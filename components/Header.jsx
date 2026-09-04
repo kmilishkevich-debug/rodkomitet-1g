@@ -13,7 +13,7 @@ export default function Header({ committee, tab, onTab, notifOpen, notifSeen, on
   return (
     <header>
       <div className="header-inner">
-        <div className="logo">Касса<em>класса</em></div>
+        <div className="logo"><span className="logo-badge">1«Г»</span>Наш 1 «Г»</div>
         <div className="spacer"></div>
         <button className="bell" onClick={onToggleNotif}>
           <Ic id="i-bell" className="ic mid" />
