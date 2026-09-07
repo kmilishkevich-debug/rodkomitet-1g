@@ -1,12 +1,5 @@
 import { Ic } from "./Art";
-
-const ROWS = [
-  { date: "01.09", what: "Букеты учителям (3 шт.)", sum: "135,00", who: "Кристина М.", receipt: "Просмотр чека: Цветочная лавка, 135,00 BYN" },
-  { date: "30.08", what: "Рабочие тетради, 27 компл.", sum: "243,00", who: "Ирина П.", receipt: "Просмотр чека: ОЗ, 243,00 BYN" },
-  { date: "28.08", what: "Питьевая вода в класс", sum: "36,50", who: "Кристина М.", receipt: "Просмотр чека: Е-доставка, 36,50 BYN" },
-  { date: "25.08", what: "Канцелярия для класса", sum: "87,00", who: "Ирина П.", receipt: "Просмотр чека: Officeton, 87,00 BYN" },
-  { date: "20.08", what: "Аптечка + мыло, салфетки", sum: "60,00", who: "Кристина М.", receipt: "Просмотр чека: Mila, 60,00 BYN" },
-];
+import { EXPENSE_GROUPS, TOTAL_SPENT, fmt, groupTotal } from "./data";
 
 export default function ExpensesTab({ committee, toast }) {
   return (
@@ -15,7 +8,7 @@ export default function ExpensesTab({ committee, toast }) {
         <svg className="cover-deco"><use href="#i-flower" /></svg>
         <h2>
           <Ic id="i-receipt" className="ic big" />Расходы{" "}
-          <span style={{ fontFamily: "'Nunito'", fontSize: 13, fontWeight: 700 }}>— каждый с чеком</span>
+          <span style={{ fontFamily: "'Nunito'", fontSize: 13, fontWeight: 700 }}>— как в таблице класса</span>
         </h2>
         {committee && (
           <button className="btn small" onClick={() => toast("В полной версии — форма добавления расхода с обязательным чеком")}>
@@ -23,24 +16,45 @@ export default function ExpensesTab({ committee, toast }) {
           </button>
         )}
       </div>
-      <div className="card">
-        <table>
-          <tbody>
-            <tr><th>Дата</th><th>Назначение</th><th>Сумма</th><th>Кто внёс</th><th>Чек</th></tr>
-            {ROWS.map((r) => (
-              <tr key={r.date + r.sum}>
-                <td>{r.date}</td>
-                <td>{r.what}</td>
-                <td><b>{r.sum}</b></td>
-                <td>{r.who}</td>
-                <td><div className="receipt-thumb" onClick={() => toast(r.receipt)}><Ic id="i-receipt" /></div></td>
+
+      {EXPENSE_GROUPS.map((g) => (
+        <div className="card" key={g.id} style={{ marginBottom: 14 }}>
+          <h3 style={{ marginTop: 0 }}>{g.title}</h3>
+          <table>
+            <tbody>
+              <tr><th>Наименование</th><th>Цена</th><th>Кол-во</th><th>Сумма</th><th>Место закупки</th></tr>
+              {g.items.map((i) => (
+                <tr key={i.name} style={i.planned ? { opacity: 0.6 } : undefined}>
+                  <td>{i.name}</td>
+                  {i.planned ? (
+                    <>
+                      <td>—</td>
+                      <td>—</td>
+                      <td><span className="chip amber">планируется</span></td>
+                      <td>—</td>
+                    </>
+                  ) : (
+                    <>
+                      <td>{i.free ? "—" : fmt(i.price)}</td>
+                      <td>{i.qty}</td>
+                      <td><b>{i.free ? <span className="chip green">бесплатно</span> : fmt(i.sum)}</b></td>
+                      <td>{i.place}</td>
+                    </>
+                  )}
+                </tr>
+              ))}
+              <tr>
+                <td colSpan={3} style={{ textAlign: "right" }}><b>Итого по группе:</b></td>
+                <td><b>{groupTotal(g) > 0 ? `${fmt(groupTotal(g))} BYN` : "—"}</b></td>
+                <td></td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
+      ))}
+
       <div className="muted" style={{ marginTop: 10 }}>
-        Итого за период: <b>561,50 BYN</b> · все расходы видны каждому родителю
+        Итого потрачено: <b>{fmt(TOTAL_SPENT)} BYN</b> · позиции «планируется» в итог не входят · все расходы видны каждому родителю
       </div>
     </section>
   );

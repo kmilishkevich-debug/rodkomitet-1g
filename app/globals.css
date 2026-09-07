@@ -122,6 +122,7 @@ main{max-width:1080px;margin:0 auto;padding:22px 18px 60px}
 /* ---------- COMPONENTS ---------- */
 .grid{display:grid;gap:14px}
 .grid.cols3{grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+.grid.cols2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:0 10px 30px rgba(23,23,23,.05)}
 .card.flat{box-shadow:none}
 .card.teal{background:var(--blue);color:#fff} .card.gold{background:var(--gold)} .card.rose{background:var(--rose)}

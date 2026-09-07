@@ -38,6 +38,12 @@ export function Sprite() {
       <path d="M9 8h6M9 11h4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
       <path d="M5 18.8h14" stroke="#171717" stroke-width="1.8"/>
     </symbol>
+    <symbol id="i-users" viewBox="0 0 24 24">
+      <circle cx="9" cy="8.2" r="3.4" fill="#F3D770" stroke="#171717" stroke-width="2"/>
+      <path d="M3.2 20c.5-4 2.9-5.8 5.8-5.8s5.3 1.8 5.8 5.8Z" fill="#BCC9EC" stroke="#171717" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="17" cy="9.4" r="2.7" fill="#F6C6D8" stroke="#171717" stroke-width="2"/>
+      <path d="M15.7 14.6c2.9.2 4.7 1.7 5.1 5.4h-4.2" fill="none" stroke="#171717" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
     <symbol id="i-bell" viewBox="0 0 24 24">
       <path d="M12 3.2a5.6 5.6 0 0 1 5.6 5.6c0 4.4 1.9 5.7 1.9 5.7H4.5s1.9-1.3 1.9-5.7A5.6 5.6 0 0 1 12 3.2Z" fill="#F3D770" stroke="#171717" stroke-width="2" stroke-linejoin="round"/>
       <path d="M9.9 17.8a2.2 2.2 0 0 0 4.2 0" fill="none" stroke="#171717" stroke-width="2" stroke-linecap="round"/>

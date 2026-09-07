@@ -1,5 +1,6 @@
 "use client";
 import { Ic } from "./Art";
+import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS } from "./data";
 
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
@@ -34,7 +35,7 @@ export default function DashboardTab({ committee, onTab, onOpenUpload }) {
           </p>
           <div className="welcome-chips">
             <button className="w-chip blue" onClick={() => onTab("votes")}>● Проголосовать за подарки</button>
-            <button className="w-chip pink" onClick={() => onOpenUpload("Фонд класса — сентябрь", "15,00 BYN")}>● Отметить взнос 15 BYN</button>
+            <button className="w-chip pink" onClick={() => onTab("expenses")}>● Посмотреть расходы за сентябрь</button>
           </div>
         </div>
         <div className="welcome-visual">
@@ -50,24 +51,24 @@ export default function DashboardTab({ committee, onTab, onOpenUpload }) {
             <div className="lbl">Сейчас в кассе</div>
             <button className="dstat-btn" title="История операций" onClick={() => onTab("history")}>↗</button>
           </div>
-          <div className="val">683,50 BYN</div>
-          <div className="note">обновлено сегодня в 10:04</div>
+          <div className="val">{fmt(CASH_NOW)} BYN</div>
+          <div className="note">собрано минус расходы</div>
         </div>
         <div className="dstat gold">
           <div className="dstat-top">
             <div className="lbl">Собрано за год</div>
             <button className="dstat-btn dark" title="Сборы" onClick={() => onTab("fees")}>+</button>
           </div>
-          <div className="val">1245,00 BYN</div>
-          <div className="note">по четырём сборам</div>
+          <div className="val">{fmt(TOTAL_COLLECTED)} BYN</div>
+          <div className="note">взнос 2026–2027 · {FAMILIES_COUNT} семей</div>
         </div>
         <div className="dstat pink">
           <div className="dstat-top">
             <div className="lbl">Потрачено</div>
             <button className="dstat-btn dark" title="Расходы" onClick={() => onTab("expenses")}>−</button>
           </div>
-          <div className="val">561,50 BYN</div>
-          <div className="note">12 операций · все с чеками</div>
+          <div className="val">{fmt(TOTAL_SPENT)} BYN</div>
+          <div className="note">{EXPENSE_GROUPS.length} группы расходов · сентябрь</div>
         </div>
       </div>
 
@@ -87,10 +88,10 @@ export default function DashboardTab({ committee, onTab, onOpenUpload }) {
       <div className="attn-card reveal d3">
         <div className="attn-ico blue"><Ic id="i-clock" /></div>
         <div className="attn-body">
-          <div className="attn-title">Фонд класса за сентябрь · 15 BYN</div>
-          <div className="attn-sub">Нужно сдать до 12 сентября · вы ещё не отметили оплату</div>
+          <div className="attn-title">Рабочие тетради на класс</div>
+          <div className="attn-sub">Закупка планируется · белорусский язык, человек и мир, трудовое обучение, ИЗО</div>
         </div>
-        <button className="pill-btn blue" onClick={() => onOpenUpload("Фонд класса — сентябрь", "15,00 BYN")}>Я сдал(а) · чек</button>
+        <button className="pill-btn blue" onClick={() => onTab("expenses")}>Подробнее</button>
       </div>
 
       <div className="sec-head reveal d4">
@@ -101,30 +102,30 @@ export default function DashboardTab({ committee, onTab, onOpenUpload }) {
       <div className="dfee-card reveal d4">
         <div className="dfee-head">
           <div>
-            <div className="dfee-title">Фонд класса · сентябрь <span className="tag-pill">регулярный</span></div>
-            <div className="dfee-meta">15 BYN с семьи · до 12 сентября</div>
+            <div className="dfee-title">Взнос 2026–2027 <span className="tag-pill">годовой</span></div>
+            <div className="dfee-meta">50 BYN с семьи · собран полностью</div>
           </div>
-          <span className="going-pill">идёт сбор</span>
+          <span className="going-pill">собран</span>
         </div>
         <div className="dfee-progress-labels">
-          <span>Сдали 19 из 27 семей</span>
-          <span>285 из 405 BYN</span>
+          <span>Сдали {FAMILIES_COUNT} из {FAMILIES_COUNT} семей</span>
+          <span>{fmt(TOTAL_COLLECTED)} BYN</span>
         </div>
-        <div className="dprogress"><i style={{ width: "70%" }}></i></div>
+        <div className="dprogress"><i style={{ width: "100%" }}></i></div>
       </div>
       <div className="dfee-card reveal d5">
         <div className="dfee-head">
           <div>
-            <div className="dfee-title">Экскурсия в музей истории <span className="tag-pill">разовый</span></div>
-            <div className="dfee-meta">25 BYN с семьи · до 20 сентября</div>
+            <div className="dfee-title">Рабочие тетради <span className="tag-pill">планируется</span></div>
+            <div className="dfee-meta">4 позиции · сумма уточняется</div>
           </div>
-          <span className="going-pill">идёт сбор</span>
+          <span className="going-pill">скоро</span>
         </div>
         <div className="dfee-progress-labels">
-          <span>Сдали 13 из 27 семей</span>
-          <span>325 из 675 BYN</span>
+          <span>Белорусский язык · Человек и мир · Труд · ИЗО</span>
+          <span>— BYN</span>
         </div>
-        <div className="dprogress"><i style={{ width: "48%" }}></i></div>
+        <div className="dprogress"><i style={{ width: "0%" }}></i></div>
       </div>
     </section>
   );

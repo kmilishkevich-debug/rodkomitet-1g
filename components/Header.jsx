@@ -6,6 +6,7 @@ const TABS = [
   { id: "expenses", icon: "i-receipt", label: "Расходы" },
   { id: "shopping", icon: "i-cart", label: "Покупки" },
   { id: "votes", icon: "i-vote", label: "Голосования" },
+  { id: "class", icon: "i-users", label: "Класс" },
   { id: "history", icon: "i-book", label: "История" },
 ];
 

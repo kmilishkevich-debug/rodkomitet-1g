@@ -1,16 +1,14 @@
 "use client";
 import { useState } from "react";
 import { Ic } from "./Art";
+import { FEES, FAMILIES_COUNT, TOTAL_COLLECTED, fmt } from "./data";
 
 export default function FeesTab({ committee, toast, onOpenUpload }) {
-  const [payers1Open, setPayers1Open] = useState(false);
-  const [payers2Open, setPayers2Open] = useState(false);
-  const [kozlovConfirmed, setKozlovConfirmed] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
 
-  const confirmPayment = () => {
-    setKozlovConfirmed(true);
-    toast("Взнос подтверждён. Родителю отправлено уведомление, сумма зачтена в кассу.");
-  };
+  const totalHoz = FEES.reduce((s, f) => s + f.hoz, 0);
+  const totalBadge = FEES.reduce((s, f) => s + f.badge, 0);
+  const totalRest = FEES.reduce((s, f) => s + f.rest, 0);
 
   return (
     <section id="tab-fees">
@@ -27,69 +25,43 @@ export default function FeesTab({ committee, toast, onOpenUpload }) {
       <div className="card fee-card">
         <div className="fee-head">
           <div>
-            <h3>Фонд класса — сентябрь <span className="chip violet">регулярный · ежемесячно</span></h3>
-            <div className="fee-meta">15,00 BYN с семьи · дедлайн 12.09 · напоминания: за 3 дня и в день дедлайна</div>
+            <h3>Взнос 2026–2027 <span className="chip violet">годовой</span></h3>
+            <div className="fee-meta">50,00 BYN с семьи · из взноса списаны хознужды (18,28) и бейджи (3,85 — у четверых)</div>
           </div>
-          <span className="chip amber">идёт сбор</span>
+          <span className="chip green">собран · {FAMILIES_COUNT}/{FAMILIES_COUNT}</span>
         </div>
-        <div className="progress"><i style={{ width: "70%" }}></i></div>
-        <div className="muted" style={{ marginBottom: 12 }}>Сдали 19 из 27 · собрано 285,00 BYN</div>
+        <div className="progress"><i style={{ width: "100%" }}></i></div>
+        <div className="muted" style={{ marginBottom: 12 }}>
+          Сдали {FAMILIES_COUNT} из {FAMILIES_COUNT} · собрано {fmt(TOTAL_COLLECTED)} BYN · остаток на детях {fmt(totalRest)} BYN
+        </div>
         <div className="row">
-          <button className="btn small teal" onClick={() => onOpenUpload("Фонд класса — сентябрь", "15,00 BYN")}>Я сдал(а) — загрузить чек</button>
-          <button className="btn small white" onClick={() => setPayers1Open(!payers1Open)}>Кто сдал / кто нет</button>
+          <button className="btn small teal" onClick={() => onOpenUpload("Взнос 2026–2027", "50,00 BYN")}>Загрузить чек об оплате</button>
+          <button className="btn small white" onClick={() => setListOpen(!listOpen)}>{listOpen ? "Скрыть список" : "Взносы и остатки по детям"}</button>
         </div>
-        {payers1Open && (
-          <div id="payers1" style={{ marginTop: 14 }}>
+        {listOpen && (
+          <div style={{ marginTop: 14, overflowX: "auto" }}>
             <table>
               <tbody>
-                <tr><th>Семья</th><th>Статус</th><th>Чек</th>{committee && <th>Действие</th>}</tr>
+                <tr><th>№</th><th>Ребёнок</th><th>Сдано</th><th>Хознужды</th><th>Бейдж</th><th>Остаток</th></tr>
+                {FEES.map((f) => (
+                  <tr key={f.n}>
+                    <td>{f.n}</td>
+                    <td>{f.child}</td>
+                    <td><b>{fmt(f.paid)}</b></td>
+                    <td>−{fmt(f.hoz)}</td>
+                    <td>{f.badge ? `−${fmt(f.badge)}` : "—"}</td>
+                    <td><b>{fmt(f.rest)}</b></td>
+                  </tr>
+                ))}
                 <tr>
-                  <td>Смирнова Ольга (Максим С.)</td>
-                  <td><span className="chip green">✓ подтверждено</span></td>
-                  <td><div className="receipt-thumb" onClick={() => toast("Просмотр чека: Смирнова, 15,00 BYN, 01.09")}><Ic id="i-receipt" /></div></td>
-                  {committee && <td>—</td>}
+                  <td colSpan={2} style={{ textAlign: "right" }}><b>Итого:</b></td>
+                  <td><b>{fmt(TOTAL_COLLECTED)}</b></td>
+                  <td><b>−{fmt(totalHoz)}</b></td>
+                  <td><b>−{fmt(totalBadge)}</b></td>
+                  <td><b>{fmt(totalRest)}</b></td>
                 </tr>
-                <tr id="pendingRow">
-                  <td>Козлов Дмитрий (Артём К.)</td>
-                  <td>{kozlovConfirmed
-                    ? <span className="chip green">✓ подтверждено</span>
-                    : <span className="chip amber">⏳ ждёт подтверждения</span>}</td>
-                  <td><div className="receipt-thumb" onClick={() => toast("Просмотр чека: Козлов, 15,00 BYN, 03.09")}><Ic id="i-receipt" /></div></td>
-                  {committee && (
-                    <td>{kozlovConfirmed ? "—" : <button className="btn small teal" onClick={confirmPayment}>Подтвердить</button>}</td>
-                  )}
-                </tr>
-                <tr>
-                  <td>Лебедева Анна (София Л.)</td>
-                  <td><span className="chip red">не сдала</span></td>
-                  <td>—</td>
-                  {committee && (
-                    <td><button className="btn small white" onClick={() => toast("Напоминание отправлено Лебедевой А. (Telegram + Email)")}>Напомнить</button></td>
-                  )}
-                </tr>
-                <tr><td className="muted" colSpan={4}>… ещё 24 семьи (в полной версии — весь список)</td></tr>
               </tbody>
             </table>
-          </div>
-        )}
-      </div>
-
-      <div className="card fee-card">
-        <div className="fee-head">
-          <div>
-            <h3>Экскурсия в музей истории <span className="chip blue">разовый</span></h3>
-            <div className="fee-meta">25,00 BYN с семьи · дедлайн 20.09</div>
-          </div>
-          <span className="chip amber">идёт сбор</span>
-        </div>
-        <div className="progress"><i style={{ width: "48%" }}></i></div>
-        <div className="muted" style={{ marginBottom: 12 }}>
-          Сдали 13 из 27 · ваш чек <b style={{ color: "var(--teal-deep)" }}>подтверждён ✓</b>
-        </div>
-        <button className="btn small white" onClick={() => setPayers2Open(!payers2Open)}>Кто сдал / кто нет</button>
-        {payers2Open && (
-          <div id="payers2" style={{ marginTop: 14 }}>
-            <div className="muted">Список из 27 семей — как в сборе выше.</div>
           </div>
         )}
       </div>
@@ -97,10 +69,10 @@ export default function FeesTab({ committee, toast, onOpenUpload }) {
       <div className="card flat fee-card" style={{ opacity: 0.72 }}>
         <div className="fee-head">
           <div>
-            <h3>Подарки учителям к 1 сентября <span className="chip blue">разовый</span></h3>
-            <div className="fee-meta">20,00 BYN · завершён 28.08</div>
+            <h3>Рабочие тетради <span className="chip blue">планируется</span></h3>
+            <div className="fee-meta">Белорусский язык · Человек и мир · Трудовое обучение · ИЗО — сумма уточняется</div>
           </div>
-          <span className="chip green">завершён · 27/27</span>
+          <span className="chip amber">скоро</span>
         </div>
       </div>
     </section>

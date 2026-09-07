@@ -9,6 +9,7 @@ import ExpensesTab from "@/components/ExpensesTab";
 import ShoppingTab from "@/components/ShoppingTab";
 import VotesTab from "@/components/VotesTab";
 import HistoryTab from "@/components/HistoryTab";
+import ClassTab from "@/components/ClassTab";
 import UploadModal from "@/components/UploadModal";
 
 export default function Page() {
@@ -78,6 +79,7 @@ export default function Page() {
             {tab === "expenses" && <ExpensesTab committee={committee} toast={toast} />}
             {tab === "shopping" && <ShoppingTab committee={committee} toast={toast} />}
             {tab === "votes" && <VotesTab committee={committee} toast={toast} />}
+            {tab === "class" && <ClassTab committee={committee} toast={toast} />}
             {tab === "history" && <HistoryTab toast={toast} />}
           </main>
           <BottomNav tab={tab} onTab={showTab} />
