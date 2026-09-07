@@ -91,7 +91,7 @@ h1,h2,h3,.display{font-family:'Nunito','Trebuchet MS','Arial Rounded MT Bold',sa
 header{background:var(--cream);position:sticky;top:0;z-index:50;border-bottom:1px solid var(--soft-line)}
 .header-inner{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:13px 18px}
 .logo{display:flex;align-items:center;gap:10px;font-family:'Nunito','Trebuchet MS',sans-serif;font-weight:800;font-size:18px;white-space:nowrap}
-.logo .logo-badge{width:38px;height:38px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex:none}
+.logo .logo-badge{width:38px;height:38px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex:none}
 .spacer{flex:1}
 .bell{position:relative;background:#fff;border:none;border-radius:50%;width:42px;height:42px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
 .bell:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(23,23,23,.12)}
@@ -213,3 +213,95 @@ tr:last-child td{border-bottom:none}
 .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:13px 22px;border-radius:999px;font-size:14px;font-weight:600;z-index:300;box-shadow:0 12px 30px rgba(0,0,0,.3);max-width:90vw}
 @media(max-width:760px){ .toast{bottom:100px} main{padding:16px 12px 96px} #notifPanel{right:10px} }
+
+/* ---------- NEW DASHBOARD (по референсу kassa-klassa) ---------- */
+.greet-date{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:4px 0 14px}
+
+/* hero welcome */
+.welcome{background:#FFFDF9;border-radius:34px;box-shadow:0 14px 38px rgba(54,49,40,.08);padding:38px 40px;display:flex;align-items:center;gap:28px;margin-bottom:26px;position:relative;overflow:hidden}
+.welcome-copy{flex:1;min-width:0}
+.welcome-h1{font-family:'Nunito','Trebuchet MS','Arial Rounded MT Bold',sans-serif;font-weight:900;font-size:clamp(30px,4.6vw,56px);line-height:1.08;letter-spacing:-.02em;margin-bottom:14px}
+.welcome-h1 .blue{color:var(--blue)}
+.welcome-sub{color:var(--muted);font-size:16px;line-height:1.5;max-width:600px;margin-bottom:20px}
+.welcome-chips{display:flex;flex-wrap:wrap;gap:10px}
+.w-chip{border:none;cursor:pointer;border-radius:999px;padding:11px 16px;font-size:13.3px;font-weight:700;font-family:'Jost';color:var(--ink);transition:.15s}
+.w-chip:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(23,23,23,.12)}
+.w-chip.blue{background:#DCE4FF}
+.w-chip.pink{background:#FDE6EF}
+.welcome-visual{position:relative;width:230px;flex:none;display:flex;align-items:center;justify-content:center}
+.w-blob{position:absolute;border-radius:50%;filter:blur(0)}
+.w-blob.green{width:210px;height:210px;background:#DFF3D8;top:6px;left:14px;border-radius:48% 52% 55% 45%/50% 46% 54% 50%}
+.w-mascot{position:relative;width:190px;height:190px;border-radius:50%;overflow:hidden;box-shadow:0 14px 34px rgba(54,49,40,.18);border:5px solid #fff}
+.w-mascot img{width:100%;height:100%;object-fit:cover;display:block}
+.w-sticker{position:absolute;bottom:-4px;right:-10px;background:#F6D96F;border-radius:17px 17px 17px 5px;padding:12px 14px;font-size:12.2px;font-weight:800;box-shadow:0 10px 24px rgba(54,49,40,.12);max-width:170px;line-height:1.3}
+
+/* stat cards */
+.stats-row{margin-bottom:30px}
+.dstat{border-radius:28px;padding:25px 26px;box-shadow:0 14px 38px rgba(54,49,40,.08);color:var(--ink)}
+.dstat.blue{background:var(--blue);color:#fff}
+.dstat.gold{background:#F6D96F}
+.dstat.pink{background:#F5BFD7}
+.dstat-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}
+.dstat .lbl{font-size:12.2px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.9}
+.dstat-btn{border:none;cursor:pointer;width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.25);color:#fff;font-size:17px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:.15s;flex:none}
+.dstat-btn.dark{background:rgba(23,23,23,.08);color:var(--ink)}
+.dstat-btn:hover{transform:translateY(-1px)}
+.dstat .val{font-family:'Nunito','Trebuchet MS',sans-serif;font-weight:900;font-size:clamp(30px,3.4vw,44px);letter-spacing:-.045em;line-height:1.05;margin-bottom:8px}
+.dstat .note{font-size:13px;font-weight:600;opacity:.85}
+
+/* section headings */
+.sec-head{display:flex;align-items:center;gap:10px;margin:26px 0 14px}
+.sec-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex:none}
+.sec-dot.gold{background:#F6D96F}
+.sec-title{font-size:20px;margin:0}
+.sec-note{font-size:12.5px;color:var(--muted);font-weight:600;margin-left:auto;text-align:right}
+
+/* attention cards */
+.attn-card{background:var(--card);border-radius:24px;box-shadow:0 10px 30px rgba(23,23,23,.05);padding:18px 20px;display:flex;align-items:center;gap:16px;margin-bottom:12px}
+.attn-ico{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+.attn-ico.pink{background:var(--pink-soft);color:var(--pink)}
+.attn-ico.blue{background:var(--blue-soft);color:var(--blue)}
+.attn-body{flex:1;min-width:0}
+.attn-title{font-weight:700;font-size:15px;margin-bottom:3px}
+.attn-sub{font-size:13px;color:var(--muted);font-weight:600}
+.pill-btn{border:none;cursor:pointer;border-radius:999px;padding:12px 18px;font-size:12.8px;font-weight:800;font-family:'Jost';color:#fff;white-space:nowrap;transition:.15s;flex:none}
+.pill-btn.pink{background:#EC5A98}
+.pill-btn.blue{background:var(--blue)}
+.pill-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(23,23,23,.18)}
+
+/* fee cards */
+.dfee-card{background:var(--card);border-radius:24px;box-shadow:0 10px 30px rgba(23,23,23,.05);padding:20px 22px;margin-bottom:14px}
+.dfee-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.dfee-title{font-weight:800;font-size:15.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.dfee-meta{font-size:13px;color:var(--muted);font-weight:600}
+.tag-pill{background:#E9E5FB;color:#4F4B68;font-size:10.5px;font-weight:700;border-radius:999px;padding:5px 9px;letter-spacing:.02em}
+.going-pill{background:#FFF1BF;font-size:12px;font-weight:700;border-radius:999px;padding:7px 12px;flex:none;white-space:nowrap}
+.dfee-progress-labels{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:8px}
+.dfee-progress-labels span:last-child{color:var(--muted)}
+.dprogress{height:11px;border-radius:999px;background:#EEECE7;overflow:hidden}
+.dprogress i{display:block;height:100%;border-radius:999px;background:var(--blue);transition:width .6s ease}
+
+/* reveal animation */
+@keyframes revealUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.reveal{animation:revealUp .6s ease both}
+.reveal.d1{animation-delay:.05s}
+.reveal.d2{animation-delay:.15s}
+.reveal.d3{animation-delay:.25s}
+.reveal.d4{animation-delay:.35s}
+.reveal.d5{animation-delay:.45s}
+@media(prefers-reduced-motion:reduce){.reveal{animation:none}}
+
+/* dashboard mobile */
+@media(max-width:760px){
+  .welcome{flex-direction:column;padding:26px 22px;text-align:left;gap:20px}
+  .welcome-visual{width:170px}
+  .w-blob.green{width:150px;height:150px;top:4px;left:10px}
+  .w-mascot{width:140px;height:140px}
+  .w-sticker{right:-16px;font-size:11.5px;padding:10px 12px;max-width:140px}
+  .welcome-h1{font-size:28px}
+  .welcome-sub{font-size:14.5px}
+  .stats-row{grid-template-columns:1fr}
+  .attn-card{flex-wrap:wrap}
+  .attn-card .pill-btn{width:100%}
+  .sec-note{display:none}
+}
