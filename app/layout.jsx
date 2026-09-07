@@ -1,8 +1,22 @@
 import "./globals.css";
+import PwaSetup from "@/components/PwaSetup";
 
 export const metadata = {
   title: "Наш 1 «Г» — школа №227",
   description: "Онлайн-касса родительского комитета 1 «Г»: сборы, расходы, чеки, голосования.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Наш 1 «Г»",
+  },
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
+};
+
+export const viewport = {
+  themeColor: "#F6F1E7",
 };
 
 export default function RootLayout({ children }) {
@@ -15,7 +29,10 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <PwaSetup />
+      </body>
     </html>
   );
 }

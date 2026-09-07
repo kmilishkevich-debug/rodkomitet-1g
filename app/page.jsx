@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Sprite } from "@/components/Art";
 import LoginScreen from "@/components/LoginScreen";
 import Header, { BottomNav } from "@/components/Header";
@@ -29,8 +29,26 @@ export default function Page() {
 
   const committee = role === "committee";
 
+  // Запоминаем вход + открываем нужную вкладку из ярлыка PWA (/?tab=...)
+  useEffect(() => {
+    let saved = null;
+    try {
+      saved = localStorage.getItem("rk1g-role");
+    } catch {}
+    if (saved === "parent" || saved === "committee") {
+      setRole(saved);
+      const t = new URLSearchParams(window.location.search).get("tab");
+      if (["dashboard", "fees", "expenses", "shopping", "votes", "class", "history"].includes(t)) {
+        setTab(t);
+      }
+    }
+  }, []);
+
   const login = (r) => {
     setRole(r);
+    try {
+      localStorage.setItem("rk1g-role", r);
+    } catch {}
     setTab("dashboard");
     setNotifOpen(false);
     if (r === "committee") {
@@ -41,6 +59,9 @@ export default function Page() {
   const logout = () => {
     setRole(null);
     setNotifOpen(false);
+    try {
+      localStorage.removeItem("rk1g-role");
+    } catch {}
   };
 
   const showTab = (t) => {
