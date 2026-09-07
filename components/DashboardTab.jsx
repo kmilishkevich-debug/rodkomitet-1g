@@ -52,7 +52,7 @@ export default function DashboardTab({ committee, onTab, onOpenUpload }) {
             <button className="dstat-btn" title="История операций" onClick={() => onTab("history")}>↗</button>
           </div>
           <div className="val">{fmt(CASH_NOW)} BYN</div>
-          <div className="note">собрано минус расходы</div>
+          <div className="note">остаток по таблице класса</div>
         </div>
         <div className="dstat gold">
           <div className="dstat-top">

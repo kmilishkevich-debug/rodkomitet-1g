@@ -114,5 +114,5 @@ export function groupTotal(g) {
 
 export const TOTAL_COLLECTED = FEES.reduce((s, f) => s + f.paid, 0); // 1373
 export const TOTAL_SPENT = EXPENSE_GROUPS.reduce((s, g) => s + groupTotal(g), 0); // 728,50
-export const CASH_NOW = TOTAL_COLLECTED - TOTAL_SPENT; // 644,50
+export const CASH_NOW = FEES.reduce((s, f) => s + f.rest, 0); // 864,04 — как в таблице класса
 export const FAMILIES_COUNT = FAMILIES.length; // 27
