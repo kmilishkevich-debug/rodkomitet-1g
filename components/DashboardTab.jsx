@@ -1,6 +1,6 @@
 "use client";
 import { Ic } from "./Art";
-import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS } from "./data";
+import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
 
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
@@ -17,8 +17,12 @@ function greetWord() {
   return "Добрый вечер";
 }
 
-export default function DashboardTab({ committee, onTab, onOpenUpload }) {
+export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroups }) {
   const name = committee ? "Кристина" : "Ольга";
+  // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
+  const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
+  const cash = liveGroups ? TOTAL_COLLECTED - spent : CASH_NOW;
+  const groupsCount = (liveGroups || EXPENSE_GROUPS).length;
   return (
     <section id="tab-dashboard">
       <div className="greet-date">{todayLine()}</div>
@@ -51,8 +55,8 @@ export default function DashboardTab({ committee, onTab, onOpenUpload }) {
             <div className="lbl">Сейчас в кассе</div>
             <button className="dstat-btn" title="История операций" onClick={() => onTab("history")}>↗</button>
           </div>
-          <div className="val">{fmt(CASH_NOW)} BYN</div>
-          <div className="note">остаток по таблице класса</div>
+          <div className="val">{fmt(cash)} BYN</div>
+          <div className="note">{liveGroups ? "собрано минус все расходы" : "остаток по таблице класса"}</div>
         </div>
         <div className="dstat gold">
           <div className="dstat-top">
@@ -67,8 +71,8 @@ export default function DashboardTab({ committee, onTab, onOpenUpload }) {
             <div className="lbl">Потрачено</div>
             <button className="dstat-btn dark" title="Расходы" onClick={() => onTab("expenses")}>−</button>
           </div>
-          <div className="val">{fmt(TOTAL_SPENT)} BYN</div>
-          <div className="note">{EXPENSE_GROUPS.length} группы расходов · сентябрь</div>
+          <div className="val">{fmt(spent)} BYN</div>
+          <div className="note">{groupsCount} группы расходов</div>
         </div>
       </div>
 

@@ -212,6 +212,22 @@ tr:last-child td{border-bottom:none}
 .upload-zone:hover{background:var(--gold-soft)}
 .upload-zone.done{border-style:solid;border-color:var(--blue);background:var(--blue-soft);color:var(--teal-deep);font-weight:700}
 .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+/* Форма добавления расхода */
+.exp-modal{max-height:92vh;overflow-y:auto}
+.exp-form label{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin:12px 0 6px}
+.exp-form input,.exp-form select,.exp-form textarea{width:100%;padding:12px 15px;border:none;border-radius:14px;background:var(--input);font-size:15px;font-weight:600;color:var(--ink);font-family:'Jost'}
+.exp-form input:focus,.exp-form select:focus,.exp-form textarea:focus{outline:2px solid var(--blue-soft)}
+.exp-form textarea{resize:vertical}
+.exp-row3{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:10px}
+.exp-check{display:flex !important;gap:8px;align-items:center;text-transform:none !important;letter-spacing:0 !important;font-size:13.5px !important;cursor:pointer}
+.exp-check input{width:16px !important;height:16px;accent-color:var(--blue)}
+.exp-form .upload-zone{padding:16px;margin:8px 0}
+.exp-actions{white-space:nowrap}
+.mini-btn{border:none;background:var(--input);border-radius:9px;width:28px;height:28px;cursor:pointer;font-size:13px;margin-left:4px;color:var(--ink)}
+.mini-btn:hover{background:var(--blue-soft)}
+.mini-btn.danger:hover{background:#F6D9D9;color:#A33}
+.receipt-link{font-size:11.5px;font-weight:800;color:var(--blue);text-decoration:underline;text-underline-offset:2px}
+.exp-note{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:13px 22px;border-radius:999px;font-size:14px;font-weight:600;z-index:300;box-shadow:0 12px 30px rgba(0,0,0,.3);max-width:90vw}
 @media(max-width:760px){ .toast{bottom:100px} main{padding:16px 12px 96px} #notifPanel{right:10px} }
 

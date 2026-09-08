@@ -11,6 +11,7 @@ import VotesTab from "@/components/VotesTab";
 import HistoryTab from "@/components/HistoryTab";
 import ClassTab from "@/components/ClassTab";
 import UploadModal from "@/components/UploadModal";
+import { supabase, fetchExpenseGroups } from "@/lib/supabase";
 
 export default function Page() {
   const [role, setRole] = useState(null); // null | 'parent' | 'committee'
@@ -29,6 +30,16 @@ export default function Page() {
 
   const committee = role === "committee";
 
+  // Живые расходы из базы (null = база не подключена, работаем на демо-данных)
+  const [liveGroups, setLiveGroups] = useState(null);
+  const reloadExpenses = useCallback(async () => {
+    const data = await fetchExpenseGroups();
+    if (data) setLiveGroups(data);
+  }, []);
+  useEffect(() => {
+    reloadExpenses();
+  }, [reloadExpenses]);
+
   // Запоминаем вход + открываем нужную вкладку из ярлыка PWA (/?tab=...)
   useEffect(() => {
     let saved = null;
@@ -36,7 +47,17 @@ export default function Page() {
       saved = localStorage.getItem("rk1g-role");
     } catch {}
     if (saved === "parent" || saved === "committee") {
-      setRole(saved);
+      // Комитет с подключённой базой должен иметь живую сессию — иначе просим войти заново
+      if (saved === "committee" && supabase) {
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session) setRole("committee");
+          else {
+            try { localStorage.removeItem("rk1g-role"); } catch {}
+          }
+        });
+      } else {
+        setRole(saved);
+      }
       const t = new URLSearchParams(window.location.search).get("tab");
       if (["dashboard", "fees", "expenses", "shopping", "votes", "class", "history"].includes(t)) {
         setTab(t);
@@ -62,6 +83,7 @@ export default function Page() {
     try {
       localStorage.removeItem("rk1g-role");
     } catch {}
+    if (supabase) supabase.auth.signOut();
   };
 
   const showTab = (t) => {
@@ -95,9 +117,9 @@ export default function Page() {
             onLogout={logout}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} onTab={showTab} onOpenUpload={openUpload} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} />}
             {tab === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={openUpload} />}
-            {tab === "expenses" && <ExpensesTab committee={committee} toast={toast} />}
+            {tab === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={reloadExpenses} />}
             {tab === "shopping" && <ShoppingTab committee={committee} toast={toast} />}
             {tab === "votes" && <VotesTab committee={committee} toast={toast} />}
             {tab === "class" && <ClassTab committee={committee} toast={toast} />}

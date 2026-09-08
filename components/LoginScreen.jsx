@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { supabase, isLive } from "@/lib/supabase";
 
 export default function LoginScreen({ onLogin }) {
   const [email, setEmail] = useState("");
@@ -7,10 +8,12 @@ export default function LoginScreen({ onLogin }) {
   const [showPass, setShowPass] = useState(false);
   const [pendingRole, setPendingRole] = useState(null);
   const [hint, setHint] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   const pickDemo = (role) => {
     setPendingRole(role);
     setHint(null);
+    if (isLive) return; // при подключённой базе кнопка родителя входит сразу
     if (role === "parent") {
       setEmail("olga.smirnova@example.com");
       setPassword("demo-parent");
@@ -20,11 +23,36 @@ export default function LoginScreen({ onLogin }) {
     }
   };
 
-  const tryLogin = () => {
+  const tryLogin = async () => {
+    if (isLive) {
+      // Настоящий вход комитета: почта + пароль (аккаунты заведены в базе)
+      if (!email.trim() || !password) {
+        setHint("Комитет входит по своей почте и паролю. Родителям пароль не нужен — кнопка ниже.");
+        return;
+      }
+      setBusy(true);
+      setHint(null);
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      setBusy(false);
+      if (error) {
+        setHint("Неверная почта или пароль. Попробуйте ещё раз.");
+        return;
+      }
+      onLogin("committee");
+      return;
+    }
     if (pendingRole) {
       onLogin(pendingRole);
     } else {
       setHint("Это демо: выберите роль ниже, и поля заполнятся сами");
+    }
+  };
+
+  const parentEnter = () => {
+    if (isLive) {
+      onLogin("parent"); // родители смотрят без пароля
+    } else {
+      pickDemo("parent");
     }
   };
 
@@ -67,26 +95,30 @@ export default function LoginScreen({ onLogin }) {
                 {showPass ? "🙈" : "👁"}
               </button>
             </div>
-            <button className="btn-login" onClick={tryLogin}>Войти →</button>
+            <button className="btn-login" onClick={tryLogin} disabled={busy}>
+              {busy ? "Входим…" : "Войти →"}
+            </button>
             {hint && <div className="login-hint-msg">{hint}</div>}
           </div>
 
-          <div className="demo-label">Или попробуйте демо-режим:</div>
+          <div className="demo-label">{isLive ? "Я родитель — смотреть без пароля:" : "Или попробуйте демо-режим:"}</div>
           <div className="demo-row">
             <button
               className={"demo-btn parent" + (pendingRole === "parent" ? " selected" : "")}
-              onClick={() => pickDemo("parent")}
+              onClick={parentEnter}
             >
               <span className="demo-ic">✿</span>
-              <span>Ольга Смирнова<small>родитель</small></span>
+              <span>{isLive ? "Войти как родитель" : "Ольга Смирнова"}<small>{isLive ? "просмотр: сборы, расходы, чеки" : "родитель"}</small></span>
             </button>
-            <button
-              className={"demo-btn committee" + (pendingRole === "committee" ? " selected" : "")}
-              onClick={() => pickDemo("committee")}
-            >
-              <span className="demo-ic">✦</span>
-              <span>Кристина М.<small>род. комитет</small></span>
-            </button>
+            {!isLive && (
+              <button
+                className={"demo-btn committee" + (pendingRole === "committee" ? " selected" : "")}
+                onClick={() => pickDemo("committee")}
+              >
+                <span className="demo-ic">✦</span>
+                <span>Кристина М.<small>род. комитет</small></span>
+              </button>
+            )}
           </div>
         </div>
 
