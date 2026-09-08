@@ -2,6 +2,7 @@ import { Ic } from "./Art";
 
 const TABS = [
   { id: "dashboard", icon: "i-home", label: "Главная" },
+  { id: "schedule", icon: "i-clock", label: "Расписание" },
   { id: "fees", icon: "i-coin", label: "Сборы" },
   { id: "expenses", icon: "i-receipt", label: "Расходы" },
   { id: "shopping", icon: "i-cart", label: "Покупки" },
@@ -37,7 +38,11 @@ export default function Header({ committee, tab, onTab, onLogout }) {
 }
 
 export function BottomNav({ tab, onTab }) {
-  const items = TABS.map((t) => (t.id === "votes" ? { ...t, label: "Голоса" } : t));
+  const items = TABS.map((t) => {
+    if (t.id === "votes") return { ...t, label: "Голоса" };
+    if (t.id === "schedule") return { ...t, label: "Уроки" };
+    return t;
+  });
   return (
     <nav className="bottomnav" id="bottomNav">
       {items.map((t) => (

@@ -1,6 +1,7 @@
 "use client";
 import { Ic } from "./Art";
 import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
+import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, scheduleFocus, subjectEmoji } from "./scheduleData";
 
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
@@ -17,7 +18,48 @@ function greetWord() {
   return "Добрый вечер";
 }
 
-export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroups }) {
+// Мини-расписание на главной: до 13:00 — уроки сегодня, после — на завтра
+function ScheduleWidget({ liveSchedule, onTab }) {
+  const focus = scheduleFocus();
+  const bells = liveSchedule?.bells?.length ? liveSchedule.bells : BELLS_FALLBACK;
+  const lessons = (liveSchedule?.lessons?.length ? liveSchedule.lessons : LESSONS_FALLBACK)
+    .filter((l) => l.day === focus.day);
+  const bellByPos = Object.fromEntries(bells.map((b) => [b.pos, b]));
+  const notes = [...new Set(lessons.map((l) => l.note).filter(Boolean))];
+  const title =
+    focus.label === "сегодня"
+      ? "Уроки сегодня"
+      : `Уроки ${focus.label} · ${DAY_NAMES[focus.day].toLowerCase()}`;
+  return (
+    <>
+      <div className="sec-head reveal d3">
+        <span className="sec-dot gold">🕐</span>
+        <h2 className="sec-title">{title}</h2>
+        <span className="sec-note">{lessons.length} урок{lessons.length === 5 ? "ов" : "а"} · каб. 166</span>
+      </div>
+      <div className="card dash-sched reveal d3">
+        {lessons.map((l) => {
+          const bell = bellByPos[l.pos];
+          return (
+            <div className="dash-sched-row" key={l.id}>
+              <span className="dash-sched-time">{bell ? `${bell.start_time}–${bell.end_time}` : `${l.pos}-й`}</span>
+              <span className="dash-sched-subj">{subjectEmoji(l.subject)} {l.subject}</span>
+            </div>
+          );
+        })}
+        {notes.length > 0 && (
+          <div className="dash-sched-note">🎒 Взять с собой: {notes.join(", ").toLowerCase()}</div>
+        )}
+        <div className="dash-sched-foot">
+          <span className="muted" style={{ fontSize: 12 }}>Временное расписание · первые 20 учебных дней</span>
+          <button className="pill-btn blue" onClick={() => onTab("schedule")}>Вся неделя</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroups, liveSchedule }) {
   const name = committee ? "Кристина" : "Ольга";
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
@@ -75,6 +117,8 @@ export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroup
           <div className="note">{groupsCount} группы расходов</div>
         </div>
       </div>
+
+      <ScheduleWidget liveSchedule={liveSchedule} onTab={onTab} />
 
       <div className="sec-head reveal d3">
         <span className="sec-dot gold">+</span>

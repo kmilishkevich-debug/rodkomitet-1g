@@ -10,8 +10,9 @@ import ShoppingTab from "@/components/ShoppingTab";
 import VotesTab from "@/components/VotesTab";
 import HistoryTab from "@/components/HistoryTab";
 import ClassTab from "@/components/ClassTab";
+import ScheduleTab from "@/components/ScheduleTab";
 import UploadModal from "@/components/UploadModal";
-import { supabase, fetchExpenseGroups } from "@/lib/supabase";
+import { supabase, fetchExpenseGroups, fetchSchedule } from "@/lib/supabase";
 
 export default function Page() {
   const [role, setRole] = useState(null); // null | 'parent' | 'committee'
@@ -40,6 +41,16 @@ export default function Page() {
     reloadExpenses();
   }, [reloadExpenses]);
 
+  // Живое расписание из базы (null = показываем встроенное на 20 учебных дней)
+  const [liveSchedule, setLiveSchedule] = useState(null);
+  const reloadSchedule = useCallback(async () => {
+    const data = await fetchSchedule();
+    if (data) setLiveSchedule(data);
+  }, []);
+  useEffect(() => {
+    reloadSchedule();
+  }, [reloadSchedule]);
+
   // Запоминаем вход + открываем нужную вкладку из ярлыка PWA (/?tab=...)
   useEffect(() => {
     let saved = null;
@@ -59,7 +70,7 @@ export default function Page() {
         setRole(saved);
       }
       const t = new URLSearchParams(window.location.search).get("tab");
-      if (["dashboard", "fees", "expenses", "shopping", "votes", "class", "history"].includes(t)) {
+      if (["dashboard", "schedule", "fees", "expenses", "shopping", "votes", "class", "history"].includes(t)) {
         setTab(t);
       }
     }
@@ -117,7 +128,8 @@ export default function Page() {
             onLogout={logout}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} />}
+            {tab === "schedule" && <ScheduleTab committee={committee} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} />}
             {tab === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={openUpload} />}
             {tab === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={reloadExpenses} />}
             {tab === "shopping" && <ShoppingTab committee={committee} toast={toast} />}
