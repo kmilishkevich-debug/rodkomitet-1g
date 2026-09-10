@@ -409,3 +409,34 @@ tr:last-child td{border-bottom:none}
   .sched-grid{grid-template-columns:1fr}
   .dash-sched-time{width:82px}
 }
+
+/* ===== Дни рождения ===== */
+.sec-dot.pink{background:var(--pink-soft);color:var(--pink)}
+.attn-ico.gold{background:var(--gold-soft);color:#8A6D1B}
+
+/* Праздничный баннер в сам день рождения / День летних детей */
+.bday-banner{display:flex;align-items:center;gap:14px;background:linear-gradient(105deg,var(--pink-soft),var(--gold-soft));border:2px solid #F3B7CF;border-radius:20px;padding:14px 18px;margin-bottom:14px}
+.bday-banner.summer{background:linear-gradient(105deg,var(--gold-soft),#E7EFD6);border-color:#E8CD7A}
+.bday-banner-ico{width:52px;height:52px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;color:var(--pink)}
+.bday-banner.summer .bday-banner-ico{color:#C99A1E}
+.bday-banner-ico .ic{width:28px;height:28px}
+.bday-banner-title{font-family:'Comfortaa';font-weight:800;font-size:17px}
+.bday-banner-sub{font-size:13.5px;margin-top:3px;color:#5B5647}
+
+/* Список ближайших ДР на Главной и календарь во вкладке «Класс» */
+.bday-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed #EDE6D6;flex-wrap:wrap}
+.bday-row:last-of-type{border-bottom:none}
+.bday-row.today{background:var(--pink-soft);border-radius:12px;padding:8px 10px}
+.bday-date{width:96px;flex:none;font-weight:800;font-size:13px;color:var(--teal-deep)}
+.bday-name{display:flex;align-items:center;gap:7px;font-weight:700}
+.bday-turns{font-size:12.5px;color:#8B8574}
+.bday-when{margin-left:auto;font-size:12.5px;font-weight:700;background:var(--blue-soft);color:var(--teal-deep);border-radius:999px;padding:3px 10px}
+.bday-when.close{background:var(--pink-soft);color:var(--pink)}
+.bday-months{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-bottom:14px}
+.bday-month-head{font-family:'Comfortaa';font-weight:800;font-size:14px;background:var(--gold-soft);border-radius:12px;padding:6px 12px;margin-bottom:6px}
+.bday-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--pink);font-weight:700;margin-top:2px}
+.bday-chip .ic{width:13px;height:13px}
+.bday-upcoming .bday-name .ic{color:var(--pink)}
+@media (max-width:560px){
+  .bday-date{width:84px}
+}

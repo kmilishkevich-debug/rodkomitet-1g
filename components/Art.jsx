@@ -64,6 +64,17 @@ export function Sprite() {
       <path d="M12 7.3v13.2"/>
       <path d="M12 7.3s-1.1-3.8-3.4-3.8a1.9 1.9 0 0 0 0 3.8Zm0 0s1.1-3.8 3.4-3.8a1.9 1.9 0 0 1 0 3.8Z"/>
     </symbol>
+    <symbol id="i-cake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/>
+      <path d="M4 16c.7.6 1.5 1 2.7 1 2 0 2-1.4 4-1.4s2 1.4 4 1.4 2-1.4 4-1.4c.5 0 .9.1 1.3.3"/>
+      <path d="M2.5 21h19"/>
+      <path d="M7 11V8M12 11V8M17 11V8"/>
+      <path d="M7 5.5c.6-.6.6-1.4 0-2M12 5.5c.6-.6.6-1.4 0-2M17 5.5c.6-.6.6-1.4 0-2"/>
+    </symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19"/>
+    </symbol>
     <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 5.5v13M5.5 12h13"/>
     </symbol>

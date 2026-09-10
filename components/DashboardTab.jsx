@@ -2,6 +2,7 @@
 import { Ic, CIc } from "./Art";
 import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, scheduleFocus, subjectIcon } from "./scheduleData";
+import { BIRTHDAYS_FALLBACK, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
 
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
@@ -60,15 +61,119 @@ function ScheduleWidget({ liveSchedule, onTab }) {
   );
 }
 
-export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroups, liveSchedule }) {
+// Праздничный баннер: сегодняшние именинники или День летних детей
+function BdayBanner({ ev }) {
+  if (ev.summerToday) {
+    return (
+      <div className="bday-banner summer reveal d1">
+        <span className="bday-banner-ico"><Ic id="i-sun" /></span>
+        <div>
+          <div className="bday-banner-title">Сегодня — День летних детей!</div>
+          <div className="bday-banner-sub">
+            Поздравляем именинников лета: {joinNames(ev.summerToday)} <Ic id="i-spark" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (ev.today.length) {
+    const many = ev.today.length > 1;
+    return (
+      <div className="bday-banner reveal d1">
+        <span className="bday-banner-ico"><Ic id="i-cake" /></span>
+        <div>
+          <div className="bday-banner-title">
+            {joinNames(ev.today)} {many ? "отмечают дни рождения" : "отмечает день рождения"}!
+          </div>
+          <div className="bday-banner-sub">
+            {many ? "Им исполняется" : "Исполняется"} {ev.today[0].turns} лет — поздравляем от всего класса <Ic id="i-spark" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
+// Блок «Дни рождения»: напоминания + ближайшие именинники
+function BirthdaysWidget({ committee, ev, list, onTab }) {
+  const upcoming = upcomingBirthdays(list, new Date(), 3);
+  const notices = [];
+  if (ev.summerTomorrow) {
+    notices.push({
+      key: "summer-tm", tone: "gold", icon: "i-sun",
+      title: "Завтра — День летних детей!",
+      sub: "Именинники лета: " + joinNames(ev.summerTomorrow),
+    });
+  }
+  if (ev.tomorrow.length) {
+    const many = ev.tomorrow.length > 1;
+    notices.push({
+      key: "tm", tone: "pink", icon: "i-cake",
+      title: `Завтра ${many ? "дни рождения отмечают" : "день рождения отмечает"} ${joinNames(ev.tomorrow)}`,
+      sub: `Исполнится ${ev.tomorrow[0].turns} лет — не забудьте поздравить!`,
+    });
+  }
+  if (committee) {
+    ev.soon.filter((g) => g.days >= 2).forEach((g) => {
+      notices.push({
+        key: "soon-" + g.days, tone: "blue", icon: "i-gift",
+        title: `${inDaysWord(g.days).replace(/^./, (c) => c.toUpperCase())} — день рождения у ${g.kids.length > 1 ? "ребят" : "ребёнка"}: ${joinNames(g.kids)}`,
+        sub: `${fmtBd(g.kids[0].born)} · исполнится ${g.kids[0].turns} лет · пора подготовить поздравление от класса`,
+      });
+    });
+  }
+  return (
+    <>
+      <div className="sec-head reveal d3">
+        <span className="sec-dot pink"><Ic id="i-cake" /></span>
+        <h2 className="sec-title">Дни рождения</h2>
+        <span className="sec-note">поздравляем всем классом</span>
+      </div>
+      {notices.map((n) => (
+        <div className={"attn-card bday-notice reveal d3"} key={n.key}>
+          <div className={"attn-ico " + n.tone}><Ic id={n.icon} /></div>
+          <div className="attn-body">
+            <div className="attn-title">{n.title}</div>
+            <div className="attn-sub">{n.sub}</div>
+          </div>
+        </div>
+      ))}
+      <div className="card bday-upcoming reveal d3">
+        {upcoming.map((k) => (
+          <div className="bday-row" key={k.id}>
+            <span className="bday-date">{fmtBd(k.born)}</span>
+            <span className="bday-name"><Ic id="i-cake" /> {bdName(k)}</span>
+            <span className="bday-turns">исполнится {k.turns}</span>
+            <span className={"bday-when" + (k.days <= 5 ? " close" : "")}>
+              {k.days === 0 ? "сегодня" : inDaysWord(k.days)}
+            </span>
+          </div>
+        ))}
+        <div className="dash-sched-foot">
+          <span className="muted" style={{ fontSize: 12 }}>
+            {committee ? "Комитету напоминаем за 5 дней, всем родителям — за 1 день" : "Напоминание появится за день до праздника"}
+          </span>
+          <button className="pill-btn pink" onClick={() => onTab("class")}>Все дни рождения</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays }) {
   const name = committee ? "Кристина" : "Ольга";
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
   const cash = liveGroups ? TOTAL_COLLECTED - spent : CASH_NOW;
   const groupsCount = (liveGroups || EXPENSE_GROUPS).length;
+  const bdays = liveBirthdays || BIRTHDAYS_FALLBACK;
+  const bdayEv = birthdayEvents(bdays, committee);
   return (
     <section id="tab-dashboard">
       <div className="greet-date">{todayLine()}</div>
+
+      <BdayBanner ev={bdayEv} />
 
       <div className="welcome reveal d1">
         <div className="welcome-copy">
@@ -120,6 +225,8 @@ export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroup
       </div>
 
       <ScheduleWidget liveSchedule={liveSchedule} onTab={onTab} />
+
+      <BirthdaysWidget committee={committee} ev={bdayEv} list={bdays} onTab={onTab} />
 
       <div className="sec-head reveal d3">
         <span className="sec-dot gold"><Ic id="i-bell" /></span>

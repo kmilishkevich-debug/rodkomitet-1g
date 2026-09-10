@@ -12,7 +12,7 @@ import HistoryTab from "@/components/HistoryTab";
 import ClassTab from "@/components/ClassTab";
 import ScheduleTab from "@/components/ScheduleTab";
 import UploadModal from "@/components/UploadModal";
-import { supabase, fetchExpenseGroups, fetchSchedule } from "@/lib/supabase";
+import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays } from "@/lib/supabase";
 
 export default function Page() {
   const [role, setRole] = useState(null); // null | 'parent' | 'committee'
@@ -50,6 +50,14 @@ export default function Page() {
   useEffect(() => {
     reloadSchedule();
   }, [reloadSchedule]);
+
+  // Живые дни рождения из базы (null = встроенный список из birthdaysData.js)
+  const [liveBirthdays, setLiveBirthdays] = useState(null);
+  useEffect(() => {
+    fetchBirthdays().then((data) => {
+      if (data) setLiveBirthdays(data);
+    });
+  }, []);
 
   // Запоминаем вход + открываем нужную вкладку из ярлыка PWA (/?tab=...)
   useEffect(() => {
@@ -128,13 +136,13 @@ export default function Page() {
             onLogout={logout}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} />}
             {tab === "schedule" && <ScheduleTab committee={committee} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} />}
             {tab === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={openUpload} />}
             {tab === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={reloadExpenses} />}
             {tab === "shopping" && <ShoppingTab committee={committee} toast={toast} />}
             {tab === "votes" && <VotesTab committee={committee} toast={toast} />}
-            {tab === "class" && <ClassTab committee={committee} toast={toast} />}
+            {tab === "class" && <ClassTab committee={committee} toast={toast} liveBirthdays={liveBirthdays} />}
             {tab === "history" && <HistoryTab toast={toast} />}
           </main>
           <BottomNav tab={tab} onTab={showTab} />
