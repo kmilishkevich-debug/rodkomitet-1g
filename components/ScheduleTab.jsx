@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Ic, CIc } from "./Art";
 import { supabase, isLive } from "@/lib/supabase";
+import { sendManualPush } from "@/lib/push";
 import {
   DAY_NAMES,
   BELLS_FALLBACK,
@@ -43,6 +44,13 @@ function LessonModal({ lesson, onClose, onSaved, toast }) {
     setSaving(false);
     if (error) return toast("Не получилось сохранить: " + error.message);
     toast("Урок обновлён — родители уже видят изменения");
+    // Сразу шлём пуш всем родителям об изменении (не блокируем закрытие окна)
+    sendManualPush({
+      title: "📅 Изменение в расписании",
+      body: `${DAY_NAMES[lesson.day]}, ${lesson.pos}-й урок: ${subject.trim()}${note.trim() ? ` · взять: ${note.trim()}` : ""}`,
+      url: "/?tab=schedule",
+      audience: "all",
+    });
     onSaved();
     onClose();
   };

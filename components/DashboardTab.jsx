@@ -3,6 +3,7 @@ import { Ic, CIc } from "./Art";
 import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, scheduleFocus, subjectIcon } from "./scheduleData";
 import { BIRTHDAYS_FALLBACK, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
+import PushSettings from "./PushSettings";
 
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
@@ -161,7 +162,7 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
   );
 }
 
-export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays }) {
+export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays }) {
   const name = committee ? "Кристина" : "Ольга";
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
@@ -283,6 +284,8 @@ export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroup
         </div>
         <div className="dprogress"><i style={{ width: "0%" }}></i></div>
       </div>
+
+      <PushSettings committee={committee} role={role} toast={toast} />
     </section>
   );
 }

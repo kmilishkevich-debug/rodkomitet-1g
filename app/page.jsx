@@ -13,6 +13,7 @@ import ClassTab from "@/components/ClassTab";
 import ScheduleTab from "@/components/ScheduleTab";
 import UploadModal from "@/components/UploadModal";
 import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays } from "@/lib/supabase";
+import { enablePush, syncPushRole } from "@/lib/push";
 
 export default function Page() {
   const [role, setRole] = useState(null); // null | 'parent' | 'committee'
@@ -69,13 +70,16 @@ export default function Page() {
       // Комитет с подключённой базой должен иметь живую сессию — иначе просим войти заново
       if (saved === "committee" && supabase) {
         supabase.auth.getSession().then(({ data }) => {
-          if (data.session) setRole("committee");
-          else {
+          if (data.session) {
+            setRole("committee");
+            syncPushRole("committee"); // тихо обновляем подписку на пуши
+          } else {
             try { localStorage.removeItem("rk1g-role"); } catch {}
           }
         });
       } else {
         setRole(saved);
+        syncPushRole(saved); // тихо обновляем подписку на пуши
       }
       const t = new URLSearchParams(window.location.search).get("tab");
       if (["dashboard", "schedule", "fees", "expenses", "shopping", "votes", "class", "history"].includes(t)) {
@@ -91,6 +95,8 @@ export default function Page() {
     } catch {}
     setTab("dashboard");
     setNotifOpen(false);
+    // Автоматически включаем пуш-уведомления при входе (клик по кнопке = разрешение браузера)
+    enablePush(r);
     if (r === "committee") {
       toast("Вы вошли как член комитета: доступны подтверждение чеков, создание сборов, расходов и голосований");
     }
@@ -136,7 +142,7 @@ export default function Page() {
             onLogout={logout}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} />}
             {tab === "schedule" && <ScheduleTab committee={committee} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} />}
             {tab === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={openUpload} />}
             {tab === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={reloadExpenses} />}
