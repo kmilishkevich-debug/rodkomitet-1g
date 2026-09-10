@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Ic } from "./Art";
 
 /* Регистрация сервис-воркера + ненавязчивая плашка «Установите приложение».
    Android/Chrome: кнопка «Установить» (beforeinstallprompt).
@@ -78,7 +79,7 @@ export default function PwaSetup() {
           <span>Добавьте на главный экран, чтобы открывать в одно касание</span>
         ) : (
           <span>
-            Нажмите «Поделиться» <span aria-hidden="true">⎋</span> и выберите
+            Нажмите «Поделиться» <span aria-hidden="true"><Ic id="i-share-ios" /></span> и выберите
             «На экран “Домой”»
           </span>
         )}
@@ -89,7 +90,7 @@ export default function PwaSetup() {
         </button>
       )}
       <button className="pwa-banner-close" onClick={dismiss} aria-label="Закрыть">
-        ✕
+        <Ic id="i-x" />
       </button>
     </div>
   );

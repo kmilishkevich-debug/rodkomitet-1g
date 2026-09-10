@@ -25,7 +25,7 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;800&family=Nunito:wght@800;900&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;600;700&family=Onest:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
       </head>

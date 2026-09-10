@@ -1,7 +1,7 @@
 "use client";
-import { Ic } from "./Art";
+import { Ic, CIc } from "./Art";
 import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
-import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, scheduleFocus, subjectEmoji } from "./scheduleData";
+import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, scheduleFocus, subjectIcon } from "./scheduleData";
 
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
@@ -33,22 +33,23 @@ function ScheduleWidget({ liveSchedule, onTab }) {
   return (
     <>
       <div className="sec-head reveal d3">
-        <span className="sec-dot gold">🕐</span>
+        <span className="sec-dot gold"><Ic id="i-clock" /></span>
         <h2 className="sec-title">{title}</h2>
         <span className="sec-note">{lessons.length} урок{lessons.length === 5 ? "ов" : "а"} · каб. 166</span>
       </div>
       <div className="card dash-sched reveal d3">
         {lessons.map((l) => {
           const bell = bellByPos[l.pos];
+          const si = subjectIcon(l.subject);
           return (
             <div className="dash-sched-row" key={l.id}>
               <span className="dash-sched-time">{bell ? `${bell.start_time}–${bell.end_time}` : `${l.pos}-й`}</span>
-              <span className="dash-sched-subj">{subjectEmoji(l.subject)} {l.subject}</span>
+              <span className="dash-sched-subj"><CIc id={si.id} tone={si.tone} size="sm" /> {l.subject}</span>
             </div>
           );
         })}
         {notes.length > 0 && (
-          <div className="dash-sched-note">🎒 Взять с собой: {notes.join(", ").toLowerCase()}</div>
+          <div className="dash-sched-note"><Ic id="i-backpack" /> Взять с собой: {notes.join(", ").toLowerCase()}</div>
         )}
         <div className="dash-sched-foot">
           <span className="muted" style={{ fontSize: 12 }}>Временное расписание · первые 20 учебных дней</span>
@@ -80,14 +81,14 @@ export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroup
             информация аккуратно собрана ниже.
           </p>
           <div className="welcome-chips">
-            <button className="w-chip blue" onClick={() => onTab("votes")}>● Проголосовать за подарки</button>
-            <button className="w-chip pink" onClick={() => onTab("expenses")}>● Посмотреть расходы за сентябрь</button>
+            <button className="w-chip blue" onClick={() => onTab("votes")}><Ic id="i-vote" /> Проголосовать за подарки</button>
+            <button className="w-chip pink" onClick={() => onTab("expenses")}><Ic id="i-receipt" /> Посмотреть расходы за сентябрь</button>
           </div>
         </div>
         <div className="welcome-visual">
           <span className="w-blob green" aria-hidden="true"></span>
           <div className="w-mascot"><img src="/mascot.jpg" alt="Маскот класса 1 «Г»" /></div>
-          <span className="w-sticker">Я собрал всё важное здесь 👋</span>
+          <span className="w-sticker">Я собрал всё важное здесь <Ic id="i-wave" /></span>
         </div>
       </div>
 
@@ -95,7 +96,7 @@ export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroup
         <div className="dstat blue">
           <div className="dstat-top">
             <div className="lbl">Сейчас в кассе</div>
-            <button className="dstat-btn" title="История операций" onClick={() => onTab("history")}>↗</button>
+            <button className="dstat-btn" title="История операций" onClick={() => onTab("history")}><Ic id="i-arrow-up-right" /></button>
           </div>
           <div className="val">{fmt(cash)} BYN</div>
           <div className="note">{liveGroups ? "собрано минус все расходы" : "остаток по таблице класса"}</div>
@@ -103,7 +104,7 @@ export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroup
         <div className="dstat gold">
           <div className="dstat-top">
             <div className="lbl">Собрано за год</div>
-            <button className="dstat-btn dark" title="Сборы" onClick={() => onTab("fees")}>+</button>
+            <button className="dstat-btn dark" title="Сборы" onClick={() => onTab("fees")}><Ic id="i-plus" /></button>
           </div>
           <div className="val">{fmt(TOTAL_COLLECTED)} BYN</div>
           <div className="note">взнос 2026–2027 · {FAMILIES_COUNT} семей</div>
@@ -111,7 +112,7 @@ export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroup
         <div className="dstat pink">
           <div className="dstat-top">
             <div className="lbl">Потрачено</div>
-            <button className="dstat-btn dark" title="Расходы" onClick={() => onTab("expenses")}>−</button>
+            <button className="dstat-btn dark" title="Расходы" onClick={() => onTab("expenses")}><Ic id="i-minus" /></button>
           </div>
           <div className="val">{fmt(spent)} BYN</div>
           <div className="note">{groupsCount} группы расходов</div>
@@ -121,7 +122,7 @@ export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroup
       <ScheduleWidget liveSchedule={liveSchedule} onTab={onTab} />
 
       <div className="sec-head reveal d3">
-        <span className="sec-dot gold">+</span>
+        <span className="sec-dot gold"><Ic id="i-bell" /></span>
         <h2 className="sec-title">Требует вашего внимания</h2>
         <span className="sec-note">2 действия</span>
       </div>
@@ -143,7 +144,7 @@ export default function DashboardTab({ committee, onTab, onOpenUpload, liveGroup
       </div>
 
       <div className="sec-head reveal d4">
-        <span className="sec-dot gold">₿</span>
+        <span className="sec-dot gold"><Ic id="i-coin" /></span>
         <h2 className="sec-title">Активные сборы</h2>
         <span className="sec-note">Показываем сумму, срок и прогресс</span>
       </div>

@@ -6,14 +6,14 @@ const pink = { color: "var(--pink)" };
 export default function HistoryTab({ toast }) {
   return (
     <section id="tab-history">
-      <div className="section-cover" style={{ background: "var(--orange)", color: "#fff" }}>
+      <div className="section-cover reveal d1" style={{ background: "var(--orange)", color: "#fff" }}>
         <svg className="cover-deco"><use href="#i-flower" /></svg>
         <h2><Ic id="i-book" className="ic big" />История операций</h2>
         <button className="btn small white" onClick={() => toast("В полной версии выгрузится Excel-отчёт за выбранный период")}>
           <Ic id="i-download" />Отчёт (Excel)
         </button>
       </div>
-      <div className="card">
+      <div className="card reveal d2">
         <table>
           <tbody>
             <tr><th>Дата</th><th>Событие</th><th>Сумма</th></tr>

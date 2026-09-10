@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Ic } from "./Art";
+import { Ic, MascotPeek } from "./Art";
 import { EXPENSE_GROUPS, fmt, groupTotal } from "./data";
 import { supabase, isLive } from "@/lib/supabase";
 import ExpenseModal from "./ExpenseModal";
@@ -39,11 +39,11 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload }) 
 
   return (
     <section id="tab-expenses">
-      <div className="section-cover" style={{ background: "var(--rose)" }}>
+      <div className="section-cover reveal d1" style={{ background: "var(--rose)" }}>
         <svg className="cover-deco"><use href="#i-flower" /></svg>
         <h2>
           <Ic id="i-receipt" className="ic big" />Расходы{" "}
-          <span style={{ fontFamily: "'Nunito'", fontSize: 13, fontWeight: 700 }}>— как в таблице класса</span>
+          <span style={{ fontFamily: "'Comfortaa'", fontSize: 13, fontWeight: 700 }}>— как в таблице класса</span>
         </h2>
         {committee && (
           <button className="btn small" onClick={openAdd}>
@@ -52,8 +52,16 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload }) 
         )}
       </div>
 
+      {groups.length === 0 && (
+        <div className="card reveal d2 empty-state">
+          <div className="mascot-wrap"><MascotPeek /></div>
+          <b>Пока ни одного расхода</b>
+          <div className="muted">Как только комитет добавит первую покупку, она появится здесь — с ценой, местом закупки и чеком.</div>
+        </div>
+      )}
+
       {groups.map((g) => (
-        <div className="card" key={g.id} style={{ marginBottom: 14 }}>
+        <div className="card reveal d2" key={g.id} style={{ marginBottom: 14 }}>
           <h3 style={{ marginTop: 0 }}>{g.title}</h3>
           <table>
             <tbody>
@@ -94,8 +102,8 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload }) 
                   )}
                   {committee && liveGroups && (
                     <td className="exp-actions">
-                      <button className="mini-btn" title="Изменить" onClick={() => openEdit(i)}>✎</button>
-                      <button className="mini-btn danger" title="Удалить" onClick={() => remove(i)}>✕</button>
+                      <button className="mini-btn" title="Изменить" onClick={() => openEdit(i)}><Ic id="i-edit" /></button>
+                      <button className="mini-btn danger" title="Удалить" onClick={() => remove(i)}><Ic id="i-x" /></button>
                     </td>
                   )}
                 </tr>

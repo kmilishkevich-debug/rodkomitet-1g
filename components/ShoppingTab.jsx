@@ -3,7 +3,7 @@ import { Ic } from "./Art";
 export default function ShoppingTab({ committee, toast }) {
   return (
     <section id="tab-shopping">
-      <div className="section-cover" style={{ background: "var(--teal)", color: "#fff" }}>
+      <div className="section-cover reveal d1" style={{ background: "var(--teal)", color: "#fff" }}>
         <svg className="cover-deco"><use href="#i-spark" /></svg>
         <h2><Ic id="i-cart" className="ic big" />Что ещё нужно купить</h2>
         {committee && (
@@ -12,7 +12,7 @@ export default function ShoppingTab({ committee, toast }) {
           </button>
         )}
       </div>
-      <div className="card">
+      <div className="card reveal d2">
         <table>
           <tbody>
             <tr><th>Позиция</th><th>Ориент. цена</th><th>Статус</th></tr>

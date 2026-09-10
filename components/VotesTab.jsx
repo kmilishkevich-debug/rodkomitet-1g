@@ -42,7 +42,7 @@ export default function VotesTab({ committee, toast }) {
 
   return (
     <section id="tab-votes">
-      <div className="section-cover" style={{ background: "var(--blue)", color: "#fff" }}>
+      <div className="section-cover reveal d1" style={{ background: "var(--blue)", color: "#fff" }}>
         <svg className="cover-deco"><use href="#i-spark" /></svg>
         <h2><Ic id="i-vote" className="ic big" />Голосования</h2>
         {committee && (
@@ -52,7 +52,7 @@ export default function VotesTab({ committee, toast }) {
         )}
       </div>
 
-      <div className="card fee-card">
+      <div className="card fee-card reveal d2">
         <div className="fee-head">
           <div>
             <h3><Ic id="i-gift" />Подарки детям на Новый год</h3>
@@ -83,7 +83,7 @@ export default function VotesTab({ committee, toast }) {
         </div>
       </div>
 
-      <div className="card fee-card">
+      <div className="card fee-card reveal d3">
         <div className="fee-head">
           <div>
             <h3>Покупаем шторы в кабинет за ~180 BYN?</h3>
@@ -96,7 +96,7 @@ export default function VotesTab({ committee, toast }) {
         <div className="muted" style={{ marginTop: 10 }}>Анонимное: видны только итоги, кто как голосовал — не видно никому.</div>
       </div>
 
-      <div className="card flat fee-card" style={{ opacity: 0.72 }}>
+      <div className="card flat fee-card reveal d4" style={{ opacity: 0.72 }}>
         <div className="fee-head">
           <div>
             <h3>Куда едем на осеннюю экскурсию?</h3>

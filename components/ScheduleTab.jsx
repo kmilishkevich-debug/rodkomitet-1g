@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Ic } from "./Art";
+import { Ic, CIc } from "./Art";
 import { supabase, isLive } from "@/lib/supabase";
 import {
   DAY_NAMES,
   BELLS_FALLBACK,
   LESSONS_FALLBACK,
   scheduleFocus,
-  subjectEmoji,
+  subjectIcon,
 } from "./scheduleData";
 
 // Модалка редактирования урока (только для комитета)
@@ -86,19 +86,19 @@ export default function ScheduleTab({ committee, toast, liveSchedule, onReload }
 
   return (
     <section id="tab-schedule">
-      <div className="section-cover" style={{ background: "var(--blue-soft)" }}>
+      <div className="section-cover reveal d1" style={{ background: "var(--blue-soft)" }}>
         <svg className="cover-deco"><use href="#i-spark" /></svg>
         <h2>
           <Ic id="i-clock" className="ic big" />Расписание{" "}
-          <span style={{ fontFamily: "'Nunito'", fontSize: 13, fontWeight: 700 }}>— уроки, звонки и что взять с собой</span>
+          <span style={{ fontFamily: "'Comfortaa'", fontSize: 13, fontWeight: 700 }}>— уроки, звонки и что взять с собой</span>
         </h2>
       </div>
 
-      <div className="sched-badge">
-        ⏳ Временное расписание · действует первые 20 учебных дней (адаптационный период)
+      <div className="sched-badge reveal d2">
+        <Ic id="i-hourglass" /> Временное расписание · действует первые 20 учебных дней (адаптационный период)
       </div>
 
-      <div className="sched-grid">
+      <div className="sched-grid reveal d2">
         {[1, 2, 3, 4, 5].map((day) => {
           const dayLessons = lessons.filter((l) => l.day === day);
           const isFocus = focus.day === day;
@@ -111,6 +111,7 @@ export default function ScheduleTab({ committee, toast, liveSchedule, onReload }
               </div>
               {dayLessons.map((l) => {
                 const bell = bellByPos[l.pos];
+                const si = subjectIcon(l.subject);
                 return (
                   <div className="sched-lesson" key={l.id}>
                     <div className="sched-time">
@@ -118,14 +119,14 @@ export default function ScheduleTab({ committee, toast, liveSchedule, onReload }
                       {bell && <span>{bell.start_time}–{bell.end_time}</span>}
                     </div>
                     <div className="sched-body">
-                      <div className="sched-subject">{subjectEmoji(l.subject)} {l.subject}</div>
+                      <div className="sched-subject"><CIc id={si.id} tone={si.tone} size="sm" /> {l.subject}</div>
                       <div className="sched-meta">
                         {[l.room ? `каб. ${l.room}` : null, l.teacher].filter(Boolean).join(" · ")}
                       </div>
-                      {l.note && <div className="sched-note">🎒 {l.note}</div>}
+                      {l.note && <div className="sched-note"><Ic id="i-backpack" /> {l.note}</div>}
                     </div>
                     {committee && (
-                      <button className="mini-btn" title="Изменить урок" onClick={() => openEdit(l)}>✎</button>
+                      <button className="mini-btn" title="Изменить урок" onClick={() => openEdit(l)}><Ic id="i-edit" /></button>
                     )}
                   </div>
                 );
@@ -136,7 +137,7 @@ export default function ScheduleTab({ committee, toast, liveSchedule, onReload }
 
         <div className="card sched-day bells">
           <div className="sched-day-head">
-            <h3>🔔 Звонки</h3>
+            <h3><CIc id="i-bell" tone="gold" size="sm" /> Звонки</h3>
           </div>
           {bells.map((b) => (
             <div className="sched-lesson" key={b.pos}>
@@ -147,14 +148,14 @@ export default function ScheduleTab({ committee, toast, liveSchedule, onReload }
             </div>
           ))}
           <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-            Перемены по 25 минут — первоклашкам нужно отдыхать 😊
+            Перемены по 25 минут — первоклашкам нужно отдыхать <Ic id="i-smile" />
           </div>
         </div>
       </div>
 
       <div className="muted" style={{ marginTop: 10 }}>
         Кабинет 166 · классный руководитель — Головко Виктория Петровна
-        {committee && " · нажмите ✎ на уроке, чтобы поправить памятку, кабинет или учителя"}
+        {committee && " · нажмите значок карандаша на уроке, чтобы поправить памятку, кабинет или учителя"}
       </div>
 
       <LessonModal

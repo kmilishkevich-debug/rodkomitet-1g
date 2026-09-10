@@ -12,7 +12,7 @@ export default function FeesTab({ committee, toast, onOpenUpload }) {
 
   return (
     <section id="tab-fees">
-      <div className="section-cover" style={{ background: "var(--gold)" }}>
+      <div className="section-cover reveal d1" style={{ background: "var(--gold)" }}>
         <svg className="cover-deco"><use href="#i-flower" /></svg>
         <h2><Ic id="i-coin" className="ic big" />Сборы и взносы</h2>
         {committee && (
@@ -22,7 +22,7 @@ export default function FeesTab({ committee, toast, onOpenUpload }) {
         )}
       </div>
 
-      <div className="card fee-card">
+      <div className="card fee-card reveal d2">
         <div className="fee-head">
           <div>
             <h3>Взнос 2026–2027 <span className="chip violet">годовой</span></h3>
@@ -66,7 +66,7 @@ export default function FeesTab({ committee, toast, onOpenUpload }) {
         )}
       </div>
 
-      <div className="card flat fee-card" style={{ opacity: 0.72 }}>
+      <div className="card flat fee-card reveal d3" style={{ opacity: 0.72 }}>
         <div className="fee-head">
           <div>
             <h3>Рабочие тетради <span className="chip blue">планируется</span></h3>

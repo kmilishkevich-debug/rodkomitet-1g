@@ -67,3 +67,19 @@ export function subjectEmoji(subject) {
   if (s.includes("человек и мир")) return "🌍";
   return "📚";
 }
+
+// SVG-иконка предмета для кружка CIc: {id, tone}
+export function subjectIcon(subject) {
+  const s = (subject || "").toLowerCase();
+  if (s.includes("физич") || s.includes("физкульт")) return { id: "i-sub-ball", tone: "green" };
+  if (s.includes("музык")) return { id: "i-sub-music", tone: "violet" };
+  if (s.includes("информацион")) return { id: "i-sub-news", tone: "blue" };
+  if (s.includes("классный")) return { id: "i-sub-star", tone: "gold" };
+  if (s.includes("изо") || s.includes("рисов")) return { id: "i-sub-art", tone: "pink" };
+  if (s.includes("матем")) return { id: "i-sub-math", tone: "blue" };
+  if (s.includes("белорус")) return { id: "i-sub-abc", tone: "green" };
+  if (s.includes("чтен") || s.includes("литерат")) return { id: "i-sub-read", tone: "orange" };
+  if (s.includes("труд")) return { id: "i-sub-scissors", tone: "rose" };
+  if (s.includes("человек и мир")) return { id: "i-sub-globe", tone: "blue" };
+  return { id: "i-sub-books", tone: "gold" };
+}

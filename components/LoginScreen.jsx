@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { supabase, isLive } from "@/lib/supabase";
+import { Ic } from "./Art";
 
 export default function LoginScreen({ onLogin }) {
   const [email, setEmail] = useState("");
@@ -92,11 +93,11 @@ export default function LoginScreen({ onLogin }) {
                 onChange={(e) => setPassword(e.target.value)}
               />
               <button type="button" className="eye-btn" onClick={() => setShowPass(!showPass)} title="Показать пароль">
-                {showPass ? "🙈" : "👁"}
+                {showPass ? <Ic id="i-eye-off" /> : <Ic id="i-eye" />}
               </button>
             </div>
             <button className="btn-login" onClick={tryLogin} disabled={busy}>
-              {busy ? "Входим…" : "Войти →"}
+              {busy ? "Входим…" : <>Войти <Ic id="i-arrow-right" /></>}
             </button>
             {hint && <div className="login-hint-msg">{hint}</div>}
           </div>
@@ -107,7 +108,7 @@ export default function LoginScreen({ onLogin }) {
               className={"demo-btn parent" + (pendingRole === "parent" ? " selected" : "")}
               onClick={parentEnter}
             >
-              <span className="demo-ic">✿</span>
+              <span className="demo-ic"><Ic id="i-flower" /></span>
               <span>{isLive ? "Войти как родитель" : "Ольга Смирнова"}<small>{isLive ? "просмотр: сборы, расходы, чеки" : "родитель"}</small></span>
             </button>
             {!isLive && (
@@ -115,7 +116,7 @@ export default function LoginScreen({ onLogin }) {
                 className={"demo-btn committee" + (pendingRole === "committee" ? " selected" : "")}
                 onClick={() => pickDemo("committee")}
               >
-                <span className="demo-ic">✦</span>
+                <span className="demo-ic"><Ic id="i-spark" /></span>
                 <span>Кристина М.<small>род. комитет</small></span>
               </button>
             )}

@@ -1,28 +1,28 @@
-import { Ic } from "./Art";
+import { Ic, CIc } from "./Art";
 import { FAMILIES, STAFF, FAMILIES_COUNT } from "./data";
 
 export default function ClassTab({ committee, toast }) {
   return (
     <section id="tab-class">
-      <div className="section-cover" style={{ background: "var(--blue-soft)" }}>
+      <div className="section-cover reveal d1" style={{ background: "var(--blue-soft)" }}>
         <svg className="cover-deco"><use href="#i-flower" /></svg>
         <h2>
           <Ic id="i-users" className="ic big" />Наш класс{" "}
-          <span style={{ fontFamily: "'Nunito'", fontSize: 13, fontWeight: 700 }}>— {FAMILIES_COUNT} семей</span>
+          <span style={{ fontFamily: "'Comfortaa'", fontSize: 13, fontWeight: 700 }}>— {FAMILIES_COUNT} семей</span>
         </h2>
       </div>
 
-      <div className="grid cols2" style={{ marginBottom: 14 }}>
+      <div className="grid cols2 reveal d2" style={{ marginBottom: 14 }}>
         {STAFF.map((s) => (
           <div className="card" key={s.name}>
             <div className="muted" style={{ marginBottom: 4 }}>{s.role}</div>
             <h3 style={{ margin: "0 0 6px" }}>{s.name}</h3>
-            <div>📞 {s.phone}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><CIc id="i-phone" tone="blue" size="sm" /> {s.phone}</div>
           </div>
         ))}
       </div>
 
-      <div className="card" style={{ overflowX: "auto" }}>
+      <div className="card reveal d3" style={{ overflowX: "auto" }}>
         <table>
           <tbody>
             <tr><th>№</th><th>Ребёнок</th><th>Родители</th><th>Телефоны</th></tr>
