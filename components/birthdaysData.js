@@ -122,6 +122,11 @@ export function birthdayEvents(list, committee, today = new Date()) {
 export function inDaysWord(days) {
   if (days === 1) return "завтра";
   if (days === 2) return "послезавтра";
-  if (days >= 3 && days <= 4) return `через ${days} дня`;
-  return `через ${days} дней`;
+  const d10 = days % 10;
+  const d100 = days % 100;
+  const word =
+    d10 === 1 && d100 !== 11 ? "день"
+    : d10 >= 2 && d10 <= 4 && (d100 < 12 || d100 > 14) ? "дня"
+    : "дней";
+  return `через ${days} ${word}`;
 }
