@@ -104,7 +104,7 @@ export default function ScheduleTab({ committee, toast, liveSchedule, onReload }
           const isFocus = focus.day === day;
           return (
             <div className={"card sched-day" + (isFocus ? " today" : "")} key={day}>
-              <div className="sched-day-head">
+              <div className={"sched-day-head dh dh-" + day}>
                 <h3>{DAY_NAMES[day]}</h3>
                 {isFocus && <span className="chip green">{focus.label}</span>}
                 <span className="sched-count">{dayLessons.length} урок{dayLessons.length === 5 ? "ов" : "а"}</span>
@@ -136,7 +136,7 @@ export default function ScheduleTab({ committee, toast, liveSchedule, onReload }
         })}
 
         <div className="card sched-day bells">
-          <div className="sched-day-head">
+          <div className="sched-day-head dh dh-gold">
             <h3><CIc id="i-bell" tone="gold" size="sm" /> Звонки</h3>
           </div>
           {bells.map((b) => (

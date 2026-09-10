@@ -371,6 +371,20 @@ tr:last-child td{border-bottom:none}
 .sched-day.today{border:2px solid var(--blue);box-shadow:0 10px 26px rgba(70,101,207,.14)}
 .sched-day-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .sched-day-head h3{margin:0;font-size:16px}
+/* Цветные шапки дней недели: Пн голубой · Вт золотой · Ср розовый · Чт зелёный · Пт сиреневый */
+.dh{padding:8px 12px;border-radius:14px}
+.dh-1{background:var(--blue-soft)}
+.dh-2{background:var(--gold-soft)}
+.dh-3{background:var(--pink-soft)}
+.dh-4{background:#E7EFD6}
+.dh-5{background:#EAE4F8}
+.dh-gold{background:var(--gold-soft)}
+/* Сегодняшний день — тот же цвет, но чуть насыщеннее (плюс обводка карточки) */
+.sched-day.today .dh-1{background:#C7D3F6}
+.sched-day.today .dh-2{background:#F4E1A0}
+.sched-day.today .dh-3{background:#F8CBDE}
+.sched-day.today .dh-4{background:#D8E5BB}
+.sched-day.today .dh-5{background:#DCD2F3}
 .sched-count{margin-left:auto;font-size:12px;color:var(--muted);font-weight:600}
 .sched-lesson{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px dashed var(--soft-line)}
 .sched-time{display:flex;flex-direction:column;align-items:center;flex:none;width:64px}

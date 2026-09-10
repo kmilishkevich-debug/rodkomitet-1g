@@ -32,7 +32,7 @@ function ScheduleWidget({ liveSchedule, onTab }) {
       : `Уроки ${focus.label} · ${DAY_NAMES[focus.day].toLowerCase()}`;
   return (
     <>
-      <div className="sec-head reveal d3">
+      <div className={"sec-head dh dh-" + focus.day + " reveal d3"}>
         <span className="sec-dot gold"><Ic id="i-clock" /></span>
         <h2 className="sec-title">{title}</h2>
         <span className="sec-note">{lessons.length} урок{lessons.length === 5 ? "ов" : "а"} · каб. 166</span>
