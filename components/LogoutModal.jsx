@@ -1,21 +1,20 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { MascotMood } from "./Art";
 
 /*
-  Окно подтверждения выхода с эмоциональным маскотом.
-  Наводишь на «Пока-пока» — маскот грустнеет, на «Я ещё побуду!» — улыбается.
-  «Пока-пока»: секундка грусти со слёзкой и «До встречи!» → выход.
+  Окно подтверждения выхода с эмоциональным маскотом (спрайт из трёх поз).
+  Наводишь на «Пока-пока» — маскот грустнеет, на «Я ещё побуду!» — радуется.
+  «Пока-пока»: секундка грусти и «До встречи!» → выход.
   «Я ещё побуду!»: радостный прыжок → окно мягко закрывается само.
 */
 export default function LogoutModal({ open, onStay, onLeave }) {
-  const [mood, setMood] = useState("wait"); // wait | sad | happy
+  const [mood, setMood] = useState("idle"); // idle | sad | happy
   const [phase, setPhase] = useState("ask"); // ask | leaving | staying
   const timer = useRef(null);
 
   useEffect(() => {
     if (open) {
-      setMood("wait");
+      setMood("idle");
       setPhase("ask");
     }
     return () => clearTimeout(timer.current);
@@ -25,7 +24,7 @@ export default function LogoutModal({ open, onStay, onLeave }) {
 
   const asking = phase === "ask";
   const hover = (m) => () => asking && setMood(m);
-  const unhover = () => asking && setMood("wait");
+  const unhover = () => asking && setMood("idle");
 
   const leave = () => {
     if (!asking) return;
@@ -41,10 +40,22 @@ export default function LogoutModal({ open, onStay, onLeave }) {
     timer.current = setTimeout(onStay, 800);
   };
 
+  const labels = {
+    idle: "Розовый маскот спокойно ждёт",
+    sad: "Розовый маскот грустит",
+    happy: "Розовый маскот радуется",
+  };
+
   return (
     <div className="overlay" onClick={asking ? stay : undefined}>
       <div className="modal logout-modal" onClick={(e) => e.stopPropagation()}>
-        <MascotMood mood={mood} />
+        <div className="masc-stage" data-state={mood} role="img" aria-label={labels[mood]}>
+          <div className="masc-motion">
+            <div className="masc-frame" data-frame="idle" />
+            <div className="masc-frame" data-frame="sad" />
+            <div className="masc-frame" data-frame="happy" />
+          </div>
+        </div>
         <h3>
           {phase === "leaving" ? "До встречи!" : phase === "staying" ? "Ура, вы остаётесь!" : "Уже уходите?"}
         </h3>

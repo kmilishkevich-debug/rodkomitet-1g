@@ -478,29 +478,19 @@ tr:last-child td{border-bottom:none}
 .logout-modal .muted{margin-bottom:4px}
 .logout-actions{justify-content:center!important;margin-top:16px!important}
 .logout-actions .btn{min-width:124px;justify-content:center}
-.lm-masc{width:132px;height:auto;display:block;margin:0 auto 8px;overflow:visible;transition:transform .3s ease}
-.lm-masc.sad{transform:translateY(4px)}
-.lm-masc.happy{animation:lm-jump .6s ease}
-/* ушки */
-.lm-masc .lm-ear{transform-box:fill-box;transform-origin:50% 100%;transition:transform .35s ease}
-.lm-masc.sad .lm-ear-l{transform:rotate(-38deg)}
-.lm-masc.sad .lm-ear-r{transform:rotate(38deg)}
-.lm-masc.happy .lm-ear-l{transform:rotate(9deg)}
-.lm-masc.happy .lm-ear-r{transform:rotate(-9deg)}
-/* бровки */
-.lm-masc .lm-brow{transform-box:fill-box;transform-origin:center;transition:transform .3s ease,opacity .25s}
-.lm-masc.sad .lm-brow-l{transform:rotate(16deg) translateY(2px)}
-.lm-masc.sad .lm-brow-r{transform:rotate(-16deg) translateY(2px)}
-.lm-masc.happy .lm-brow{opacity:0}
-/* ротики */
-.lm-masc .lm-mouth{opacity:0;transition:opacity .22s ease}
-.lm-masc.wait .lm-m-wait{opacity:1}
-.lm-masc.sad .lm-m-sad{opacity:1}
-.lm-masc.happy .lm-m-happy{opacity:1}
-/* слёзка */
-.lm-masc .lm-tear{opacity:0}
-.lm-masc.sad .lm-tear{animation:lm-tear 1.3s ease-in infinite}
-@keyframes lm-tear{0%{opacity:0;transform:translateY(0)}18%{opacity:1}72%{opacity:1;transform:translateY(13px)}100%{opacity:0;transform:translateY(19px)}}
-@keyframes lm-jump{0%,100%{transform:translateY(0)}32%{transform:translateY(-13px)}58%{transform:translateY(0)}78%{transform:translateY(-5px)}}
+/* маскот-спрайт: три позы в одной картинке, скруглённая карточка */
+.masc-stage{width:180px;aspect-ratio:1;margin:0 auto 10px;position:relative;isolation:isolate;border-radius:28px;overflow:hidden;background:#f5f0fa;box-shadow:0 8px 26px rgba(87,85,162,.12)}
+.masc-motion{position:absolute;inset:0;transform-origin:50% 96%;animation:masc-breathe 4s ease-in-out infinite}
+.masc-frame{position:absolute;inset:0;background-image:url(/mascot-moods.webp);background-size:300% 100%;background-repeat:no-repeat;opacity:0;transition:opacity .3s ease}
+.masc-frame[data-frame=idle]{background-position:0% 50%}
+.masc-frame[data-frame=sad]{background-position:50% 50%}
+.masc-frame[data-frame=happy]{background-position:100% 50%}
+.masc-stage[data-state=idle] [data-frame=idle],.masc-stage[data-state=sad] [data-frame=sad],.masc-stage[data-state=happy] [data-frame=happy]{opacity:1}
+.masc-stage[data-state=sad] .masc-motion{animation:masc-droop 1s ease both}
+.masc-stage[data-state=happy] .masc-motion{animation:masc-joy 1.25s ease-in-out both}
+@keyframes masc-breathe{50%{transform:scale(1.009,1.016)}}
+@keyframes masc-droop{to{transform:translateY(5px) rotate(-1.1deg) scaleY(.985)}}
+@keyframes masc-joy{0%,100%{transform:translateY(0)}20%{transform:translateY(3px) scale(1.015,.98)}44%{transform:translateY(-14px) rotate(1deg)}65%{transform:translateY(0) scale(1.01,.99)}82%{transform:translateY(-5px)}}
+@media(prefers-reduced-motion:reduce){.masc-motion,.masc-frame{animation:none!important;transition:none!important}}
 /* подпись «Выход» — только на широких экранах */
 @media(max-width:760px){.exit-label{display:none}}
