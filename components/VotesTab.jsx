@@ -12,17 +12,15 @@ function VoteOpt({ width, label, pct, voted, onVote }) {
   );
 }
 
-export default function VotesTab({ committee, toast }) {
-  const [vote1, setVote1] = useState(null);
-  const [vote2, setVote2] = useState(null);
+export default function VotesTab({ committee, toast, vote1, vote2, onCast }) {
   const [comments, setComments] = useState([
     { avatarStyle: { background: "var(--blue)", color: "#fff" }, initials: "ИП", name: "Ирина П.", text: "Сладкие наборы в том году зашли отлично, предлагаю повторить 🙂" },
     { avatarStyle: { background: "var(--orange)" }, initials: "ДК", name: "Дмитрий К.", text: "За игрушку — конфет детям и так хватает)" },
   ]);
   const [draft, setDraft] = useState("");
 
-  const cast = (setter, idx) => () => {
-    setter(idx);
+  const cast = (which, idx) => () => {
+    onCast(which, idx);
     toast("Ваш голос учтён ✓ (в полной версии проценты пересчитаются)");
   };
 
@@ -60,9 +58,9 @@ export default function VotesTab({ committee, toast }) {
           </div>
           <span className="chip blue">открытое</span>
         </div>
-        <VoteOpt width="61%" pct="61%" label="Готовые сладкие наборы (~15 BYN/ребёнок)" voted={vote1 === 0} onVote={cast(setVote1, 0)} />
-        <VoteOpt width="28%" pct="28%" label="Игрушка + мини-набор конфет (~18 BYN)" voted={vote1 === 1} onVote={cast(setVote1, 1)} />
-        <VoteOpt width="11%" pct="11%" label="Книга по возрасту (~14 BYN)" voted={vote1 === 2} onVote={cast(setVote1, 2)} />
+        <VoteOpt width="61%" pct="61%" label="Готовые сладкие наборы (~15 BYN/ребёнок)" voted={vote1 === 0} onVote={cast(1, 0)} />
+        <VoteOpt width="28%" pct="28%" label="Игрушка + мини-набор конфет (~18 BYN)" voted={vote1 === 1} onVote={cast(1, 1)} />
+        <VoteOpt width="11%" pct="11%" label="Книга по возрасту (~14 BYN)" voted={vote1 === 2} onVote={cast(1, 2)} />
         <div className="muted" style={{ marginTop: 10 }}>Открытое голосование: видно, кто как проголосовал.</div>
         <h2 style={{ fontSize: 15 }}>Обсуждение</h2>
         {comments.map((c, i) => (
@@ -91,8 +89,8 @@ export default function VotesTab({ committee, toast }) {
           </div>
           <span className="chip violet">анонимное</span>
         </div>
-        <VoteOpt width="67%" pct="67%" label="Да, покупаем" voted={vote2 === 0} onVote={cast(setVote2, 0)} />
-        <VoteOpt width="33%" pct="33%" label="Нет, обойдёмся" voted={vote2 === 1} onVote={cast(setVote2, 1)} />
+        <VoteOpt width="67%" pct="67%" label="Да, покупаем" voted={vote2 === 0} onVote={cast(2, 0)} />
+        <VoteOpt width="33%" pct="33%" label="Нет, обойдёмся" voted={vote2 === 1} onVote={cast(2, 1)} />
         <div className="muted" style={{ marginTop: 10 }}>Анонимное: видны только итоги, кто как голосовал — не видно никому.</div>
       </div>
 

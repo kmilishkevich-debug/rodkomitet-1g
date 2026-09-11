@@ -26,6 +26,20 @@ export default function Page() {
   const [toastMsg, setToastMsg] = useState(null);
   const toastTimer = useRef(null);
 
+  // Маскот на главной: приветствие раз за визит/вход, реакции на дела и выход
+  const mascotRef = useRef(null);
+  const [greetToken, setGreetToken] = useState(0);
+  // Голоса подняты сюда, чтобы не теряться при переключении вкладок
+  const [vote1, setVote1] = useState(null);
+  const [vote2, setVote2] = useState(null);
+  const justVoted = useRef(false);
+  const allDone = vote1 !== null && vote2 !== null;
+  const pendingCount = (vote1 === null ? 1 : 0) + (vote2 === null ? 1 : 0);
+  const castVote = useCallback((which, idx) => {
+    (which === 1 ? setVote1 : setVote2)(idx);
+    justVoted.current = true;
+  }, []);
+
   const toast = useCallback((msg) => {
     setToastMsg(msg);
     clearTimeout(toastTimer.current);
@@ -74,6 +88,7 @@ export default function Page() {
         supabase.auth.getSession().then(({ data }) => {
           if (data.session) {
             setRole("committee");
+            setGreetToken((t) => t + 1); // маскот поздоровается один раз
             syncPushRole("committee"); // тихо обновляем подписку на пуши
           } else {
             try { localStorage.removeItem("rk1g-role"); } catch {}
@@ -81,6 +96,7 @@ export default function Page() {
         });
       } else {
         setRole(saved);
+        setGreetToken((t) => t + 1); // маскот поздоровается один раз
         syncPushRole(saved); // тихо обновляем подписку на пуши
       }
       const t = new URLSearchParams(window.location.search).get("tab");
@@ -92,6 +108,7 @@ export default function Page() {
 
   const login = (r) => {
     setRole(r);
+    setGreetToken((t) => t + 1); // новое приветствие после ручного входа
     try {
       localStorage.setItem("rk1g-role", r);
     } catch {}
@@ -120,6 +137,15 @@ export default function Page() {
     window.scrollTo({ top: 0 });
   };
 
+  // Возврат на главную после отданного голоса — маскот разово радуется
+  useEffect(() => {
+    if (tab === "dashboard" && justVoted.current) {
+      justVoted.current = false;
+      const id = setTimeout(() => mascotRef.current?.success(), 350);
+      return () => clearTimeout(id);
+    }
+  }, [tab]);
+
   const toggleNotif = () => {
     setNotifOpen(!notifOpen);
     setNotifSeen(true);
@@ -142,15 +168,18 @@ export default function Page() {
             notifOpen={notifOpen}
             notifSeen={notifSeen}
             onToggleNotif={toggleNotif}
-            onLogout={() => setLogoutOpen(true)}
+            onLogout={() => {
+              setLogoutOpen(true);
+              mascotRef.current?.sad(); // маскот на главной грустнеет (если она открыта)
+            }}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} mascotRef={mascotRef} allDone={allDone} greetToken={greetToken} pendingCount={pendingCount} />}
             {tab === "schedule" && <ScheduleTab committee={committee} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} />}
             {tab === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={openUpload} />}
             {tab === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={reloadExpenses} />}
             {tab === "shopping" && <ShoppingTab committee={committee} toast={toast} />}
-            {tab === "votes" && <VotesTab committee={committee} toast={toast} />}
+            {tab === "votes" && <VotesTab committee={committee} toast={toast} vote1={vote1} vote2={vote2} onCast={castVote} />}
             {tab === "class" && <ClassTab committee={committee} toast={toast} liveBirthdays={liveBirthdays} />}
             {tab === "history" && <HistoryTab toast={toast} />}
           </main>
@@ -158,7 +187,14 @@ export default function Page() {
         </div>
       )}
       <UploadModal open={upload.open} name={upload.name} sum={upload.sum} onClose={closeUpload} toast={toast} />
-      <LogoutModal open={logoutOpen} onStay={() => setLogoutOpen(false)} onLeave={logout} />
+      <LogoutModal
+        open={logoutOpen}
+        onStay={() => {
+          setLogoutOpen(false);
+          mascotRef.current?.stay(); // «Я ещё побуду!» — маскот радуется
+        }}
+        onLeave={logout}
+      />
       {toastMsg && <div className="toast">{toastMsg}</div>}
     </>
   );

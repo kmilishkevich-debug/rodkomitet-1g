@@ -4,6 +4,7 @@ import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GR
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, scheduleFocus, subjectIcon } from "./scheduleData";
 import { BIRTHDAYS_FALLBACK, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
 import PushSettings from "./PushSettings";
+import ClassMascot from "./ClassMascot";
 
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
@@ -162,8 +163,15 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
   );
 }
 
-export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays }) {
+export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, mascotRef, allDone, greetToken, pendingCount }) {
   const name = committee ? "Кристина" : "Ольга";
+  // Живой счётчик важных дел (по двум активным голосованиям)
+  const headline =
+    pendingCount === 0
+      ? "Все важные дела выполнены"
+      : pendingCount === 1
+        ? "Сегодня есть 1 важное дело"
+        : `Сегодня есть ${pendingCount} важных дела`;
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
   const cash = liveGroups ? TOTAL_COLLECTED - spent : CASH_NOW;
@@ -180,7 +188,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         <div className="welcome-copy">
           <h1 className="welcome-h1">
             {greetWord()}, {name}!<br />
-            <span className="blue">Сегодня есть 2 важных дела</span>
+            <span className="blue">{headline}</span>
           </h1>
           <p className="welcome-sub">
             Сразу показываем только то, что требует вашего внимания. Остальная
@@ -193,8 +201,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         </div>
         <div className="welcome-visual">
           <span className="w-blob green" aria-hidden="true"></span>
-          <div className="w-mascot"><img src="/mascot.jpg" alt="Маскот класса 1 «Г»" /></div>
-          <span className="w-sticker">Я собрал всё важное здесь <Ic id="i-wave" /></span>
+          <ClassMascot ref={mascotRef} allDone={allDone} greetToken={greetToken} />
         </div>
       </div>
 
