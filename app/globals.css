@@ -128,7 +128,9 @@ header{background:var(--cream);position:sticky;top:0;z-index:50;border-bottom:1p
 .avatar{width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;flex:none}
 .role-tag{font-size:11px;color:var(--muted);font-weight:600}
 .name-block div:first-child{font-weight:700}
-.exit-btn{border:none;background:none;font-size:16px;cursor:pointer;padding:4px;color:var(--ink)}
+.exit-btn{border:none;background:none;font-size:16px;cursor:pointer;padding:4px 6px;color:var(--ink);display:flex;align-items:center;gap:5px;border-radius:10px;transition:.15s}
+.exit-btn:hover{background:var(--input)}
+.exit-label{font-family:'Onest';font-weight:800;font-size:12.5px}
 
 /* top nav (desktop) */
 nav.topnav{max-width:1080px;margin:0 auto;display:flex;gap:8px;padding:10px 16px;overflow-x:auto}
@@ -469,3 +471,36 @@ tr:last-child td{border-bottom:none}
 .push-steps li::before{content:counter(pstep);flex:none;width:22px;height:22px;border-radius:50%;background:var(--gold-soft);color:var(--ink);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
 .push-step-ico{flex:none;width:32px;height:32px;border-radius:10px;background:var(--blue-soft);display:flex;align-items:center;justify-content:center}
 .push-step-ico .ic{width:16px;height:16px;color:var(--teal-deep)}
+
+/* ===== Окно выхода с эмоциональным маскотом ===== */
+.logout-modal{text-align:center;max-width:360px}
+.logout-modal h3{margin-top:2px}
+.logout-modal .muted{margin-bottom:4px}
+.logout-actions{justify-content:center!important;margin-top:16px!important}
+.logout-actions .btn{min-width:124px;justify-content:center}
+.lm-masc{width:132px;height:auto;display:block;margin:0 auto 8px;overflow:visible;transition:transform .3s ease}
+.lm-masc.sad{transform:translateY(4px)}
+.lm-masc.happy{animation:lm-jump .6s ease}
+/* ушки */
+.lm-masc .lm-ear{transform-box:fill-box;transform-origin:50% 100%;transition:transform .35s ease}
+.lm-masc.sad .lm-ear-l{transform:rotate(-38deg)}
+.lm-masc.sad .lm-ear-r{transform:rotate(38deg)}
+.lm-masc.happy .lm-ear-l{transform:rotate(9deg)}
+.lm-masc.happy .lm-ear-r{transform:rotate(-9deg)}
+/* бровки */
+.lm-masc .lm-brow{transform-box:fill-box;transform-origin:center;transition:transform .3s ease,opacity .25s}
+.lm-masc.sad .lm-brow-l{transform:rotate(16deg) translateY(2px)}
+.lm-masc.sad .lm-brow-r{transform:rotate(-16deg) translateY(2px)}
+.lm-masc.happy .lm-brow{opacity:0}
+/* ротики */
+.lm-masc .lm-mouth{opacity:0;transition:opacity .22s ease}
+.lm-masc.wait .lm-m-wait{opacity:1}
+.lm-masc.sad .lm-m-sad{opacity:1}
+.lm-masc.happy .lm-m-happy{opacity:1}
+/* слёзка */
+.lm-masc .lm-tear{opacity:0}
+.lm-masc.sad .lm-tear{animation:lm-tear 1.3s ease-in infinite}
+@keyframes lm-tear{0%{opacity:0;transform:translateY(0)}18%{opacity:1}72%{opacity:1;transform:translateY(13px)}100%{opacity:0;transform:translateY(19px)}}
+@keyframes lm-jump{0%,100%{transform:translateY(0)}32%{transform:translateY(-13px)}58%{transform:translateY(0)}78%{transform:translateY(-5px)}}
+/* подпись «Выход» — только на широких экранах */
+@media(max-width:760px){.exit-label{display:none}}

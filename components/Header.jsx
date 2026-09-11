@@ -23,7 +23,9 @@ export default function Header({ committee, tab, onTab, onLogout }) {
             <div id="userName">{committee ? "Кристина М." : "Ольга Смирнова"}</div>
             <div className="role-tag" id="userRole">{committee ? "член комитета" : "родитель"}</div>
           </div>
-          <button className="exit-btn" onClick={onLogout} title="Выйти"><Ic id="i-power" /></button>
+          <button className="exit-btn" onClick={onLogout} title="Выйти">
+            <Ic id="i-door" /><span className="exit-label">Выход</span>
+          </button>
         </div>
       </div>
       <nav className="topnav" id="mainNav">

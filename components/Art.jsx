@@ -118,6 +118,11 @@ export function Sprite() {
       <path d="M12 3.5v8"/>
       <path d="M7.1 6.3a7.4 7.4 0 1 0 9.8 0"/>
     </symbol>
+    <symbol id="i-door" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M13.5 3.5H6.8A1.8 1.8 0 0 0 5 5.3v13.4a1.8 1.8 0 0 0 1.8 1.8h6.7"/>
+      <path d="M16 8.5 19.5 12 16 15.5"/>
+      <path d="M10.5 12h8.5"/>
+    </symbol>
     <symbol id="i-share-ios" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 3.5v10.5M12 3.5 8.5 7M12 3.5 15.5 7"/>
       <path d="M5.5 11v7.5A1.5 1.5 0 0 0 7 20h10a1.5 1.5 0 0 0 1.5-1.5V11"/>
@@ -342,6 +347,39 @@ export function MascotPhone({ className }) {
   return (
     <svg className={className} viewBox="0 0 100 90">
       <use href="#i-masc-phone" />
+    </svg>
+  );
+}
+
+/* Маскот с эмоциями для окна выхода: mood = "wait" | "sad" | "happy" */
+export function MascotMood({ mood = "wait", className = "" }) {
+  return (
+    <svg className={`lm-masc ${mood} ${className}`} viewBox="0 -14 100 102" aria-hidden="true">
+      {/* ушки-хохолки: опускаются в грусти, поднимаются в радости */}
+      <g className="lm-ear lm-ear-l">
+        <path d="M34 14 q-8 -20 6 -23 q11 -2 10 14" fill="#4665CF" stroke="#171717" strokeWidth="3" strokeLinejoin="round" />
+      </g>
+      <g className="lm-ear lm-ear-r">
+        <path d="M68 14 q8 -20 -6 -23 q-11 -2 -10 14" fill="#4665CF" stroke="#171717" strokeWidth="3" strokeLinejoin="round" />
+      </g>
+      {/* пушистая голова — как у остальных маскотов приложения */}
+      <path d="M50 14 q13 -6 12 4 q11 -3 8 7 q10 1 4 9 q9 4 0 10 q6 8 -6 9 q2 10 -10 7 q-2 10 -12 5 q-6 8 -13 1 q-10 5 -12 -5 q-11 2 -8 -9 q-9 -2 -3 -10 q-8 -6 1 -11 q-5 -9 6 -9 q-1 -11 10 -7 q3 -9 11 -3 q5 -7 12 2Z" fill="#4665CF" stroke="#171717" strokeWidth="3" strokeLinejoin="round" />
+      {/* бровки */}
+      <path className="lm-brow lm-brow-l" d="M34 32 q5 -3 10 -1" fill="none" stroke="#171717" strokeWidth="2.4" strokeLinecap="round" />
+      <path className="lm-brow lm-brow-r" d="M68 32 q-5 -3 -10 -1" fill="none" stroke="#171717" strokeWidth="2.4" strokeLinecap="round" />
+      {/* глазки */}
+      <g className="eyes-sm">
+        <circle cx="40" cy="42" r="5.2" fill="#171717" /><circle cx="42" cy="40.5" r="1.7" fill="#fff" />
+        <circle cx="62" cy="42" r="5.2" fill="#171717" /><circle cx="64" cy="40.5" r="1.7" fill="#fff" />
+      </g>
+      {/* слёзка (видна только в грусти) */}
+      <path className="lm-tear" d="M38 50 q3.2 4.6 0 7 q-3.2 -2.4 0 -7Z" fill="#8FC3F5" stroke="#171717" strokeWidth="1.6" strokeLinejoin="round" />
+      {/* щёчки */}
+      <circle cx="30" cy="50" r="3.6" fill="#F6C5D8" opacity=".85" /><circle cx="72" cy="50" r="3.6" fill="#F6C5D8" opacity=".85" />
+      {/* ротики: тревожный / грустный / улыбка */}
+      <circle className="lm-mouth lm-m-wait" cx="51" cy="58" r="3.4" fill="#E8598E" stroke="#171717" strokeWidth="2" />
+      <path className="lm-mouth lm-m-sad" d="M43 61 q8 -8 16 0" fill="none" stroke="#171717" strokeWidth="2.6" strokeLinecap="round" />
+      <path className="lm-mouth lm-m-happy" d="M42 55 q5 -5 9 -1 q4 -4 9 1 q-5 10 -18 0Z" fill="#E8598E" stroke="#171717" strokeWidth="2.2" strokeLinejoin="round" />
     </svg>
   );
 }

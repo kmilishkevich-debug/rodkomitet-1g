@@ -12,6 +12,7 @@ import HistoryTab from "@/components/HistoryTab";
 import ClassTab from "@/components/ClassTab";
 import ScheduleTab from "@/components/ScheduleTab";
 import UploadModal from "@/components/UploadModal";
+import LogoutModal from "@/components/LogoutModal";
 import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays } from "@/lib/supabase";
 import { enablePush, syncPushRole } from "@/lib/push";
 
@@ -21,6 +22,7 @@ export default function Page() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifSeen, setNotifSeen] = useState(false);
   const [upload, setUpload] = useState({ open: false, name: "—", sum: "—" });
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
   const toastTimer = useRef(null);
 
@@ -103,6 +105,7 @@ export default function Page() {
   };
 
   const logout = () => {
+    setLogoutOpen(false);
     setRole(null);
     setNotifOpen(false);
     try {
@@ -139,7 +142,7 @@ export default function Page() {
             notifOpen={notifOpen}
             notifSeen={notifSeen}
             onToggleNotif={toggleNotif}
-            onLogout={logout}
+            onLogout={() => setLogoutOpen(true)}
           />
           <main>
             {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} />}
@@ -155,6 +158,7 @@ export default function Page() {
         </div>
       )}
       <UploadModal open={upload.open} name={upload.name} sum={upload.sum} onClose={closeUpload} toast={toast} />
+      <LogoutModal open={logoutOpen} onStay={() => setLogoutOpen(false)} onLeave={logout} />
       {toastMsg && <div className="toast">{toastMsg}</div>}
     </>
   );
