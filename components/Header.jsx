@@ -15,11 +15,15 @@ const TABS = [
 // Однократное проигрывание анимации иконки при нажатии (демо-механика play)
 function playOnce(e) {
   const b = e.currentTarget;
-  b.classList.remove("nvi-play");
-  void b.offsetWidth;
-  b.classList.add("nvi-play");
-  clearTimeout(b._nviTimer);
-  b._nviTimer = setTimeout(() => b.classList.remove("nvi-play"), 700);
+  // Откладываем на тик: при смене вкладки React перезаписывает className
+  // и стирает класс, добавленный синхронно. После перерисовки класс живёт.
+  setTimeout(() => {
+    b.classList.remove("nvi-play");
+    void b.offsetWidth;
+    b.classList.add("nvi-play");
+    clearTimeout(b._nviTimer);
+    b._nviTimer = setTimeout(() => b.classList.remove("nvi-play"), 700);
+  }, 0);
 }
 
 export default function Header({ committee, tab, onTab, onLogout }) {

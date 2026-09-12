@@ -583,5 +583,6 @@ nav.bottomnav button.nvi-host.active{background:#4965D9;color:#fff;padding:5px 5
 @keyframes nvi-check{0%{stroke-dashoffset:33}100%{stroke-dashoffset:0}}
 @keyframes nvi-person{50%{transform:translateY(-5px)}100%{transform:none}}
 @keyframes nvi-corner{50%{transform:rotate(-22deg)}100%{transform:none}}
+@keyframes nvi-window-light{50%{fill:#ffbc26;filter:drop-shadow(0 0 4px #ffcf54)}}
 /* reduced-motion: движение выключено, активный цвет и подложка остаются */
 @media(prefers-reduced-motion:reduce){.nvi *{animation:none!important;transition:none!important}.nvi .spark{opacity:0!important}}
