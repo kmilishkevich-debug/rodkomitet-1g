@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Ic } from "./Art";
+import NavIcon from "./NavIcons";
 
 function VoteOpt({ width, label, pct, voted, onVote }) {
   return (
@@ -42,7 +43,7 @@ export default function VotesTab({ committee, toast, vote1, vote2, onCast }) {
     <section id="tab-votes">
       <div className="section-cover reveal d1" style={{ background: "var(--blue)", color: "#fff" }}>
         <svg className="cover-deco"><use href="#i-spark" /></svg>
-        <h2><Ic id="i-vote" className="ic big" />Голосования</h2>
+        <h2><NavIcon name="votes" uid="h-votes" size={32} className="nvi-big" />Голосования</h2>
         {committee && (
           <button className="btn small gold" onClick={() => toast("В полной версии — создание голосования: вопрос, варианты, дедлайн, открытое/анонимное")}>
             <Ic id="i-plus" />Создать

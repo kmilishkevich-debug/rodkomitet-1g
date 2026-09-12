@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Ic, MascotPeek } from "./Art";
+import NavIcon from "./NavIcons";
 import { EXPENSE_GROUPS, fmt, groupTotal } from "./data";
 import { supabase, isLive } from "@/lib/supabase";
 import ExpenseModal from "./ExpenseModal";
@@ -42,7 +43,7 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload }) 
       <div className="section-cover reveal d1" style={{ background: "var(--rose)" }}>
         <svg className="cover-deco"><use href="#i-flower" /></svg>
         <h2>
-          <Ic id="i-receipt" className="ic big" />Расходы{" "}
+          <NavIcon name="expenses" uid="h-expenses" size={32} className="nvi-big" />Расходы{" "}
           <span style={{ fontFamily: "'Comfortaa'", fontSize: 13, fontWeight: 700 }}>— как в таблице класса</span>
         </h2>
         {committee && (

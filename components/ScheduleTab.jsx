@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Ic, CIc } from "./Art";
+import NavIcon from "./NavIcons";
 import { supabase, isLive } from "@/lib/supabase";
 import { sendManualPush } from "@/lib/push";
 import {
@@ -97,7 +98,7 @@ export default function ScheduleTab({ committee, toast, liveSchedule, onReload }
       <div className="section-cover reveal d1" style={{ background: "var(--blue-soft)" }}>
         <svg className="cover-deco"><use href="#i-spark" /></svg>
         <h2>
-          <Ic id="i-clock" className="ic big" />Расписание{" "}
+          <NavIcon name="schedule" uid="h-schedule" size={32} className="nvi-big" />Расписание{" "}
           <span style={{ fontFamily: "'Comfortaa'", fontSize: 13, fontWeight: 700 }}>— уроки, звонки и что взять с собой</span>
         </h2>
       </div>

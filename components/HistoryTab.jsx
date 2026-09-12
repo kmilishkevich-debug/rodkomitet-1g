@@ -1,4 +1,5 @@
 import { Ic } from "./Art";
+import NavIcon from "./NavIcons";
 
 const teal = { color: "var(--teal-deep)" };
 const pink = { color: "var(--pink)" };
@@ -8,7 +9,7 @@ export default function HistoryTab({ toast }) {
     <section id="tab-history">
       <div className="section-cover reveal d1" style={{ background: "var(--orange)", color: "#fff" }}>
         <svg className="cover-deco"><use href="#i-flower" /></svg>
-        <h2><Ic id="i-book" className="ic big" />История операций</h2>
+        <h2><NavIcon name="history" uid="h-history" size={32} className="nvi-big" />История операций</h2>
         <button className="btn small white" onClick={() => toast("В полной версии выгрузится Excel-отчёт за выбранный период")}>
           <Ic id="i-download" />Отчёт (Excel)
         </button>

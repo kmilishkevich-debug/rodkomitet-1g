@@ -1,4 +1,5 @@
 import { Ic, CIc } from "./Art";
+import NavIcon from "./NavIcons";
 import { FAMILIES, STAFF, FAMILIES_COUNT } from "./data";
 import { BIRTHDAYS_FALLBACK, fmtBd, bdName, bdInfo, BD_MONTHS } from "./birthdaysData";
 
@@ -56,7 +57,7 @@ export default function ClassTab({ committee, toast, liveBirthdays }) {
       <div className="section-cover reveal d1" style={{ background: "var(--blue-soft)" }}>
         <svg className="cover-deco"><use href="#i-flower" /></svg>
         <h2>
-          <Ic id="i-users" className="ic big" />Наш класс{" "}
+          <NavIcon name="class" uid="h-class" size={32} className="nvi-big" />Наш класс{" "}
           <span style={{ fontFamily: "'Comfortaa'", fontSize: 13, fontWeight: 700 }}>— {FAMILIES_COUNT} семей</span>
         </h2>
       </div>

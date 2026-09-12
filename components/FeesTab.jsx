@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Ic } from "./Art";
+import NavIcon from "./NavIcons";
 import { FEES, FAMILIES_COUNT, TOTAL_COLLECTED, fmt } from "./data";
 
 export default function FeesTab({ committee, toast, onOpenUpload }) {
@@ -14,7 +15,7 @@ export default function FeesTab({ committee, toast, onOpenUpload }) {
     <section id="tab-fees">
       <div className="section-cover reveal d1" style={{ background: "var(--gold)" }}>
         <svg className="cover-deco"><use href="#i-flower" /></svg>
-        <h2><Ic id="i-coin" className="ic big" />Сборы и взносы</h2>
+        <h2><NavIcon name="fees" uid="h-fees" size={32} className="nvi-big" />Сборы и взносы</h2>
         {committee && (
           <button className="btn small" onClick={() => toast("В полной версии откроется форма создания сбора")}>
             <Ic id="i-plus" />Новый сбор

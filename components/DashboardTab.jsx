@@ -1,5 +1,6 @@
 "use client";
 import { Ic, CIc } from "./Art";
+import NavIcon from "./NavIcons";
 import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, scheduleFocus, subjectIcon } from "./scheduleData";
 import { BIRTHDAYS_FALLBACK, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
@@ -36,7 +37,7 @@ function ScheduleWidget({ liveSchedule, onTab }) {
   return (
     <>
       <div className={"sec-head dh dh-" + focus.day + " reveal d3"}>
-        <span className="sec-dot gold"><Ic id="i-clock" /></span>
+        <span className="sec-dot gold"><NavIcon name="schedule" uid="d-sched" size={20} /></span>
         <h2 className="sec-title">{title}</h2>
         <span className="sec-note">{lessons.length} урок{lessons.length === 5 ? "ов" : "а"} · каб. 166</span>
       </div>
@@ -195,8 +196,8 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
             информация аккуратно собрана ниже.
           </p>
           <div className="welcome-chips">
-            <button className="w-chip blue" onClick={() => onTab("votes")}><Ic id="i-vote" /> Проголосовать за подарки</button>
-            <button className="w-chip pink" onClick={() => onTab("expenses")}><Ic id="i-receipt" /> Посмотреть расходы за сентябрь</button>
+            <button className="w-chip blue" onClick={() => onTab("votes")}><NavIcon name="votes" uid="d-votes" size={18} className="nvi-inline" /> Проголосовать за подарки</button>
+            <button className="w-chip pink" onClick={() => onTab("expenses")}><NavIcon name="expenses" uid="d-exp" size={18} className="nvi-inline" /> Посмотреть расходы за сентябрь</button>
           </div>
         </div>
         <div className="welcome-visual">
@@ -242,7 +243,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         <span className="sec-note">2 действия</span>
       </div>
       <div className="attn-card reveal d3">
-        <div className="attn-ico pink"><Ic id="i-vote" /></div>
+        <div className="attn-ico pink"><NavIcon name="votes" uid="d-attn-vote" size={26} /></div>
         <div className="attn-body">
           <div className="attn-title">Подарки детям на Новый год</div>
           <div className="attn-sub">Голосование открыто до 10 сентября · ответили 18 из 27 семей</div>
@@ -250,7 +251,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         <button className="pill-btn pink" onClick={() => onTab("votes")}>Проголосовать</button>
       </div>
       <div className="attn-card reveal d3">
-        <div className="attn-ico blue"><Ic id="i-clock" /></div>
+        <div className="attn-ico blue"><NavIcon name="schedule" uid="d-attn-sched" size={26} /></div>
         <div className="attn-body">
           <div className="attn-title">Рабочие тетради на класс</div>
           <div className="attn-sub">Закупка планируется · белорусский язык, человек и мир, трудовое обучение, ИЗО</div>
@@ -259,7 +260,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       </div>
 
       <div className="sec-head reveal d4">
-        <span className="sec-dot gold"><Ic id="i-coin" /></span>
+        <span className="sec-dot gold"><NavIcon name="fees" uid="d-fees" size={20} /></span>
         <h2 className="sec-title">Активные сборы</h2>
         <span className="sec-note">Показываем сумму, срок и прогресс</span>
       </div>

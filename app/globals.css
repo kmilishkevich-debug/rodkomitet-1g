@@ -539,3 +539,49 @@ tr:last-child td{border-bottom:none}
 @media(prefers-reduced-motion:reduce){.masc-motion,.masc-frame{animation:none!important;transition:none!important}}
 /* подпись «Выход» — только на широких экранах */
 @media(max-width:760px){.exit-label{display:none}}
+
+/* ===== Объёмные иконки навигации (nvi-). Источник: navigation-icons-volume.html ===== */
+.nvi{display:block;flex:none;overflow:visible}
+.nvi-big{vertical-align:-8px}
+.nvi-inline{vertical-align:-5px;display:inline-block}
+/* плашки навигации: цвета по ТЗ */
+nav.topnav button.nvi-host{gap:9px;color:#26314A;padding:7px 17px 7px 10px}
+nav.topnav button.nvi-host.active{background:#4965D9;color:#fff;box-shadow:0 5px 13px rgba(73,101,217,.13)}
+nav.bottomnav button.nvi-host{padding:5px 3px;gap:4px}
+nav.bottomnav button.nvi-host.active{background:#4965D9;color:#fff;padding:5px 5px}
+/* светлая круглая подложка за иконкой активной вкладки */
+.nvi-host.active .nvi{background:#f5f3ff;border-radius:50%}
+.nvi-host:focus-visible{outline:3px solid #d59b46;outline-offset:2px}
+/* геометрия анимируемых групп (внутри .nvi классы изолированы) */
+.nvi .object{transform-origin:40px 60px}
+.nvi .spark{opacity:0;transform-origin:68px 17px}
+.nvi .page{transform-origin:39px 32px}
+.nvi .handle{transform-origin:39px 34px}
+.nvi .corner{transform-origin:58px 59px}
+.nvi .person,.nvi .coin,.nvi .receipt{transform-box:fill-box;transform-origin:center}
+.nvi .check{stroke-dasharray:33;stroke-dashoffset:0}
+.nvi .window{transition:filter .3s}
+/* окошко домика светится, пока курсор/фокус на кнопке */
+.nvi-host:hover .nvi .window,.nvi-host:focus-visible .nvi .window{fill:#ffbc26;filter:drop-shadow(0 0 4px #ffcf54)}
+/* однократные анимации: hover / focus / нажатие (.nvi-play), 450–650 мс, без циклов */
+.nvi-host:is(:hover,:focus-visible,.nvi-play) .nvi .object{animation:nvi-object-pop .6s cubic-bezier(.2,.8,.3,1) both}
+.nvi-host:is(:hover,:focus-visible,.nvi-play) .nvi .spark{animation:nvi-spark .6s ease both}
+.nvi-host:is(:hover,:focus-visible,.nvi-play) .nvi .page{animation:nvi-page .6s ease both}
+.nvi-host:is(:hover,:focus-visible,.nvi-play) .nvi .coin{animation:nvi-coin .65s ease both}
+.nvi-host:is(:hover,:focus-visible,.nvi-play) .nvi .receipt{animation:nvi-receipt .6s ease both}
+.nvi-host:is(:hover,:focus-visible,.nvi-play) .nvi .handle{animation:nvi-handle .6s ease both}
+.nvi-host:is(:hover,:focus-visible,.nvi-play) .nvi .check{animation:nvi-check .55s ease both}
+.nvi-host:is(:hover,:focus-visible,.nvi-play) .nvi .person{animation:nvi-person .6s ease both}
+.nvi-host:is(:hover,:focus-visible,.nvi-play) .nvi .corner{animation:nvi-corner .6s ease both}
+.nvi-host.nvi-play .nvi .window{animation:nvi-window-light .5s ease both}
+@keyframes nvi-object-pop{0%,100%{transform:none}40%{transform:translateY(-3px) rotate(-4deg)}70%{transform:translateY(-1px) rotate(2deg)}}
+@keyframes nvi-spark{0%,100%{opacity:0;transform:scale(.2) rotate(-20deg)}45%,65%{opacity:1;transform:scale(1) rotate(8deg)}}
+@keyframes nvi-page{45%{transform:translateY(-4px) rotate(-6deg)}100%{transform:none}}
+@keyframes nvi-coin{0%{transform:translateY(-5px);opacity:0}25%{opacity:1}68%{transform:translateY(14px);opacity:0}69%{transform:translateY(-5px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes nvi-receipt{50%{transform:translateY(-5px)}100%{transform:none}}
+@keyframes nvi-handle{30%{transform:rotate(-12deg)}65%{transform:rotate(6deg)}100%{transform:none}}
+@keyframes nvi-check{0%{stroke-dashoffset:33}100%{stroke-dashoffset:0}}
+@keyframes nvi-person{50%{transform:translateY(-5px)}100%{transform:none}}
+@keyframes nvi-corner{50%{transform:rotate(-22deg)}100%{transform:none}}
+/* reduced-motion: движение выключено, активный цвет и подложка остаются */
+@media(prefers-reduced-motion:reduce){.nvi *{animation:none!important;transition:none!important}.nvi .spark{opacity:0!important}}

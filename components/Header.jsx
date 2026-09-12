@@ -1,4 +1,5 @@
 import { Ic } from "./Art";
+import NavIcon from "./NavIcons";
 
 const TABS = [
   { id: "dashboard", icon: "i-home", label: "Главная" },
@@ -10,6 +11,16 @@ const TABS = [
   { id: "class", icon: "i-users", label: "Класс" },
   { id: "history", icon: "i-book", label: "История" },
 ];
+
+// Однократное проигрывание анимации иконки при нажатии (демо-механика play)
+function playOnce(e) {
+  const b = e.currentTarget;
+  b.classList.remove("nvi-play");
+  void b.offsetWidth;
+  b.classList.add("nvi-play");
+  clearTimeout(b._nviTimer);
+  b._nviTimer = setTimeout(() => b.classList.remove("nvi-play"), 700);
+}
 
 export default function Header({ committee, tab, onTab, onLogout }) {
   return (
@@ -30,8 +41,14 @@ export default function Header({ committee, tab, onTab, onLogout }) {
       </div>
       <nav className="topnav" id="mainNav">
         {TABS.map((t) => (
-          <button key={t.id} data-tab={t.id} className={tab === t.id ? "active" : ""} onClick={() => onTab(t.id)}>
-            <Ic id={t.icon} />{t.label}
+          <button
+            key={t.id}
+            data-tab={t.id}
+            className={"nvi-host" + (tab === t.id ? " active" : "")}
+            aria-current={tab === t.id ? "page" : undefined}
+            onClick={(e) => { playOnce(e); onTab(t.id); }}
+          >
+            <NavIcon name={t.id} uid={"top-" + t.id} size={36} />{t.label}
           </button>
         ))}
       </nav>
@@ -48,8 +65,14 @@ export function BottomNav({ tab, onTab }) {
   return (
     <nav className="bottomnav" id="bottomNav">
       {items.map((t) => (
-        <button key={t.id} data-tab={t.id} className={tab === t.id ? "active" : ""} onClick={() => onTab(t.id)}>
-          <Ic id={t.icon} className="ic mid" />{t.label}
+        <button
+          key={t.id}
+          data-tab={t.id}
+          className={"nvi-host" + (tab === t.id ? " active" : "")}
+          aria-current={tab === t.id ? "page" : undefined}
+          onClick={(e) => { playOnce(e); onTab(t.id); }}
+        >
+          <NavIcon name={t.id} uid={"bot-" + t.id} size={36} />{t.label}
         </button>
       ))}
     </nav>
