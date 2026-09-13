@@ -138,7 +138,7 @@ nav.topnav button{border:none;background:#fff;padding:9px 17px;font-size:13.5px;
 nav.topnav button:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(23,23,23,.1)}
 nav.topnav button.active{background:var(--ink);color:#fff}
 /* bottom nav (mobile) */
-nav.bottomnav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--soft-line);z-index:60;justify-content:space-around;padding:10px 4px calc(12px + env(safe-area-inset-bottom))}
+nav.bottomnav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--soft-line);z-index:60;justify-content:space-around;padding:10px 2px calc(12px + env(safe-area-inset-bottom))}
 nav.bottomnav button{border:none;background:none;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 9px;border-radius:14px;font-family:'Onest';transition:.15s}
 nav.bottomnav button.active{color:#fff;background:var(--ink);padding:8px 11px}
 @media(max-width:760px){
@@ -547,8 +547,9 @@ tr:last-child td{border-bottom:none}
 /* плашки навигации: цвета по ТЗ */
 nav.topnav button.nvi-host{gap:8px;color:#26314A;padding:7px 13px 7px 9px}
 nav.topnav button.nvi-host.active{background:#4965D9;color:#fff;box-shadow:0 5px 13px rgba(73,101,217,.13)}
-nav.bottomnav button.nvi-host{padding:5px 3px;gap:4px}
-nav.bottomnav button.nvi-host.active{background:#4965D9;color:#fff;padding:5px 5px}
+nav.bottomnav button.nvi-host{flex:1 1 0;min-width:0;padding:4px 1px;gap:3px;font-size:9.5px}
+nav.bottomnav button.nvi-host.active{background:#4965D9;color:#fff;padding:4px 1px}
+nav.bottomnav .nvi{width:32px;height:32px}
 /* светлая круглая подложка за иконкой активной вкладки */
 .nvi-host.active .nvi{background:#f5f3ff;border-radius:50%}
 .nvi-host:focus-visible{outline:3px solid #d59b46;outline-offset:2px}
