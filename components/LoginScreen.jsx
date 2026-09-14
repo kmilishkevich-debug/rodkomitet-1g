@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { supabase, isLive } from "@/lib/supabase";
+import { supabase, isLive, fetchUserRole } from "@/lib/supabase";
 import { Ic } from "./Art";
 
 export default function LoginScreen({ onLogin }) {
@@ -34,12 +34,15 @@ export default function LoginScreen({ onLogin }) {
       setBusy(true);
       setHint(null);
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      setBusy(false);
       if (error) {
+        setBusy(false);
         setHint("Неверная почта или пароль. Попробуйте ещё раз.");
         return;
       }
-      onLogin("committee");
+      // Смотрим роль: учитель получает доступ только к расписанию
+      const roleData = await fetchUserRole();
+      setBusy(false);
+      onLogin(roleData?.role === "teacher" ? "teacher" : "committee");
       return;
     }
     if (pendingRole) {

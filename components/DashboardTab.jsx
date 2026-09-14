@@ -3,6 +3,7 @@ import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FEE_ONLY_DEDUCTIONS, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, scheduleFocus, subjectIcon } from "./scheduleData";
+import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu } from "./scheduleOverrides";
 import { BIRTHDAYS_FALLBACK, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
 import PushSettings from "./PushSettings";
 import ClassMascot from "./ClassMascot";
@@ -22,12 +23,35 @@ function greetWord() {
   return "Добрый вечер";
 }
 
+// Баннер на главной: активное изменение расписания на день из мини-виджета
+function ScheduleChangeBanner({ activeOvs, focusIso, focusLabel, endTime, toast, onTab }) {
+  if (!activeOvs.length) return null;
+  const total = activeOvs.reduce((s, ov) => s + (ov.changes || []).length, 0);
+  const comment = activeOvs.map((ov) => ov.comment).filter(Boolean).join(" · ");
+  return (
+    <div className="attn-card reveal d1" style={{ background: "var(--gold-soft, #fdf3d8)" }}>
+      <div className="attn-ico blue"><NavIcon name="schedule" uid="d-sched-chg" size={26} /></div>
+      <div className="attn-body">
+        <div className="attn-title">Изменение расписания на {fmtDateRu(focusIso)}</div>
+        <div className="attn-sub">
+          {total === 1 ? "1 урок изменён" : `Изменено уроков: ${total}`}
+          {endTime ? ` · занятия ${focusLabel} закончатся в ${endTime}` : ""}
+          {comment ? ` · ${comment}` : ""}
+        </div>
+      </div>
+      <button className="pill-btn blue" onClick={() => onTab("schedule")}>Подробнее</button>
+    </div>
+  );
+}
+
 // Мини-расписание на главной: до 13:00 — уроки сегодня, после — на завтра
-function ScheduleWidget({ liveSchedule, onTab }) {
+function ScheduleWidget({ liveSchedule, overrides, onTab }) {
   const focus = scheduleFocus();
   const bells = liveSchedule?.bells?.length ? liveSchedule.bells : BELLS_FALLBACK;
-  const lessons = (liveSchedule?.lessons?.length ? liveSchedule.lessons : LESSONS_FALLBACK)
-    .filter((l) => l.day === focus.day);
+  const allLessons = liveSchedule?.lessons?.length ? liveSchedule.lessons : LESSONS_FALLBACK;
+  const focusIso = weekDates()[focus.day];
+  const activeOvs = activeOverridesFor(overrides, focusIso);
+  const { lessons, changed } = applyOverridesToDay(allLessons, focus.day, activeOvs);
   const bellByPos = Object.fromEntries(bells.map((b) => [b.pos, b]));
   const notes = [...new Set(lessons.map((l) => l.note).filter(Boolean))];
   const title =
@@ -39,22 +63,43 @@ function ScheduleWidget({ liveSchedule, onTab }) {
       <div className={"sec-head dh dh-" + focus.day + " reveal d3"}>
         <span className="sec-dot gold"><NavIcon name="schedule" uid="d-sched" size={20} /></span>
         <h2 className="sec-title">{title}</h2>
-        <span className="sec-note">{lessons.length} урок{lessons.length === 5 ? "ов" : "а"} · каб. 166</span>
+        <span className="sec-note">
+          {lessons.length} урок{lessons.length === 5 ? "ов" : "а"} · каб. 166
+          {activeOvs.length > 0 && <> · <b style={{ color: "#b07d0a" }}>изменено</b></>}
+        </span>
       </div>
       <div className="card dash-sched reveal d3">
         {lessons.map((l) => {
           const bell = bellByPos[l.pos];
           const si = subjectIcon(l.subject);
+          const ch = changed[l.pos];
           return (
-            <div className="dash-sched-row" key={l.id}>
+            <div className="dash-sched-row" key={l.id} style={ch ? { background: "var(--blue-soft)", borderRadius: 10 } : undefined}>
               <span className="dash-sched-time">{bell ? `${bell.start_time}–${bell.end_time}` : `${l.pos}-й`}</span>
-              <span className="dash-sched-subj"><CIc id={si.id} tone={si.tone} size="sm" /> {l.subject}</span>
+              <span className="dash-sched-subj">
+                <CIc id={si.id} tone={si.tone} size="sm" /> {l.subject}
+                {ch && ch.old && ch.old.subject !== l.subject && <span className="muted" style={{ fontSize: 12 }}> (вместо: {ch.old.subject})</span>}
+                {ch && ch.added && <span className="muted" style={{ fontSize: 12 }}> (добавлен)</span>}
+              </span>
             </div>
           );
         })}
+        {Object.values(changed).filter((c) => c.removed).map((c) => (
+          <div className="dash-sched-row" key={"rm-" + c.old?.pos} style={{ opacity: 0.65 }}>
+            <span className="dash-sched-time">{c.old ? `${c.old.pos}-й` : ""}</span>
+            <span className="dash-sched-subj" style={{ textDecoration: "line-through" }}>{c.old?.subject}</span>
+            <span className="muted" style={{ fontSize: 12 }}> урок отменён</span>
+          </div>
+        ))}
         {notes.length > 0 && (
           <div className="dash-sched-note"><Ic id="i-backpack" /> Взять с собой: {notes.join(", ").toLowerCase()}</div>
         )}
+        {activeOvs.length > 0 && (() => {
+          const end = dayEndTime(lessons, bells);
+          return end ? (
+            <div className="dash-sched-note">Занятия закончатся в <b>{end}</b></div>
+          ) : null;
+        })()}
         <div className="dash-sched-foot">
           <span className="muted" style={{ fontSize: 12 }}>Временное расписание · первые 20 учебных дней</span>
           <button className="pill-btn blue" onClick={() => onTab("schedule")}>Вся неделя</button>
@@ -164,7 +209,7 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
   );
 }
 
-export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, mascotRef, allDone, greetToken, pendingCount }) {
+export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, allDone, greetToken, pendingCount }) {
   const name = committee ? "Кристина" : "Ольга";
   // Живой счётчик важных дел (по двум активным голосованиям)
   const headline =
@@ -181,11 +226,20 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   const groupsCount = (liveGroups || EXPENSE_GROUPS).length;
   const bdays = liveBirthdays || BIRTHDAYS_FALLBACK;
   const bdayEv = birthdayEvents(bdays, committee);
+  // Изменение расписания на день из мини-виджета — баннер сверху
+  const schedFocus = scheduleFocus();
+  const schedBells = liveSchedule?.bells?.length ? liveSchedule.bells : BELLS_FALLBACK;
+  const schedAll = liveSchedule?.lessons?.length ? liveSchedule.lessons : LESSONS_FALLBACK;
+  const schedIso = weekDates()[schedFocus.day];
+  const schedOvs = activeOverridesFor(overrides, schedIso);
+  const schedEnd = schedOvs.length ? dayEndTime(applyOverridesToDay(schedAll, schedFocus.day, schedOvs).lessons, schedBells) : null;
   return (
     <section id="tab-dashboard">
       <div className="greet-date">{todayLine()}</div>
 
       <BdayBanner ev={bdayEv} />
+
+      <ScheduleChangeBanner activeOvs={schedOvs} focusIso={schedIso} focusLabel={schedFocus.label} endTime={schedEnd} toast={toast} onTab={onTab} />
 
       <div className="welcome reveal d1">
         <div className="welcome-copy">
@@ -235,7 +289,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         </div>
       </div>
 
-      <ScheduleWidget liveSchedule={liveSchedule} onTab={onTab} />
+      <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
 
       <BirthdaysWidget committee={committee} ev={bdayEv} list={bdays} onTab={onTab} />
 

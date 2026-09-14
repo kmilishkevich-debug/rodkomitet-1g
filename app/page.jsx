@@ -13,11 +13,12 @@ import ClassTab from "@/components/ClassTab";
 import ScheduleTab from "@/components/ScheduleTab";
 import UploadModal from "@/components/UploadModal";
 import LogoutModal from "@/components/LogoutModal";
-import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays } from "@/lib/supabase";
+import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole } from "@/lib/supabase";
 import { enablePush, syncPushRole } from "@/lib/push";
 
 export default function Page() {
-  const [role, setRole] = useState(null); // null | 'parent' | 'committee'
+  const [role, setRole] = useState(null); // null | 'parent' | 'committee' | 'teacher'
+  const [authorName, setAuthorName] = useState(null); // имя для истории изменений расписания
   const [tab, setTab] = useState("dashboard");
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifSeen, setNotifSeen] = useState(false);
@@ -47,6 +48,11 @@ export default function Page() {
   }, []);
 
   const committee = role === "committee";
+  const teacher = role === "teacher";
+  const canEditSchedule = committee || teacher; // учитель меняет только расписание
+
+  // Кто вносит изменения расписания — для истории и подписи замен
+  const author = authorName || (teacher ? "Учитель" : committee ? "Комитет" : "");
 
   // Живые расходы из базы (null = база не подключена, работаем на демо-данных)
   const [liveGroups, setLiveGroups] = useState(null);
@@ -68,6 +74,27 @@ export default function Page() {
     reloadSchedule();
   }, [reloadSchedule]);
 
+  // Замены расписания (изменения поверх основного; null = таблица ещё не создана)
+  const [liveOverrides, setLiveOverrides] = useState(null);
+  const reloadOverrides = useCallback(async () => {
+    const data = await fetchScheduleOverrides();
+    if (data) setLiveOverrides(data);
+  }, []);
+  useEffect(() => {
+    reloadOverrides();
+  }, [reloadOverrides]);
+
+  // Имя вошедшего (для подписи изменений расписания)
+  useEffect(() => {
+    if (role === "committee" || role === "teacher") {
+      fetchUserRole().then((data) => {
+        if (data?.display_name) setAuthorName(data.display_name);
+      });
+    } else {
+      setAuthorName(null);
+    }
+  }, [role]);
+
   // Живые дни рождения из базы (null = встроенный список из birthdaysData.js)
   const [liveBirthdays, setLiveBirthdays] = useState(null);
   useEffect(() => {
@@ -82,14 +109,14 @@ export default function Page() {
     try {
       saved = localStorage.getItem("rk1g-role");
     } catch {}
-    if (saved === "parent" || saved === "committee") {
-      // Комитет с подключённой базой должен иметь живую сессию — иначе просим войти заново
-      if (saved === "committee" && supabase) {
+    if (saved === "parent" || saved === "committee" || saved === "teacher") {
+      // Комитет и учитель с подключённой базой должны иметь живую сессию — иначе просим войти заново
+      if ((saved === "committee" || saved === "teacher") && supabase) {
         supabase.auth.getSession().then(({ data }) => {
           if (data.session) {
-            setRole("committee");
+            setRole(saved);
             setGreetToken((t) => t + 1); // маскот поздоровается один раз
-            syncPushRole("committee"); // тихо обновляем подписку на пуши
+            syncPushRole(saved); // тихо обновляем подписку на пуши
           } else {
             try { localStorage.removeItem("rk1g-role"); } catch {}
           }
@@ -118,6 +145,9 @@ export default function Page() {
     enablePush(r);
     if (r === "committee") {
       toast("Вы вошли как член комитета: доступны подтверждение чеков, создание сборов, расходов и голосований");
+    }
+    if (r === "teacher") {
+      toast("Вы вошли как учитель: можно вносить изменения в расписание");
     }
   };
 
@@ -174,8 +204,8 @@ export default function Page() {
             }}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} mascotRef={mascotRef} allDone={allDone} greetToken={greetToken} pendingCount={pendingCount} />}
-            {tab === "schedule" && <ScheduleTab committee={committee} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} allDone={allDone} greetToken={greetToken} pendingCount={pendingCount} />}
+            {tab === "schedule" && <ScheduleTab committee={committee} canEditSchedule={canEditSchedule} author={author} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} overrides={liveOverrides} onReloadOverrides={reloadOverrides} />}
             {tab === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={openUpload} />}
             {tab === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={reloadExpenses} />}
             {tab === "shopping" && <ShoppingTab committee={committee} toast={toast} />}
