@@ -18,28 +18,46 @@ const PE = "Физическая культура и здоровье";
 const PE_NOTE = "Спортивная форма и обувь";
 
 export const LESSONS_FALLBACK = [
+  // Понедельник
   { id: "m1", day: 1, pos: 1, subject: INTRO, note: null, room: "166", teacher: T },
   { id: "m2", day: 1, pos: 2, subject: INTRO, note: null, room: "166", teacher: T },
   { id: "m3", day: 1, pos: 3, subject: PE, note: PE_NOTE, room: "166", teacher: null },
   { id: "m4", day: 1, pos: 4, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "m5", day: 1, pos: 5, subject: "Классный час", note: null, room: "166", teacher: T },
+  // Вторник
   { id: "t1", day: 2, pos: 1, subject: INTRO, note: null, room: "166", teacher: T },
   { id: "t2", day: 2, pos: 2, subject: INTRO, note: null, room: "166", teacher: T },
   { id: "t3", day: 2, pos: 3, subject: PE, note: PE_NOTE, room: "166", teacher: null },
   { id: "t4", day: 2, pos: 4, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "t5", day: 2, pos: 5, subject: "Факультатив «Элементы логики»", note: null, room: "166", teacher: T },
+  // Среда
   { id: "w1", day: 3, pos: 1, subject: INTRO, note: null, room: "166", teacher: T },
   { id: "w2", day: 3, pos: 2, subject: INTRO, note: null, room: "166", teacher: T },
   { id: "w3", day: 3, pos: 3, subject: INTRO, note: null, room: "166", teacher: T },
   { id: "w4", day: 3, pos: 4, subject: "Музыка", note: null, room: "166", teacher: null },
-  { id: "th1", day: 4, pos: 1, subject: "Информационный час", note: null, room: "166", teacher: T },
-  { id: "th2", day: 4, pos: 2, subject: PE, note: PE_NOTE, room: "166", teacher: null },
+  { id: "w5", day: 3, pos: 5, subject: "Поддерживающее занятие", note: null, room: "166", teacher: T },
+  // Четверг (после 3-го урока — информационный час, см. INFO_HOUR)
+  { id: "th1", day: 4, pos: 1, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "th2", day: 4, pos: 2, subject: INTRO, note: null, room: "166", teacher: T },
   { id: "th3", day: 4, pos: 3, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "th4", day: 4, pos: 4, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "th5", day: 4, pos: 5, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "f1", day: 5, pos: 1, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "th4", day: 4, pos: 4, subject: "Факультатив «Вытокі роднай мовы»", note: null, room: "166", teacher: T },
+  // Пятница
+  { id: "f1", day: 5, pos: 1, subject: PE, note: PE_NOTE, room: "166", teacher: null },
   { id: "f2", day: 5, pos: 2, subject: INTRO, note: null, room: "166", teacher: T },
   { id: "f3", day: 5, pos: 3, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "f4", day: 5, pos: 4, subject: "Классный час", note: null, room: "166", teacher: T },
+  { id: "f4", day: 5, pos: 4, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "f5", day: 5, pos: 5, subject: "Поддерживающее занятие", note: null, room: "166", teacher: T },
 ];
+
+// Информационный час в четверге — отдельная строка между 3-м и 4-м уроками
+export const INFO_HOUR = { day: 4, afterPos: 3, subject: "Информационный час", tag: "15 минут" };
+
+// Как показывать урок: факультативы — название + курсивная пометка «факультатив»
+export function lessonDisplay(subject) {
+  const m = /^Факультатив\s*«(.+)»$/i.exec(subject || "");
+  if (m) return { name: m[1], tag: "факультатив" };
+  return { name: subject, tag: null };
+}
 
 // Какой день показывать на главной: до 13:00 в будни — сегодня,
 // после 13:00 — завтра; в выходные — понедельник.
@@ -60,6 +78,9 @@ export function subjectEmoji(subject) {
   if (s.includes("информацион")) return "📰";
   if (s.includes("классный")) return "🌟";
   if (s.includes("изо") || s.includes("рисов")) return "🎨";
+  if (s.includes("логик")) return "🧩";
+  if (s.includes("вытокі") || s.includes("роднай") || s.includes("родная")) return "📗";
+  if (s.includes("поддержива")) return "✏️";
   if (s.includes("матем")) return "🔢";
   if (s.includes("белорус")) return "📗";
   if (s.includes("чтен") || s.includes("литерат")) return "📖";
@@ -76,6 +97,9 @@ export function subjectIcon(subject) {
   if (s.includes("информацион")) return { id: "i-sub-news", tone: "blue" };
   if (s.includes("классный")) return { id: "i-sub-star", tone: "gold" };
   if (s.includes("изо") || s.includes("рисов")) return { id: "i-sub-art", tone: "pink" };
+  if (s.includes("логик")) return { id: "i-sub-math", tone: "blue" };
+  if (s.includes("вытокі") || s.includes("роднай") || s.includes("родная")) return { id: "i-sub-abc", tone: "green" };
+  if (s.includes("поддержива")) return { id: "i-sub-books", tone: "orange" };
   if (s.includes("матем")) return { id: "i-sub-math", tone: "blue" };
   if (s.includes("белорус")) return { id: "i-sub-abc", tone: "green" };
   if (s.includes("чтен") || s.includes("литерат")) return { id: "i-sub-read", tone: "orange" };

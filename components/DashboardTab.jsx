@@ -1,9 +1,10 @@
 "use client";
+import { Fragment } from "react";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FEE_ONLY_DEDUCTIONS, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
-import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, scheduleFocus, subjectIcon } from "./scheduleData";
-import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu } from "./scheduleOverrides";
+import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, INFO_HOUR, scheduleFocus, subjectIcon, lessonDisplay } from "./scheduleData";
+import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu, minskDateISO } from "./scheduleOverrides";
 import { BIRTHDAYS_FALLBACK, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
 import PushSettings from "./PushSettings";
 import ClassMascot from "./ClassMascot";
@@ -44,6 +45,25 @@ function ScheduleChangeBanner({ activeOvs, focusIso, focusLabel, endTime, toast,
   );
 }
 
+// Баннер «Расписание обновлено» — показывается неделю после обновления 14.09.2026
+const NEW_SCHEDULE_BANNER_UNTIL = "2026-09-21";
+function NewScheduleBanner({ onTab }) {
+  if (minskDateISO() >= NEW_SCHEDULE_BANNER_UNTIL) return null;
+  return (
+    <div className="attn-card reveal d1" style={{ background: "var(--blue-soft, #eaf2fb)" }}>
+      <div className="attn-ico blue"><NavIcon name="schedule" uid="d-sched-new" size={26} /></div>
+      <div className="attn-body">
+        <div className="attn-title">Расписание обновлено</div>
+        <div className="attn-sub">
+          Теперь по 5 занятий в день (в четверг — 4, конец в 11:35). Добавлены классный час,
+          факультативы и поддерживающие занятия.
+        </div>
+      </div>
+      <button className="pill-btn blue" onClick={() => onTab("schedule")}>Посмотреть</button>
+    </div>
+  );
+}
+
 // Мини-расписание на главной: до 13:00 — уроки сегодня, после — на завтра
 function ScheduleWidget({ liveSchedule, overrides, onTab }) {
   const focus = scheduleFocus();
@@ -73,15 +93,28 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
           const bell = bellByPos[l.pos];
           const si = subjectIcon(l.subject);
           const ch = changed[l.pos];
+          const disp = lessonDisplay(l.subject);
           return (
-            <div className="dash-sched-row" key={l.id} style={ch ? { background: "var(--blue-soft)", borderRadius: 10 } : undefined}>
-              <span className="dash-sched-time">{bell ? `${bell.start_time}–${bell.end_time}` : `${l.pos}-й`}</span>
-              <span className="dash-sched-subj">
-                <CIc id={si.id} tone={si.tone} size="sm" /> {l.subject}
-                {ch && ch.old && ch.old.subject !== l.subject && <span className="muted" style={{ fontSize: 12 }}> (вместо: {ch.old.subject})</span>}
-                {ch && ch.added && <span className="muted" style={{ fontSize: 12 }}> (добавлен)</span>}
-              </span>
-            </div>
+            <Fragment key={l.id}>
+              <div className="dash-sched-row" style={ch ? { background: "var(--blue-soft)", borderRadius: 10 } : undefined}>
+                <span className="dash-sched-time">{bell ? `${bell.start_time}–${bell.end_time}` : `${l.pos}-й`}</span>
+                <span className="dash-sched-subj">
+                  <CIc id={si.id} tone={si.tone} size="sm" /> {disp.name}
+                  {disp.tag && <span className="muted" style={{ fontStyle: "italic", fontSize: 12 }}> · {disp.tag}</span>}
+                  {ch && ch.old && ch.old.subject !== l.subject && <span className="muted" style={{ fontSize: 12 }}> (вместо: {ch.old.subject})</span>}
+                  {ch && ch.added && <span className="muted" style={{ fontSize: 12 }}> (добавлен)</span>}
+                </span>
+              </div>
+              {focus.day === INFO_HOUR.day && l.pos === INFO_HOUR.afterPos && (
+                <div className="dash-sched-row" style={{ opacity: 0.9 }}>
+                  <span className="dash-sched-time" />
+                  <span className="dash-sched-subj">
+                    <CIc id="i-sub-news" tone="blue" size="sm" /> {INFO_HOUR.subject}
+                    <span className="muted" style={{ fontStyle: "italic", fontSize: 12 }}> · {INFO_HOUR.tag}</span>
+                  </span>
+                </div>
+              )}
+            </Fragment>
           );
         })}
         {Object.values(changed).filter((c) => c.removed).map((c) => (
@@ -238,6 +271,8 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       <div className="greet-date">{todayLine()}</div>
 
       <BdayBanner ev={bdayEv} />
+
+      <NewScheduleBanner onTab={onTab} />
 
       <ScheduleChangeBanner activeOvs={schedOvs} focusIso={schedIso} focusLabel={schedFocus.label} endTime={schedEnd} toast={toast} onTab={onTab} />
 

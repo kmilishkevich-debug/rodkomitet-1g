@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import { supabase, isLive, cancelScheduleOverride, deleteScheduleDraft, addScheduleHistory } from "@/lib/supabase";
@@ -8,8 +8,10 @@ import {
   DAY_NAMES,
   BELLS_FALLBACK,
   LESSONS_FALLBACK,
+  INFO_HOUR,
   scheduleFocus,
   subjectIcon,
+  lessonDisplay,
 } from "./scheduleData";
 import {
   weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime,
@@ -242,31 +244,49 @@ export default function ScheduleTab({ committee, canEditSchedule, author, toast,
                 const si = subjectIcon(l.subject);
                 const ch = changed[l.pos];
                 const key = day + "-" + l.pos;
+                const disp = lessonDisplay(l.subject);
                 return (
-                  <div className="sched-lesson" key={l.id} style={ch ? { background: "var(--blue-soft, #eaf2fb)", borderRadius: 10 } : undefined}>
-                    <div className="sched-time">
-                      <b>{l.pos}</b>
-                      {bell && <span>{bell.start_time}–{bell.end_time}</span>}
-                    </div>
-                    <div className="sched-body">
-                      <div className="sched-subject"><CIc id={si.id} tone={si.tone} size="sm" /> {l.subject}</div>
-                      <div className="sched-meta">
-                        {[l.room ? `каб. ${l.room}` : null, l.teacher].filter(Boolean).join(" · ")}
+                  <Fragment key={l.id}>
+                    <div className="sched-lesson" style={ch ? { background: "var(--blue-soft, #eaf2fb)", borderRadius: 10 } : undefined}>
+                      <div className="sched-time">
+                        <b>{l.pos}</b>
+                        {bell && <span>{bell.start_time}–{bell.end_time}</span>}
                       </div>
-                      {l.note && <div className="sched-note"><Ic id="i-backpack" /> {l.note}</div>}
-                      {ch && (
-                        <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
-                          <button className="pill-btn" style={{ fontSize: 11, padding: "1px 8px" }} onClick={() => setShowOld((s) => ({ ...s, [key]: !s[key] }))}>
-                            {showOld[key] ? "скрыть" : ch.added ? "добавлен уроком" : "что было?"}
-                          </button>
-                          {showOld[key] && <> было: {ch.old ? ch.old.subject : "урока не было"} · замена {periodLabel(ch.ov)}</>}
+                      <div className="sched-body">
+                        <div className="sched-subject">
+                          <CIc id={si.id} tone={si.tone} size="sm" /> {disp.name}
+                          {disp.tag && <span className="muted" style={{ fontStyle: "italic", fontWeight: 400, fontSize: 12 }}> · {disp.tag}</span>}
                         </div>
+                        <div className="sched-meta">
+                          {[l.room ? `каб. ${l.room}` : null, l.teacher].filter(Boolean).join(" · ")}
+                        </div>
+                        {l.note && <div className="sched-note"><Ic id="i-backpack" /> {l.note}</div>}
+                        {ch && (
+                          <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
+                            <button className="pill-btn" style={{ fontSize: 11, padding: "1px 8px" }} onClick={() => setShowOld((s) => ({ ...s, [key]: !s[key] }))}>
+                              {showOld[key] ? "скрыть" : ch.added ? "добавлен уроком" : "что было?"}
+                            </button>
+                            {showOld[key] && <> было: {ch.old ? ch.old.subject : "урока не было"} · замена {periodLabel(ch.ov)}</>}
+                          </div>
+                        )}
+                      </div>
+                      {committee && !ch && (
+                        <button className="mini-btn" title="Изменить урок в основном расписании" onClick={() => openEdit(l)}><Ic id="i-edit" /></button>
                       )}
                     </div>
-                    {committee && !ch && (
-                      <button className="mini-btn" title="Изменить урок в основном расписании" onClick={() => openEdit(l)}><Ic id="i-edit" /></button>
+                    {day === INFO_HOUR.day && l.pos === INFO_HOUR.afterPos && (
+                      <div className="sched-lesson" style={{ opacity: 0.9 }}>
+                        <div className="sched-time"><span style={{ fontSize: 15 }}>📰</span></div>
+                        <div className="sched-body">
+                          <div className="sched-subject">
+                            <CIc id="i-sub-news" tone="blue" size="sm" /> {INFO_HOUR.subject}
+                            <span className="muted" style={{ fontStyle: "italic", fontWeight: 400, fontSize: 12 }}> · {INFO_HOUR.tag}</span>
+                          </div>
+                          <div className="sched-meta">между 3-м и 4-м уроками</div>
+                        </div>
+                      </div>
                     )}
-                  </div>
+                  </Fragment>
                 );
               })}
               {Object.entries(changed).filter(([, c]) => c.removed).map(([pos, c]) => (
