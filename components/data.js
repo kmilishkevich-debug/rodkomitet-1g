@@ -50,15 +50,15 @@ export const FEE_COLUMNS = [
 ];
 
 // Взносы 2026–2027 по таблице класса (сентябрь). Стандартные списания:
-// хознужды 37,52 · подарки 34,14 · значки 6,90 · ГПД 7,60. Бейдж 3,85 — у четверых.
+// хознужды 37,52 · подарки 34,14 · значки 6,90 · ГПД 7,02. Бейдж 3,85 — у четверых.
 // Остаток считается автоматически: взнос минус все списания (может быть отрицательным).
-const STD = { hoz: 37.52, badge: 0, gifts: 34.14, ward: 0, magnets: 6.9, gpd: 7.6, books: 0 };
+const STD = { hoz: 37.52, badge: 0, gifts: 34.14, ward: 0, magnets: 6.9, gpd: 7.02, books: 0 };
 export const FEES = [
   { n: 1,  child: "Белоус Ольга",       ...STD, paid: 175 },
   { n: 2,  child: "Богдан Давид",       ...STD, paid: 200 },
   { n: 3,  child: "Богдан Ульяна",      ...STD, paid: 200 },
   { n: 4,  child: "Гладкая Карина",     ...STD, paid: 200 },
-  { n: 5,  child: "Горлинская Алёна",   ...STD, paid: 65.5 },
+  { n: 5,  child: "Горлинская Алёна",   ...STD, paid: 215.5 },
   { n: 6,  child: "Гурецкий Роман",     ...STD, paid: 200 },
   { n: 7,  child: "Дашкевич Варвара",   ...STD, paid: 70, badge: 3.85 },
   { n: 8,  child: "Дехтяр Илья",        ...STD, paid: 200.5 },
@@ -162,9 +162,9 @@ export function groupTotal(g) {
   return g.items.reduce((s, i) => s + (i.planned ? 0 : i.sum || 0), 0);
 }
 
-export const TOTAL_COLLECTED = Math.round(FEES.reduce((s, f) => s + f.paid, 0) * 100) / 100; // 4549,10
+export const TOTAL_COLLECTED = Math.round(FEES.reduce((s, f) => s + f.paid, 0) * 100) / 100; // 4699,10
 export const TOTAL_SPENT = Math.round(EXPENSE_GROUPS.reduce((s, g) => s + groupTotal(g), 0) * 100) / 100; // 2310,50
-export const CASH_NOW = Math.round(FEES.reduce((s, f) => s + feeRest(f), 0) * 100) / 100; // 2223,20 — как в таблице класса
+export const CASH_NOW = Math.round(FEES.reduce((s, f) => s + feeRest(f), 0) * 100) / 100; // 2373,20 — как в таблице класса
 // Списания из взносов, которых нет в списке расходов (бейджи — покупались через школу)
 export const FEE_ONLY_DEDUCTIONS = Math.round(FEES.reduce((s, f) => s + (f.badge || 0), 0) * 100) / 100; // 15,40
 export const FAMILIES_COUNT = FAMILIES.length; // 27

@@ -80,85 +80,85 @@ begin
 
   -- 1. Белоус Ольга
   insert into fee_rows (n, child) values (1, 'Белоус Ольга') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 175), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 175), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 2. Богдан Давид
   insert into fee_rows (n, child) values (2, 'Богдан Давид') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 3. Богдан Ульяна
   insert into fee_rows (n, child) values (3, 'Богдан Ульяна') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 4. Гладкая Карина
   insert into fee_rows (n, child) values (4, 'Гладкая Карина') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 5. Горлинская Алёна
   insert into fee_rows (n, child) values (5, 'Горлинская Алёна') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 65.5), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 215.5), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 6. Гурецкий Роман
   insert into fee_rows (n, child) values (6, 'Гурецкий Роман') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 7. Дашкевич Варвара (+ бейдж 3,85)
   insert into fee_rows (n, child) values (7, 'Дашкевич Варвара') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 70), (r, c_hoz, 37.52), (r, c_badge, 3.85), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 70), (r, c_hoz, 37.52), (r, c_badge, 3.85), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 8. Дехтяр Илья
   insert into fee_rows (n, child) values (8, 'Дехтяр Илья') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200.5), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200.5), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 9. Домашевич Милана (значки — 2 шт, 13,80)
   insert into fee_rows (n, child) values (9, 'Домашевич Милана') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 71.4), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 13.8), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 71.4), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 13.8), (r, c_gpd, 7.02);
   -- 10. Дорошенко Арина (без ГПД)
   insert into fee_rows (n, child) values (10, 'Дорошенко Арина') returning id into r;
   insert into fee_values (row_id, column_id, amount) values (r, c_paid, 50), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9);
   -- 11. Казнадей Анна
   insert into fee_rows (n, child) values (11, 'Казнадей Анна') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 12. Кашуба Тимур
   insert into fee_rows (n, child) values (12, 'Кашуба Тимур') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 13. Кнотько София
   insert into fee_rows (n, child) values (13, 'Кнотько София') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 14. Коваленков Тимофей
   insert into fee_rows (n, child) values (14, 'Коваленков Тимофей') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 15. Лаппо Егор
   insert into fee_rows (n, child) values (15, 'Лаппо Егор') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 201.3), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 201.3), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 16. Левко Арина
   insert into fee_rows (n, child) values (16, 'Левко Арина') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 17. Литош Кирилл
   insert into fee_rows (n, child) values (17, 'Литош Кирилл') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 58.8), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 58.8), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 18. Милишкевич Ева
   insert into fee_rows (n, child) values (18, 'Милишкевич Ева') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 19. Савчук Доминик (+ бейдж 3,85)
   insert into fee_rows (n, child) values (19, 'Савчук Доминик') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 205), (r, c_hoz, 37.52), (r, c_badge, 3.85), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 205), (r, c_hoz, 37.52), (r, c_badge, 3.85), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 20. Стасько Павел
   insert into fee_rows (n, child) values (20, 'Стасько Павел') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200.8), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200.8), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 21. Сиссауи Мохаммед (без ГПД)
   insert into fee_rows (n, child) values (21, 'Сиссауи Мохаммед') returning id into r;
   insert into fee_values (row_id, column_id, amount) values (r, c_paid, 58.8), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9);
   -- 22. Сухабок Артём (+ бейдж 3,85)
   insert into fee_rows (n, child) values (22, 'Сухабок Артём') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 204), (r, c_hoz, 37.52), (r, c_badge, 3.85), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 204), (r, c_hoz, 37.52), (r, c_badge, 3.85), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 23. Талако Алиса
   insert into fee_rows (n, child) values (23, 'Талако Алиса') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200.4), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200.4), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 24. Тылецкий Андрей (без ГПД)
   insert into fee_rows (n, child) values (24, 'Тылецкий Андрей') returning id into r;
   insert into fee_values (row_id, column_id, amount) values (r, c_paid, 183.8), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9);
   -- 25. Шилкин Артём
   insert into fee_rows (n, child) values (25, 'Шилкин Артём') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 26. Шило Тимофей (+ бейдж 3,85)
   insert into fee_rows (n, child) values (26, 'Шило Тимофей') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 204), (r, c_hoz, 37.52), (r, c_badge, 3.85), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 204), (r, c_hoz, 37.52), (r, c_badge, 3.85), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 27. Шурова Агата
   insert into fee_rows (n, child) values (27, 'Шурова Агата') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 199.8), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.6);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 199.8), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
 end $$;
 
 -- ЧАСТЬ 3. ОБНОВЛЕНИЕ РАСХОДОВ ПО ТАБЛИЦЕ -----------------------------------
