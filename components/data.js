@@ -83,6 +83,11 @@ export const FEES = [
   { n: 27, child: "Шурова Агата",       ...STD, paid: 199.8 },
 ];
 
+// Кто ходит в ГПД (встроенный запасной список): все, у кого есть списание ГПД в таблице класса —
+// 24 ребёнка, без Дорошенко Арины, Сиссауи Мохаммеда и Тылецкого Андрея.
+// Живые пометки и заметки хранятся в базе (таблица child_notes, файл gpd-notes-setup.sql).
+export const GPD_CHILDREN = FEES.filter((f) => (f.gpd || 0) > 0).map((f) => f.child);
+
 // Остаток по ребёнку: взнос минус все списания
 export function feeRest(f) {
   const charges = FEE_COLUMNS.filter((c) => c.kind === "charge").reduce((s, c) => s + (f[c.key] || 0), 0);

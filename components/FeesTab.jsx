@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
-import { FEES, FEE_COLUMNS, FAMILIES_COUNT, fmt, feeRest } from "./data";
-import { supabase, isLive, fetchFees } from "@/lib/supabase";
+import { FEES, FEE_COLUMNS, FAMILIES_COUNT, GPD_CHILDREN, fmt, feeRest } from "./data";
+import { supabase, isLive, fetchFees, fetchChildNotes } from "@/lib/supabase";
 
 // Остаток по строке живых данных: взнос минус все списания
 function liveRest(row, columns) {
@@ -22,8 +22,13 @@ export default function FeesTab({ committee, toast, onOpenUpload }) {
   const [editVal, setEditVal] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [notes, setNotes] = useState(null); // пометки ГПД/заметки из базы
+
   const reload = async () => setLive(await fetchFees());
-  useEffect(() => { reload(); }, []);
+  useEffect(() => { reload(); fetchChildNotes().then(setNotes); }, []);
+
+  // Ходит ли ребёнок в ГПД: живые пометки из базы или встроенный список
+  const isGpd = (child) => (notes ? !!(notes[child] && notes[child].gpd) : GPD_CHILDREN.includes(child));
 
   // Единый вид данных: живые из базы или встроенные из data.js
   const columns = live
@@ -141,7 +146,12 @@ export default function FeesTab({ committee, toast, onOpenUpload }) {
                 {rows.map((r) => (
                   <tr key={r.id}>
                     <td>{r.n}</td>
-                    <td>{r.child}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      {r.child}
+                      {isGpd(r.child) && (
+                        <span className="chip green" style={{ marginLeft: 6, padding: "2px 8px", fontSize: 10.5 }}>ГПД</span>
+                      )}
+                    </td>
                     {columns.map((c) => {
                       const v = r.values[c.id] || 0;
                       if (!v) return <td key={c.id}>—</td>;

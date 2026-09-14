@@ -1,7 +1,10 @@
+"use client";
+import { useEffect, useState } from "react";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
-import { FAMILIES, STAFF, FAMILIES_COUNT } from "./data";
+import { FAMILIES, STAFF, FAMILIES_COUNT, GPD_CHILDREN } from "./data";
 import { BIRTHDAYS_FALLBACK, fmtBd, bdName, bdInfo, BD_MONTHS } from "./birthdaysData";
+import { isLive, fetchChildNotes, saveChildNote } from "@/lib/supabase";
 
 // Учебный год: с сентября по август — так календарь идёт «по порядку года класса»
 const MONTH_ORDER = [8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7];
@@ -52,6 +55,44 @@ export default function ClassTab({ committee, toast, liveBirthdays }) {
   const bdays = liveBirthdays || BIRTHDAYS_FALLBACK;
   // «Фамилия Имя» → дата рождения, чтобы показать дату прямо в таблице семей
   const bornByChild = Object.fromEntries(bdays.map((k) => [`${k.last} ${k.first}`, k.born]));
+
+  // Пометки по детям: ГПД + заметки. Живые — из базы, запасные — встроенный список
+  const [notes, setNotes] = useState(null);
+  const [editChild, setEditChild] = useState(null);
+  const [editGpd, setEditGpd] = useState(false);
+  const [editNote, setEditNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const reloadNotes = async () => setNotes(await fetchChildNotes());
+  useEffect(() => { reloadNotes(); }, []);
+
+  const noteFor = (child) =>
+    notes ? notes[child] || { gpd: false, note: "" } : { gpd: GPD_CHILDREN.includes(child), note: "" };
+
+  const startEditNote = (child) => {
+    if (!isLive || !notes) {
+      return toast("Редактирование пометок заработает после запуска файла gpd-notes-setup.sql в Supabase");
+    }
+    const cur = noteFor(child);
+    setEditChild(child);
+    setEditGpd(cur.gpd);
+    setEditNote(cur.note);
+  };
+
+  const saveEditNote = async () => {
+    setSaving(true);
+    try {
+      await saveChildNote(editChild, editGpd, editNote.trim());
+      setEditChild(null);
+      toast("Пометка сохранена");
+      reloadNotes();
+    } catch (e) {
+      toast("Не получилось сохранить: " + (e.message || e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <section id="tab-class">
       <div className="section-cover reveal d1" style={{ background: "var(--blue-soft)" }}>
@@ -83,10 +124,42 @@ export default function ClassTab({ committee, toast, liveBirthdays }) {
                 <td>{f.n}</td>
                 <td>
                   <b>{f.child}</b>
+                  {noteFor(f.child).gpd && (
+                    <span className="chip green" style={{ marginLeft: 6, padding: "2px 8px", fontSize: 10.5 }}>ГПД</span>
+                  )}
+                  {committee && (
+                    <button className="mini-btn" title="Пометка: ГПД и заметка" onClick={() => startEditNote(f.child)}>
+                      <Ic id="i-edit" />
+                    </button>
+                  )}
                   {bornByChild[f.child] && (
                     <div className="bday-chip"><Ic id="i-cake" /> {fmtBd(bornByChild[f.child])}</div>
                   )}
                   {f.note && <div><span className="chip violet">{f.note}</span></div>}
+                  {editChild === f.child ? (
+                    <div style={{ marginTop: 6, display: "grid", gap: 6, maxWidth: 260 }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}>
+                        <input type="checkbox" checked={editGpd} onChange={(e) => setEditGpd(e.target.checked)} />
+                        ходит в ГПД
+                      </label>
+                      <input
+                        value={editNote}
+                        onChange={(e) => setEditNote(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveEditNote(); if (e.key === "Escape") setEditChild(null); }}
+                        placeholder="Заметка по ребёнку (видна всем)"
+                        autoFocus
+                        style={{ fontSize: 13, padding: "6px 8px" }}
+                      />
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button className="mini-btn" title="Сохранить" onClick={saveEditNote} disabled={saving}>✓</button>
+                        <button className="mini-btn danger" title="Отмена" onClick={() => setEditChild(null)}>✕</button>
+                      </div>
+                    </div>
+                  ) : (
+                    noteFor(f.child).note && (
+                      <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>{noteFor(f.child).note}</div>
+                    )
+                  )}
                 </td>
                 <td>
                   {f.parents.map((p) => <div key={p}>{p}</div>)}
