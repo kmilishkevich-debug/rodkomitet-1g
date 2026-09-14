@@ -206,6 +206,7 @@ export default function Page() {
           <Header
             committee={committee}
             tab={tab}
+            moneySub={moneySub}
             onTab={showTab}
             notifOpen={notifOpen}
             notifSeen={notifSeen}
@@ -222,7 +223,7 @@ export default function Page() {
             {tab === "class" && <ClassTab committee={committee} toast={toast} liveBirthdays={liveBirthdays} />}
             {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} />}
           </main>
-          <BottomNav tab={tab} onTab={showTab} />
+          <BottomNav tab={tab} moneySub={moneySub} onTab={showTab} />
         </div>
       )}
       <UploadModal open={upload.open} name={upload.name} sum={upload.sum} onClose={closeUpload} toast={toast} />
