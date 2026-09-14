@@ -242,15 +242,11 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
   );
 }
 
-export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, allDone, greetToken, pendingCount }) {
-  const name = committee ? "Кристина" : "Ольга";
-  // Живой счётчик важных дел (по двум активным голосованиям)
-  const headline =
-    pendingCount === 0
-      ? "Все важные дела выполнены"
-      : pendingCount === 1
-        ? "Сегодня есть 1 важное дело"
-        : `Сегодня есть ${pendingCount} важных дела`;
+export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken }) {
+  const greetName = committee ? ", Кристина" : "";
+  // Пока в разделе «Требует внимания» одна карточка — тетради
+  const attnCount = 1;
+  const headline = attnCount === 0 ? "Все важные дела выполнены" : "Сегодня есть 1 важное дело";
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
   const cash = liveGroups
@@ -279,7 +275,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       <div className="welcome reveal d1">
         <div className="welcome-copy">
           <h1 className="welcome-h1">
-            {greetWord()}, {name}!<br />
+            {greetWord()}{greetName}!<br />
             <span className="blue">{headline}</span>
           </h1>
           <p className="welcome-sub">
@@ -287,13 +283,13 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
             информация аккуратно собрана ниже.
           </p>
           <div className="welcome-chips">
-            <button className="w-chip blue" onClick={() => onTab("votes")}><NavIcon name="votes" uid="d-votes" size={18} className="nvi-inline" /> Проголосовать за подарки</button>
+            <button className="w-chip blue" onClick={() => onTab("schedule")}><NavIcon name="schedule" uid="d-schd" size={18} className="nvi-inline" /> Расписание на неделю</button>
             <button className="w-chip pink" onClick={() => onTab("expenses")}><NavIcon name="expenses" uid="d-exp" size={18} className="nvi-inline" /> Посмотреть расходы за сентябрь</button>
           </div>
         </div>
         <div className="welcome-visual">
           <span className="w-blob green" aria-hidden="true"></span>
-          <ClassMascot ref={mascotRef} allDone={allDone} greetToken={greetToken} />
+          <ClassMascot ref={mascotRef} allDone={false} greetToken={greetToken} />
         </div>
       </div>
 
@@ -304,7 +300,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
             <button className="dstat-btn" title="История операций" onClick={() => onTab("history")}><Ic id="i-arrow-up-right" /></button>
           </div>
           <div className="val">{fmt(cash)} BYN</div>
-          <div className="note">{liveGroups ? "собрано минус расходы и бейджи" : "остаток по таблице класса"}</div>
+          <div className="note">собрано − расходы − бейджи ({fmt(FEE_ONLY_DEDUCTIONS)})</div>
         </div>
         <div className="dstat gold">
           <div className="dstat-top">
@@ -331,15 +327,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       <div className="sec-head reveal d3">
         <span className="sec-dot gold"><Ic id="i-bell" /></span>
         <h2 className="sec-title">Требует вашего внимания</h2>
-        <span className="sec-note">2 действия</span>
-      </div>
-      <div className="attn-card reveal d3">
-        <div className="attn-ico pink"><NavIcon name="votes" uid="d-attn-vote" size={26} /></div>
-        <div className="attn-body">
-          <div className="attn-title">Подарки детям на Новый год</div>
-          <div className="attn-sub">Голосование открыто до 10 сентября · ответили 18 из 27 семей</div>
-        </div>
-        <button className="pill-btn pink" onClick={() => onTab("votes")}>Проголосовать</button>
+        <span className="sec-note">{attnCount === 1 ? "1 действие" : `${attnCount} действия`}</span>
       </div>
       <div className="attn-card reveal d3">
         <div className="attn-ico blue"><NavIcon name="schedule" uid="d-attn-sched" size={26} /></div>

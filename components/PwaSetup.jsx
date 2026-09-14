@@ -19,6 +19,15 @@ function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
+// Баннер установки показываем только тем, кто уже вошёл в приложение
+function hasRole() {
+  try {
+    return !!localStorage.getItem("rk1g-role");
+  } catch {
+    return false;
+  }
+}
+
 export default function PwaSetup() {
   const [installEvt, setInstallEvt] = useState(null);
   const [show, setShow] = useState(false); // false | "android" | "ios"
@@ -38,13 +47,15 @@ export default function PwaSetup() {
     const onPrompt = (e) => {
       e.preventDefault();
       setInstallEvt(e);
-      setShow("android");
+      if (hasRole()) setShow("android");
     };
     window.addEventListener("beforeinstallprompt", onPrompt);
 
     let t;
     if (isIOS()) {
-      t = setTimeout(() => setShow("ios"), 2500);
+      t = setTimeout(() => {
+        if (hasRole()) setShow("ios");
+      }, 2500);
     }
     return () => {
       window.removeEventListener("beforeinstallprompt", onPrompt);

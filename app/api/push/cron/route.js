@@ -60,7 +60,7 @@ export async function GET(request) {
       kidsList.length === 1
         ? `Завтра день рождения у ${joinNames(kidsList)} — исполнится ${turns}!`
         : `Завтра дни рождения: ${joinNames(kidsList)}. Не забудьте поздравить!`;
-    results.push(await sendPushToAll({ title, body, url: "/?tab=birthdays" }, "all"));
+    results.push(await sendPushToAll({ title, body, url: "/?tab=class" }, "all"));
   }
 
   // Всем родителям: завтра День летних детей
@@ -70,7 +70,7 @@ export async function GET(request) {
         {
           title: "☀️ Завтра — День летних детей!",
           body: `Поздравляем летних именинников: ${joinNames(ev.summerTomorrow, false)}.`,
-          url: "/?tab=birthdays",
+          url: "/?tab=class",
         },
         "all"
       )
@@ -88,7 +88,7 @@ export async function GET(request) {
         {
           title: "🎈 Скоро дни рождения (комитету)",
           body: lines.join("; "),
-          url: "/?tab=birthdays",
+          url: "/?tab=class",
         },
         "committee"
       )

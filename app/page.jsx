@@ -4,11 +4,8 @@ import { Sprite } from "@/components/Art";
 import LoginScreen from "@/components/LoginScreen";
 import Header, { BottomNav } from "@/components/Header";
 import DashboardTab from "@/components/DashboardTab";
-import FeesTab from "@/components/FeesTab";
-import ExpensesTab from "@/components/ExpensesTab";
-import ShoppingTab from "@/components/ShoppingTab";
+import MoneyTab from "@/components/MoneyTab";
 import VotesTab from "@/components/VotesTab";
-import HistoryTab from "@/components/HistoryTab";
 import ClassTab from "@/components/ClassTab";
 import ScheduleTab from "@/components/ScheduleTab";
 import UploadModal from "@/components/UploadModal";
@@ -30,16 +27,8 @@ export default function Page() {
   // Маскот на главной: приветствие раз за визит/вход, реакции на дела и выход
   const mascotRef = useRef(null);
   const [greetToken, setGreetToken] = useState(0);
-  // Голоса подняты сюда, чтобы не теряться при переключении вкладок
-  const [vote1, setVote1] = useState(null);
-  const [vote2, setVote2] = useState(null);
-  const justVoted = useRef(false);
-  const allDone = vote1 !== null && vote2 !== null;
-  const pendingCount = (vote1 === null ? 1 : 0) + (vote2 === null ? 1 : 0);
-  const castVote = useCallback((which, idx) => {
-    (which === 1 ? setVote1 : setVote2)(idx);
-    justVoted.current = true;
-  }, []);
+  // Подвкладка раздела «Деньги»: fees | expenses | history
+  const [moneySub, setMoneySub] = useState("fees");
 
   const toast = useCallback((msg) => {
     setToastMsg(msg);
@@ -103,7 +92,27 @@ export default function Page() {
     });
   }, []);
 
-  // Запоминаем вход + открываем нужную вкладку из ярлыка PWA (/?tab=...)
+  // Разбор адреса раздела: /?tab=... → вкладка (старые адреса денег ведут в «Деньги»)
+  const applyRoute = useCallback((t) => {
+    if (!t) return;
+    if (t === "birthdays") t = "class"; // старые пуш-уведомления о днях рождения
+    if (["fees", "expenses", "history", "shopping"].includes(t)) {
+      setTab("money");
+      setMoneySub(t === "shopping" ? "expenses" : t);
+    } else if (["dashboard", "schedule", "votes", "class", "money"].includes(t)) {
+      setTab(t);
+      if (t === "money") setMoneySub((s) => s || "fees");
+    }
+  }, []);
+
+  // Записываем раздел в адресную строку — работают «назад» и прямые ссылки
+  const pushTab = (t) => {
+    try {
+      window.history.pushState({ tab: t }, "", t === "dashboard" ? window.location.pathname : `?tab=${t}`);
+    } catch {}
+  };
+
+  // Запоминаем вход + открываем нужную вкладку из адреса (/?tab=...)
   useEffect(() => {
     let saved = null;
     try {
@@ -126,12 +135,13 @@ export default function Page() {
         setGreetToken((t) => t + 1); // маскот поздоровается один раз
         syncPushRole(saved); // тихо обновляем подписку на пуши
       }
-      const t = new URLSearchParams(window.location.search).get("tab");
-      if (["dashboard", "schedule", "fees", "expenses", "shopping", "votes", "class", "history"].includes(t)) {
-        setTab(t);
-      }
+      applyRoute(new URLSearchParams(window.location.search).get("tab"));
     }
-  }, []);
+    // Кнопки «назад/вперёд» браузера переключают разделы
+    const onPop = () => applyRoute(new URLSearchParams(window.location.search).get("tab") || "dashboard");
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [applyRoute]);
 
   const login = (r) => {
     setRole(r);
@@ -139,7 +149,12 @@ export default function Page() {
     try {
       localStorage.setItem("rk1g-role", r);
     } catch {}
-    setTab("dashboard");
+    const urlTab = new URLSearchParams(window.location.search).get("tab");
+    if (urlTab) {
+      applyRoute(urlTab);
+    } else {
+      setTab("dashboard");
+    }
     setNotifOpen(false);
     // Автоматически включаем пуш-уведомления при входе (клик по кнопке = разрешение браузера)
     enablePush(r);
@@ -162,19 +177,16 @@ export default function Page() {
   };
 
   const showTab = (t) => {
-    setTab(t);
+    applyRoute(t);
+    pushTab(t);
     setNotifOpen(false);
     window.scrollTo({ top: 0 });
   };
 
-  // Возврат на главную после отданного голоса — маскот разово радуется
-  useEffect(() => {
-    if (tab === "dashboard" && justVoted.current) {
-      justVoted.current = false;
-      const id = setTimeout(() => mascotRef.current?.success(), 350);
-      return () => clearTimeout(id);
-    }
-  }, [tab]);
+  const showMoneySub = (s) => {
+    setMoneySub(s);
+    pushTab(s);
+  };
 
   const toggleNotif = () => {
     setNotifOpen(!notifOpen);
@@ -204,14 +216,11 @@ export default function Page() {
             }}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} allDone={allDone} greetToken={greetToken} pendingCount={pendingCount} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} />}
             {tab === "schedule" && <ScheduleTab committee={committee} canEditSchedule={canEditSchedule} author={author} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} overrides={liveOverrides} onReloadOverrides={reloadOverrides} />}
-            {tab === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={openUpload} />}
-            {tab === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={reloadExpenses} />}
-            {tab === "shopping" && <ShoppingTab committee={committee} toast={toast} />}
-            {tab === "votes" && <VotesTab committee={committee} toast={toast} vote1={vote1} vote2={vote2} onCast={castVote} />}
+            {tab === "votes" && <VotesTab committee={committee} toast={toast} />}
             {tab === "class" && <ClassTab committee={committee} toast={toast} liveBirthdays={liveBirthdays} />}
-            {tab === "history" && <HistoryTab toast={toast} />}
+            {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} />}
           </main>
           <BottomNav tab={tab} onTab={showTab} />
         </div>

@@ -41,12 +41,23 @@ function ManualPush({ toast }) {
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [audience, setAudience] = useState("all");
+  const [target, setTarget] = useState("dashboard");
   const [sending, setSending] = useState(false);
+
+  // Куда попадёт родитель, нажав на уведомление
+  const TARGETS = [
+    { id: "dashboard", label: "Главная" },
+    { id: "votes", label: "Голосования" },
+    { id: "schedule", label: "Расписание" },
+    { id: "class", label: "Класс" },
+    { id: "money", label: "Деньги" },
+  ];
 
   const send = async () => {
     if (!title.trim() || !text.trim()) return toast("Заполните заголовок и текст");
     setSending(true);
-    const res = await sendManualPush({ title: title.trim(), body: text.trim(), audience });
+    const url = target === "dashboard" ? "/" : `/?tab=${target}`;
+    const res = await sendManualPush({ title: title.trim(), body: text.trim(), audience, url });
     setSending(false);
     if (!res.ok) return toast("Не получилось отправить: " + (res.error || "ошибка"));
     toast(`Пуш отправлен: доставляется на ${res.sent} устройств${res.gone ? ` (устаревших подписок убрано: ${res.gone})` : ""}`);
@@ -66,6 +77,12 @@ function ManualPush({ toast }) {
         <div className="push-aud">
           <button className={"chip-btn" + (audience === "all" ? " active" : "")} onClick={() => setAudience("all")}>Всем родителям</button>
           <button className={"chip-btn" + (audience === "committee" ? " active" : "")} onClick={() => setAudience("committee")}>Только комитету</button>
+        </div>
+        <label>Что откроется по нажатию</label>
+        <div className="push-aud">
+          {TARGETS.map((t) => (
+            <button key={t.id} className={"chip-btn" + (target === t.id ? " active" : "")} onClick={() => setTarget(t.id)}>{t.label}</button>
+          ))}
         </div>
       </div>
       <div className="actions" style={{ marginTop: 10 }}>

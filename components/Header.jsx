@@ -3,13 +3,10 @@ import NavIcon from "./NavIcons";
 
 const TABS = [
   { id: "dashboard", icon: "i-home", label: "Главная" },
-  { id: "schedule", icon: "i-clock", label: "Расписание" },
-  { id: "fees", icon: "i-coin", label: "Сборы" },
-  { id: "expenses", icon: "i-receipt", label: "Расходы" },
-  { id: "shopping", icon: "i-cart", label: "Покупки" },
   { id: "votes", icon: "i-vote", label: "Голосования" },
+  { id: "schedule", icon: "i-clock", label: "Расписание" },
   { id: "class", icon: "i-users", label: "Класс" },
-  { id: "history", icon: "i-book", label: "История" },
+  { id: "money", icon: "i-coin", label: "Деньги" },
 ];
 
 // Однократное проигрывание анимации иконки при нажатии (демо-механика play)
@@ -33,9 +30,9 @@ export default function Header({ committee, tab, onTab, onLogout }) {
         <div className="logo"><span className="logo-badge">1«Г»</span>Наш 1 «Г»</div>
         <div className="spacer"></div>
         <div className="user-chip">
-          <div className="avatar" id="userAvatar">{committee ? "КМ" : "ОС"}</div>
+          <div className="avatar" id="userAvatar">{committee ? "КМ" : "Р"}</div>
           <div className="name-block">
-            <div id="userName">{committee ? "Кристина М." : "Ольга Смирнова"}</div>
+            <div id="userName">{committee ? "Кристина М." : "Родитель"}</div>
             <div className="role-tag" id="userRole">{committee ? "член комитета" : "родитель"}</div>
           </div>
           <button className="exit-btn" onClick={onLogout} title="Выйти">

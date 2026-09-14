@@ -587,3 +587,8 @@ nav.bottomnav .nvi{width:32px;height:32px}
 @keyframes nvi-window-light{50%{fill:#ffbc26;filter:drop-shadow(0 0 4px #ffcf54)}}
 /* reduced-motion: движение выключено, активный цвет и подложка остаются */
 @media(prefers-reduced-motion:reduce){.nvi *{animation:none!important;transition:none!important}.nvi .spark{opacity:0!important}}
+
+/* Субнавигация раздела «Деньги»: Сборы / Расходы / История */
+.money-subnav{display:flex;gap:8px;margin:2px 0 14px;flex-wrap:wrap}
+.money-subnav button{border:1.5px solid var(--line,#e3e0f0);background:#fff;border-radius:999px;padding:8px 16px;font-weight:600;cursor:pointer;font-family:inherit;font-size:14px;color:inherit}
+.money-subnav button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
