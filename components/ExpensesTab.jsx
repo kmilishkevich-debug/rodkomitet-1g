@@ -15,6 +15,9 @@ function fmtDate(d) {
 export default function ExpensesTab({ committee, toast, liveGroups, onReload }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [editGroup, setEditGroup] = useState(null); // id группы в режиме переименования
+  const [editVal, setEditVal] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
 
   const groups = liveGroups || EXPENSE_GROUPS;
   const totalSpent = groups.reduce((s, g) => s + groupTotal(g), 0);
@@ -28,6 +31,24 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload }) 
   const openEdit = (item) => {
     setEditItem(item);
     setModalOpen(true);
+  };
+
+  const startEditGroup = (g) => {
+    if (!liveGroups) return toast("Названия групп можно менять после подключения базы");
+    setEditGroup(g.id);
+    setEditVal(g.title);
+  };
+
+  const saveGroupTitle = async () => {
+    const title = editVal.trim();
+    if (!title) return toast("Название не может быть пустым");
+    setSavingTitle(true);
+    const { error } = await supabase.from("expense_groups").update({ title }).eq("id", editGroup);
+    setSavingTitle(false);
+    if (error) return toast("Не получилось сохранить: " + error.message);
+    setEditGroup(null);
+    toast("Название группы обновлено");
+    onReload?.();
   };
 
   const remove = async (item) => {
@@ -63,7 +84,30 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload }) 
 
       {groups.map((g) => (
         <div className="card reveal d2" key={g.id} style={{ marginBottom: 14 }}>
-          <h3 style={{ marginTop: 0 }}>{g.title}</h3>
+          <h3 style={{ marginTop: 0 }}>
+            {editGroup === g.id ? (
+              <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                <input
+                  value={editVal}
+                  onChange={(e) => setEditVal(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveGroupTitle(); if (e.key === "Escape") setEditGroup(null); }}
+                  autoFocus
+                  style={{ fontSize: 15, padding: "4px 8px", minWidth: 220 }}
+                />
+                <button className="mini-btn" title="Сохранить" onClick={saveGroupTitle} disabled={savingTitle}>✓</button>
+                <button className="mini-btn danger" title="Отмена" onClick={() => setEditGroup(null)}>✕</button>
+              </span>
+            ) : (
+              <>
+                {g.title}
+                {committee && liveGroups && (
+                  <button className="mini-btn" title="Переименовать группу" onClick={() => startEditGroup(g)} style={{ marginLeft: 6 }}>
+                    <Ic id="i-edit" />
+                  </button>
+                )}
+              </>
+            )}
+          </h3>
           <table>
             <tbody>
               <tr>
@@ -95,7 +139,7 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload }) 
                     </>
                   ) : (
                     <>
-                      <td>{i.free ? "—" : fmt(i.price)}</td>
+                      <td>{i.free || !i.price ? "—" : fmt(i.price)}</td>
                       <td>{i.qty}</td>
                       <td><b>{i.free ? <span className="chip green">бесплатно</span> : fmt(i.sum)}</b></td>
                       <td>{i.place}</td>

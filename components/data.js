@@ -36,36 +36,58 @@ export const STAFF = [
   { name: "Нушаба Алиевна", phone: "(25) 777-55-85", role: "Воспитатель ГПД" },
 ];
 
-// Взносы 2026–2027: сдано · списания (хознужды у всех 18,28; бейдж 3,85 у четверых) · остаток.
-export const FEES = [
-  { n: 1,  child: "Белоус Ольга",       paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 2,  child: "Богдан Давид",       paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 3,  child: "Богдан Ульяна",      paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 4,  child: "Гладкая Карина",     paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 5,  child: "Горлинская Алёна",   paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 6,  child: "Гурецкий Роман",     paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 7,  child: "Дашкевич Варвара",   paid: 60, hoz: 18.28, badge: 3.85, rest: 37.87 },
-  { n: 8,  child: "Дехтяр Илья",        paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 9,  child: "Домашевич Милана",   paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 10, child: "Дорошенко Арина",    paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 11, child: "Казнадей Анна",      paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 12, child: "Кашуба Тимур",       paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 13, child: "Кнотько София",      paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 14, child: "Коваленков Тимофей", paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 15, child: "Лаппо Егор",         paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 16, child: "Левко Арина",        paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 17, child: "Литош Кирилл",       paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 18, child: "Милишкевич Ева",     paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 19, child: "Савчук Доминик",     paid: 55, hoz: 18.28, badge: 3.85, rest: 32.87 },
-  { n: 20, child: "Стасько Павел",      paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 21, child: "Сиссауи Мохаммед",   paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 22, child: "Сухабок Артём",      paid: 54, hoz: 18.28, badge: 3.85, rest: 31.87 },
-  { n: 23, child: "Талако Алиса",       paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 24, child: "Тылецкий Андрей",    paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 25, child: "Шилкин Артём",       paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
-  { n: 26, child: "Шило Тимофей",       paid: 54, hoz: 18.28, badge: 3.85, rest: 31.87 },
-  { n: 27, child: "Шурова Агата",       paid: 50, hoz: 18.28, badge: 0,    rest: 31.72 },
+// Статьи сборов (колонки таблицы). kind: 'paid' — сдано, 'charge' — списание из взноса.
+// Заголовки можно переименовывать в приложении (комитет) — тогда названия берутся из базы.
+export const FEE_COLUMNS = [
+  { key: "paid",    title: "Взнос",              kind: "paid"   },
+  { key: "hoz",     title: "Хоз. нужды",         kind: "charge" },
+  { key: "badge",   title: "Бейдж",              kind: "charge" },
+  { key: "gifts",   title: "Подарки (сентябрь)", kind: "charge" },
+  { key: "ward",    title: "Гардероб",           kind: "charge" },
+  { key: "magnets", title: "Магнитные значки",   kind: "charge" },
+  { key: "gpd",     title: "ГПД",                kind: "charge" },
+  { key: "books",   title: "Рабочие тетради",    kind: "charge" },
 ];
+
+// Взносы 2026–2027 по таблице класса (сентябрь). Стандартные списания:
+// хознужды 37,52 · подарки 34,14 · значки 6,90 · ГПД 7,60. Бейдж 3,85 — у четверых.
+// Остаток считается автоматически: взнос минус все списания (может быть отрицательным).
+const STD = { hoz: 37.52, badge: 0, gifts: 34.14, ward: 0, magnets: 6.9, gpd: 7.6, books: 0 };
+export const FEES = [
+  { n: 1,  child: "Белоус Ольга",       ...STD, paid: 175 },
+  { n: 2,  child: "Богдан Давид",       ...STD, paid: 200 },
+  { n: 3,  child: "Богдан Ульяна",      ...STD, paid: 200 },
+  { n: 4,  child: "Гладкая Карина",     ...STD, paid: 200 },
+  { n: 5,  child: "Горлинская Алёна",   ...STD, paid: 65.5 },
+  { n: 6,  child: "Гурецкий Роман",     ...STD, paid: 200 },
+  { n: 7,  child: "Дашкевич Варвара",   ...STD, paid: 70, badge: 3.85 },
+  { n: 8,  child: "Дехтяр Илья",        ...STD, paid: 200.5 },
+  { n: 9,  child: "Домашевич Милана",   ...STD, paid: 71.4, magnets: 13.8 },
+  { n: 10, child: "Дорошенко Арина",    ...STD, paid: 50, gpd: 0 },
+  { n: 11, child: "Казнадей Анна",      ...STD, paid: 200 },
+  { n: 12, child: "Кашуба Тимур",       ...STD, paid: 200 },
+  { n: 13, child: "Кнотько София",      ...STD, paid: 200 },
+  { n: 14, child: "Коваленков Тимофей", ...STD, paid: 200 },
+  { n: 15, child: "Лаппо Егор",         ...STD, paid: 201.3 },
+  { n: 16, child: "Левко Арина",        ...STD, paid: 200 },
+  { n: 17, child: "Литош Кирилл",       ...STD, paid: 58.8 },
+  { n: 18, child: "Милишкевич Ева",     ...STD, paid: 200 },
+  { n: 19, child: "Савчук Доминик",     ...STD, paid: 205, badge: 3.85 },
+  { n: 20, child: "Стасько Павел",      ...STD, paid: 200.8 },
+  { n: 21, child: "Сиссауи Мохаммед",   ...STD, paid: 58.8, gpd: 0 },
+  { n: 22, child: "Сухабок Артём",      ...STD, paid: 204, badge: 3.85 },
+  { n: 23, child: "Талако Алиса",       ...STD, paid: 200.4 },
+  { n: 24, child: "Тылецкий Андрей",    ...STD, paid: 183.8, gpd: 0 },
+  { n: 25, child: "Шилкин Артём",       ...STD, paid: 200 },
+  { n: 26, child: "Шило Тимофей",       ...STD, paid: 204, badge: 3.85 },
+  { n: 27, child: "Шурова Агата",       ...STD, paid: 199.8 },
+];
+
+// Остаток по ребёнку: взнос минус все списания
+export function feeRest(f) {
+  const charges = FEE_COLUMNS.filter((c) => c.kind === "charge").reduce((s, c) => s + (f[c.key] || 0), 0);
+  return Math.round((f.paid - charges) * 100) / 100;
+}
 
 // Расходы — группами, как в таблице. planned: true — позиция без суммы («планируется»), в итог не входит.
 export const EXPENSE_GROUPS = [
@@ -80,16 +102,42 @@ export const EXPENSE_GROUPS = [
       { name: "Тряпочки для парт",    price: 2.5,   qty: "2 уп (6 шт)",   sum: 5,     place: "FixPrice" },
       { name: "Мусорные пакеты",      price: 2.83,  qty: "1",             sum: 2.83,  place: "Санта" },
       { name: "Савок + щётка",        price: 17,    qty: "1",             sum: 17,    place: "21 Век" },
-      { name: "Контейнеры для канцелярии", planned: true },
+      { name: "Контейнеры для канцелярии + наклейки", price: 19.24, qty: "27", sum: 519.48, place: "21 Век", comment: "наклейки — 10,41 BYN в составе суммы" },
       { name: "Фильтр (вода) + расходы на школьные награждения", price: 15, qty: "27", sum: 405, place: "ЕРИП: Попечительский совет школы" },
+      { name: "Вешалки и стеллажи в гардероб", planned: true, comment: "8,80 × 27 — сумма уточняется, совместно с 1 «В» классом" },
     ],
   },
   {
-    id: "bday",
-    title: "Дни рождения (сентябрь)",
+    id: "gifts",
+    title: "Подарки (сентябрь)",
     items: [
-      { name: "Казнадей Анна (02.09)", price: 35, qty: "1", sum: 35, place: "Канцелярия" },
-      { name: "Головко Виктория Петровна (09.09) · сертификат", price: 200, qty: "1", sum: 200, place: "Золотое яблоко" },
+      { name: "День рождения — Казнадей Анна (02.09)", price: 30, qty: "1", sum: 30, place: "Канцелярия" },
+      { name: "День рождения — Головко Виктория Петровна (09.09) · сертификат и цветы", price: 300, qty: "1", sum: 300, place: "Золотое яблоко · цветы" },
+      { name: "Канцелярия — подарки ученикам на дни рождения", qty: "26", sum: 591.85, place: "Expobel, рынок" },
+    ],
+  },
+  {
+    id: "gpd",
+    title: "ГПД (группа продлённого дня)",
+    items: [
+      { name: "Тряпки на швабру",        price: 3,    qty: "2",             sum: 6,     place: "FixPrice" },
+      { name: "Савок + щётка",           price: 17,   qty: "1",             sum: 17,    place: "21 Век" },
+      { name: "Тряпочки для уборки поверхностей", price: 5, qty: "1 уп (5 шт)", sum: 5,  place: "FixPrice" },
+      { name: "Бумажные полотенца",      price: 2.79, qty: "2",             sum: 5.58,  place: "Мила" },
+      { name: "Влажные салфетки",        price: 3.99, qty: "2 уп",          sum: 7.98,  place: "Мила" },
+      { name: "Туалетная бумага",        price: 16,   qty: "1 уп (24 шт)",  sum: 16,    place: "FixPrice" },
+      { name: "Контейнеры для игр", planned: true },
+      { name: "Канцелярия общая", qty: "набор", sum: 95, place: "FixPrice, Галамарт", comment: "цветные карандаши, ножницы, тетради, простые карандаши, ластики, блоки А4" },
+      { name: "Ковёр", planned: true },
+      { name: "Контейнер для канцелярии", price: 3.9,  qty: "5",            sum: 19.5,  place: "Три цены" },
+      { name: "Наклейки на кровати",     price: 0.43, qty: "24",            sum: 10.41, place: "Фотопечать" },
+    ],
+  },
+  {
+    id: "other",
+    title: "Прочее",
+    items: [
+      { name: "Магнитные значки (Домашевич — 2 шт)", price: 6.9, qty: "28", sum: 193.2, place: "СШ № 227" },
     ],
   },
   {
@@ -100,6 +148,8 @@ export const EXPENSE_GROUPS = [
       { name: "Человек и мир", planned: true },
       { name: "Трудовое обучение", planned: true },
       { name: "ИЗО", planned: true },
+      { name: "Шкала самооценки", planned: true },
+      { name: "Планшет для прописей", planned: true },
     ],
   },
 ];
@@ -112,7 +162,9 @@ export function groupTotal(g) {
   return g.items.reduce((s, i) => s + (i.planned ? 0 : i.sum || 0), 0);
 }
 
-export const TOTAL_COLLECTED = FEES.reduce((s, f) => s + f.paid, 0); // 1373
-export const TOTAL_SPENT = EXPENSE_GROUPS.reduce((s, g) => s + groupTotal(g), 0); // 728,50
-export const CASH_NOW = FEES.reduce((s, f) => s + f.rest, 0); // 864,04 — как в таблице класса
+export const TOTAL_COLLECTED = Math.round(FEES.reduce((s, f) => s + f.paid, 0) * 100) / 100; // 4549,10
+export const TOTAL_SPENT = Math.round(EXPENSE_GROUPS.reduce((s, g) => s + groupTotal(g), 0) * 100) / 100; // 2310,50
+export const CASH_NOW = Math.round(FEES.reduce((s, f) => s + feeRest(f), 0) * 100) / 100; // 2223,20 — как в таблице класса
+// Списания из взносов, которых нет в списке расходов (бейджи — покупались через школу)
+export const FEE_ONLY_DEDUCTIONS = Math.round(FEES.reduce((s, f) => s + (f.badge || 0), 0) * 100) / 100; // 15,40
 export const FAMILIES_COUNT = FAMILIES.length; // 27

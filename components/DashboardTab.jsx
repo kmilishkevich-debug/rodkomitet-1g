@@ -1,7 +1,7 @@
 "use client";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
-import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
+import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FEE_ONLY_DEDUCTIONS, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, scheduleFocus, subjectIcon } from "./scheduleData";
 import { BIRTHDAYS_FALLBACK, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
 import PushSettings from "./PushSettings";
@@ -175,7 +175,9 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         : `Сегодня есть ${pendingCount} важных дела`;
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
-  const cash = liveGroups ? TOTAL_COLLECTED - spent : CASH_NOW;
+  const cash = liveGroups
+    ? Math.round((TOTAL_COLLECTED - spent - FEE_ONLY_DEDUCTIONS) * 100) / 100
+    : CASH_NOW;
   const groupsCount = (liveGroups || EXPENSE_GROUPS).length;
   const bdays = liveBirthdays || BIRTHDAYS_FALLBACK;
   const bdayEv = birthdayEvents(bdays, committee);
@@ -213,7 +215,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
             <button className="dstat-btn" title="История операций" onClick={() => onTab("history")}><Ic id="i-arrow-up-right" /></button>
           </div>
           <div className="val">{fmt(cash)} BYN</div>
-          <div className="note">{liveGroups ? "собрано минус все расходы" : "остаток по таблице класса"}</div>
+          <div className="note">{liveGroups ? "собрано минус расходы и бейджи" : "остаток по таблице класса"}</div>
         </div>
         <div className="dstat gold">
           <div className="dstat-top">
@@ -254,7 +256,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         <div className="attn-ico blue"><NavIcon name="schedule" uid="d-attn-sched" size={26} /></div>
         <div className="attn-body">
           <div className="attn-title">Рабочие тетради на класс</div>
-          <div className="attn-sub">Закупка планируется · белорусский язык, человек и мир, трудовое обучение, ИЗО</div>
+          <div className="attn-sub">Закупка планируется · белорусский язык, человек и мир, труд, ИЗО, шкала самооценки, планшет для прописей</div>
         </div>
         <button className="pill-btn blue" onClick={() => onTab("expenses")}>Подробнее</button>
       </div>
@@ -268,7 +270,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         <div className="dfee-head">
           <div>
             <div className="dfee-title">Взнос 2026–2027 <span className="tag-pill">годовой</span></div>
-            <div className="dfee-meta">50 BYN с семьи · собран полностью</div>
+            <div className="dfee-meta">суммы по таблице класса · собран полностью</div>
           </div>
           <span className="going-pill">собран</span>
         </div>
@@ -282,12 +284,12 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         <div className="dfee-head">
           <div>
             <div className="dfee-title">Рабочие тетради <span className="tag-pill">планируется</span></div>
-            <div className="dfee-meta">4 позиции · сумма уточняется</div>
+            <div className="dfee-meta">6 позиций · сумма уточняется</div>
           </div>
           <span className="going-pill">скоро</span>
         </div>
         <div className="dfee-progress-labels">
-          <span>Белорусский язык · Человек и мир · Труд · ИЗО</span>
+          <span>Белорусский язык · Человек и мир · Труд · ИЗО · Шкала самооценки · Планшет для прописей</span>
           <span>— BYN</span>
         </div>
         <div className="dprogress"><i style={{ width: "0%" }}></i></div>
