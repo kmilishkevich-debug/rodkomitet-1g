@@ -10,7 +10,7 @@ const SUBS = [
   { id: "history", label: "История" },
 ];
 
-export default function MoneyTab({ sub, onSub, committee, toast, onOpenUpload, liveGroups, onReload }) {
+export default function MoneyTab({ sub, onSub, committee, toast, onOpenUpload, liveGroups, onReload, author }) {
   return (
     <section id="tab-money">
       <div className="money-subnav reveal d1">
@@ -25,7 +25,7 @@ export default function MoneyTab({ sub, onSub, committee, toast, onOpenUpload, l
           </button>
         ))}
       </div>
-      {sub === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={onOpenUpload} />}
+      {sub === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={onOpenUpload} author={author} />}
       {sub === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={onReload} />}
       {sub === "history" && <HistoryTab toast={toast} />}
     </section>

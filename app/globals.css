@@ -601,3 +601,12 @@ nav.bottomnav .nvi{width:32px;height:32px}
 .bnav-more-menu button{display:flex;align-items:center;gap:10px;padding:9px 12px;border:0;background:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:left;color:inherit}
 .bnav-more-menu button.active,.bnav-more-menu button:hover{background:var(--bg,#f4f2fb)}
 .bnav-more-menu .nvi{width:26px;height:26px;flex:none}
+
+/* Редактируемые сборы: серый чип «закрыт», поля модалок, кликабельные ячейки */
+.chip.gray{background:#E7E5E4}
+.fee-lb{display:block;font-size:12.5px;font-weight:700;margin:2px 0 4px;color:var(--muted,#6b7280)}
+.fee-inp{width:100%;box-sizing:border-box;border:1.5px solid var(--soft-line,#e3e0f0);border-radius:12px;padding:9px 12px;font-family:inherit;font-size:14.5px;margin-bottom:10px;background:#fff}
+.fee-inp:focus{outline:none;border-color:var(--teal,#14b8a6)}
+.cell-btn{border:0;background:none;font:inherit;color:inherit;cursor:pointer;padding:2px 4px;border-radius:8px;border-bottom:1.5px dashed rgba(120,110,180,.5)}
+.cell-btn:hover{background:var(--bg,#f4f2fb)}
+.pay-tag{display:inline-block;margin-left:4px;font-size:10px;font-weight:800;background:var(--gold-soft,#fdeec7);border-radius:6px;padding:1px 5px;vertical-align:middle}

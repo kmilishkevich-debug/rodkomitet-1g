@@ -1,5 +1,6 @@
 "use client";
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { fetchCashExtras } from "@/lib/supabase";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FEE_ONLY_DEDUCTIONS, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
@@ -249,9 +250,17 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   const headline = attnCount === 0 ? "Все важные дела выполнены" : "Сегодня есть 1 важное дело";
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
+  // Поступления сверх старого сбора: платежи по новым сборам + разовые поступления
+  const [extras, setExtras] = useState(null);
+  useEffect(() => {
+    fetchCashExtras().then((data) => {
+      if (data) setExtras(data);
+    });
+  }, []);
+  const extraIncome = extras ? extras.oneOff + extras.campaigns : 0;
   const cash = liveGroups
-    ? Math.round((TOTAL_COLLECTED - spent - FEE_ONLY_DEDUCTIONS) * 100) / 100
-    : CASH_NOW;
+    ? Math.round((TOTAL_COLLECTED - spent - FEE_ONLY_DEDUCTIONS + extraIncome) * 100) / 100
+    : Math.round((CASH_NOW + extraIncome) * 100) / 100;
   const groupsCount = (liveGroups || EXPENSE_GROUPS).length;
   const bdays = liveBirthdays || BIRTHDAYS_FALLBACK;
   const bdayEv = birthdayEvents(bdays, committee);
