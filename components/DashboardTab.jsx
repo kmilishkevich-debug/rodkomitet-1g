@@ -243,8 +243,9 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
   );
 }
 
-export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken }) {
-  const greetName = committee ? ", Кристина" : "";
+export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName }) {
+  // Персональное приветствие: имя берём из базы (user_roles.display_name); если имени нет — без имени
+  const greetName = authorName ? `, ${authorName}` : "";
   // Пока в разделе «Требует внимания» одна карточка — тетради
   const attnCount = 1;
   const headline = attnCount === 0 ? "Все важные дела выполнены" : "Сегодня есть 1 важное дело";
