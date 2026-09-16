@@ -60,7 +60,7 @@ export const FEES = [
   { n: 4,  child: "Гладкая Карина",     ...STD, paid: 200 },
   { n: 5,  child: "Горлинская Алёна",   ...STD, paid: 215.5 },
   { n: 6,  child: "Гурецкий Роман",     ...STD, paid: 200 },
-  { n: 7,  child: "Дашкевич Варвара",   ...STD, paid: 70, badge: 3.85 },
+  { n: 7,  child: "Дашкевич Варвара",   ...STD, paid: 170, badge: 3.85 },
   { n: 8,  child: "Дехтяр Илья",        ...STD, paid: 200.5 },
   { n: 9,  child: "Домашевич Милана",   ...STD, paid: 71.4, magnets: 13.8 },
   { n: 10, child: "Дорошенко Арина",    ...STD, paid: 50, gpd: 0 },
