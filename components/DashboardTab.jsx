@@ -6,7 +6,7 @@ import NavIcon from "./NavIcons";
 import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FEE_ONLY_DEDUCTIONS, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, INFO_HOUR, scheduleFocus, subjectIcon, lessonDisplay } from "./scheduleData";
 import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu, minskDateISO } from "./scheduleOverrides";
-import { BIRTHDAYS_FALLBACK, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
+import { BIRTHDAYS_FALLBACK, birthdayEvents, monthBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
 import PushSettings from "./PushSettings";
 import ClassMascot from "./ClassMascot";
 import TreasurerMascot from "./TreasurerMascot";
@@ -180,7 +180,7 @@ function BdayBanner({ ev }) {
 
 // Блок «Дни рождения»: напоминания + ближайшие именинники
 function BirthdaysWidget({ committee, ev, list, onTab }) {
-  const upcoming = upcomingBirthdays(list, new Date(), 3);
+  const bdMonth = monthBirthdays(list, new Date());
   const notices = [];
   if (ev.summerTomorrow) {
     notices.push({
@@ -210,7 +210,7 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
     <>
       <div className="sec-head reveal d3">
         <span className="sec-dot pink"><Ic id="i-cake" /></span>
-        <h2 className="sec-title">Дни рождения</h2>
+        <h2 className="sec-title">Дни рождения в {bdMonth.monthLabel}</h2>
         <span className="sec-note">поздравляем всем классом</span>
       </div>
       {notices.map((n) => (
@@ -223,13 +223,13 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
         </div>
       ))}
       <div className="card bday-upcoming reveal d3">
-        {upcoming.map((k) => (
-          <div className="bday-row" key={k.id}>
+        {bdMonth.kids.map((k) => (
+          <div className={"bday-row" + (k.passed ? " past" : "")} key={k.id}>
             <span className="bday-date">{fmtBd(k.born)}</span>
             <span className="bday-name"><Ic id="i-cake" /> {bdName(k)}</span>
-            <span className="bday-turns">исполнится {k.turns}</span>
-            <span className={"bday-when" + (k.days <= 5 ? " close" : "")}>
-              {k.days === 0 ? "сегодня" : inDaysWord(k.days)}
+            <span className="bday-turns">{k.passed ? `исполнилось ${k.turns}` : `исполнится ${k.turns}`}</span>
+            <span className={"bday-when" + (k.passed ? " past" : k.days >= 0 && k.days <= 5 ? " close" : "")}>
+              {k.passed ? "уже отметили" : k.days === 0 ? "сегодня!" : inDaysWord(k.days)}
             </span>
           </div>
         ))}

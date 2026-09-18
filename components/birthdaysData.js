@@ -39,6 +39,12 @@ export const BD_MONTHS = [
   "июля", "августа", "сентября", "октября", "ноября", "декабря",
 ];
 
+// «в сентябре», «в октябре» — для заголовка виджета на Главной
+export const BD_MONTHS_PREP = [
+  "январе", "феврале", "марте", "апреле", "мае", "июне",
+  "июле", "августе", "сентябре", "октябре", "ноябре", "декабре",
+];
+
 export const bdName = (k) => `${k.first} ${k.last}`;
 
 // «27 октября» — без года
@@ -67,6 +73,29 @@ export function upcomingBirthdays(list, today = new Date(), n = 3) {
     .map((k) => ({ ...k, ...bdInfo(k.born, today) }))
     .sort((a, b) => a.days - b.days)
     .slice(0, n);
+}
+
+// Все именинники месяца ближайшего ДР (для виджета на Главной).
+// Берём месяц, в котором ближайший день рождения (включая сегодня):
+// если в текущем месяце ДР больше нет — показываем целиком следующий месяц.
+// Прошедшие ДР показываемого месяца помечаем passed (days < 0).
+export function monthBirthdays(list, today = new Date()) {
+  if (!list.length) return { month: 0, monthLabel: BD_MONTHS_PREP[0], kids: [] };
+  const t = mid(today);
+  const withInfo = list.map((k) => ({ ...k, ...bdInfo(k.born, today) }));
+  const nearest = withInfo.reduce((a, b) => (a.days <= b.days ? a : b));
+  const y = nearest.next.getFullYear();
+  const m = nearest.next.getMonth();
+  const kids = list
+    .filter((k) => Number(k.born.split("-")[1]) - 1 === m)
+    .map((k) => {
+      const d = Number(k.born.split("-")[2]);
+      const date = new Date(y, m, d);
+      const days = Math.round((date - t) / dayMs);
+      return { ...k, date, days, turns: y - Number(k.born.slice(0, 4)), passed: days < 0 };
+    })
+    .sort((a, b) => a.days - b.days);
+  return { month: m, monthLabel: BD_MONTHS_PREP[m], kids };
 }
 
 // Летние дети (июнь–август) — их поздравляем на Дне летних детей
