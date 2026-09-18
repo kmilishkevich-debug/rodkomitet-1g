@@ -9,6 +9,7 @@ import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDate
 import { BIRTHDAYS_FALLBACK, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
 import PushSettings from "./PushSettings";
 import ClassMascot from "./ClassMascot";
+import TreasurerMascot from "./TreasurerMascot";
 
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
@@ -327,6 +328,8 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           </div>
           <div className="val">{fmt(spent)} BYN</div>
           <div className="note">{groupsCount} группы расходов</div>
+          {/* Компактный «Пушистый казначей»: штампует чек «Учтено!» при новом расходе */}
+          <TreasurerMascot compact />
         </div>
       </div>
 

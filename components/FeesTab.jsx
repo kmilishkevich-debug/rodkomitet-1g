@@ -7,6 +7,7 @@ import {
   supabase, isLive, fetchFees, fetchChildNotes, saveFeeValue,
   fetchOneOffIncomes, addOneOffIncome, fetchFeeEditsLog, addFeeEdit,
 } from "@/lib/supabase";
+import TreasurerMascot, { MASCOT_GOAL, notifyTreasurer } from "./TreasurerMascot";
 
 // Полная сумма взносов с семьи на 2026–2027 (50 + 150)
 const FEE_TARGET = 200;
@@ -226,6 +227,15 @@ export default function FeesTab({ committee, toast, onOpenUpload, author }) {
           target: "Взносы 2026–2027", child: row.child, field: column.title,
           old_amount: old, new_amount: amount, editor,
         });
+        // Пушистый казначей реагирует на новый взнос (только на увеличение суммы)
+        if (column.kind === "paid" && amount > old) {
+          notifyTreasurer({
+            type: "contribution",
+            id: row.id + ":" + column.id + ":" + Date.now(),
+            child: row.child,
+            amount: round2(amount - old),
+          });
+        }
       }
       setCellEdit(null);
       toast("Сумма сохранена, изменение записано в журнал");
@@ -315,6 +325,8 @@ export default function FeesTab({ committee, toast, onOpenUpload, author }) {
         <div className="muted" style={{ marginBottom: 12 }}>
           Сдали полностью {doneCount} из {rows.length} · собрано {fmt(totalPaid)} BYN · осталось собрать {fmt(totalDue)} BYN · остаток на детях {fmt(totalRest)} BYN
         </div>
+        {/* «Пушистый казначей»: банка «Общее дело 1Г», цель — 200 BYN × 27 семей */}
+        <TreasurerMascot collected={totalPaid} goal={MASCOT_GOAL} />
         <div className="row">
           <button className="btn small teal" onClick={() => onOpenUpload("Взносы 2026–2027", "до " + fmt(FEE_TARGET) + " BYN с семьи")}>Загрузить чек об оплате</button>
           <button className="btn small white" onClick={() => setListOpen(!listOpen)}>{listOpen ? "Скрыть список" : "Взносы и остатки по детям"}</button>

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase, uploadReceipt } from "@/lib/supabase";
+import { notifyTreasurer } from "./TreasurerMascot";
 
 const NEW_GROUP = "__new__";
 
@@ -116,6 +117,16 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
       if (error) throw error;
 
       toast(editItem ? "Расход обновлён" : "Расход добавлен — родители уже видят его");
+      // Пушистый казначей штампует чек «Учтено!» (только новые реальные расходы)
+      if (!editItem && !planned && !free && sumNum > 0) {
+        const groupTitle = (groups.find((g) => g.id === gid) || {}).title || newGroupTitle.trim();
+        notifyTreasurer({
+          type: "expense",
+          id: "exp:" + Date.now(),
+          category: groupTitle || finalName,
+          amount: sumNum,
+        });
+      }
       onSaved();
       onClose();
     } catch (e) {

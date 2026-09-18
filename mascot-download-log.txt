@@ -1,0 +1,12 @@
+Downloading mascot scenes... 
+OK scene-start 
+OK scene-grow 
+OK scene-near 
+OK scene-done 
+OK scene-compact 
+scene-compact.png
+scene-done.png
+scene-grow.png
+scene-near.png
+scene-start.png
+DONE 
