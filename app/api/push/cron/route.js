@@ -96,6 +96,18 @@ export async function GET(request) {
   }
 
   const sent = results.reduce((s, r) => s + (r.sent || 0), 0);
+  const failed = results.reduce((s, r) => s + (r.failed || 0), 0);
+
+  // Если отправляли, но не доставили НИ ОДНОГО пуша — освобождаем дату,
+  // чтобы повторный запуск в этот же день мог попробовать снова
+  if (results.length && sent === 0) {
+    await sb.from("push_log").delete().eq("day", day);
+    return NextResponse.json(
+      { ok: false, day, notifications: results.length, sent, failed, error: "Ни один пуш не доставлен — дата освобождена для повтора" },
+      { status: 500 }
+    );
+  }
+
   await sb.from("push_log").update({ sent }).eq("day", day);
-  return NextResponse.json({ ok: true, day, notifications: results.length, sent });
+  return NextResponse.json({ ok: true, day, notifications: results.length, sent, failed });
 }

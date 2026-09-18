@@ -60,7 +60,11 @@ function ManualPush({ toast }) {
     const res = await sendManualPush({ title: title.trim(), body: text.trim(), audience, url });
     setSending(false);
     if (!res.ok) return toast("Не получилось отправить: " + (res.error || "ошибка"));
-    toast(`Пуш отправлен: доставляется на ${res.sent} устройств${res.gone ? ` (устаревших подписок убрано: ${res.gone})` : ""}`);
+    toast(
+      `Пуш отправлен: доставляется на ${res.sent} устройств` +
+        (res.failed ? `, не доставлен на ${res.failed}` : "") +
+        (res.gone ? ` (устаревших подписок убрано: ${res.gone})` : "")
+    );
     setTitle("");
     setText("");
   };

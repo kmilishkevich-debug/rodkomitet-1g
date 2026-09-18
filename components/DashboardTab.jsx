@@ -304,7 +304,30 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         </div>
       </div>
 
-      <div className="grid cols3 stats-row reveal d2">
+      <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
+
+      <BirthdaysWidget committee={committee} ev={bdayEv} list={bdays} onTab={onTab} />
+
+      <div className="sec-head reveal d2">
+        <span className="sec-dot gold"><Ic id="i-bell" /></span>
+        <h2 className="sec-title">Требует вашего внимания</h2>
+        <span className="sec-note">{attnCount === 1 ? "1 действие" : `${attnCount} действия`}</span>
+      </div>
+      <div className="attn-card reveal d2">
+        <div className="attn-ico blue"><NavIcon name="schedule" uid="d-attn-sched" size={26} /></div>
+        <div className="attn-body">
+          <div className="attn-title">Рабочие тетради на класс</div>
+          <div className="attn-sub">Закупка планируется · белорусский язык, человек и мир, труд, ИЗО, шкала самооценки, планшет для прописей</div>
+        </div>
+        <button className="pill-btn blue" onClick={() => onTab("expenses")}>Подробнее</button>
+      </div>
+
+      <div className="sec-head reveal d3">
+        <span className="sec-dot gold"><Ic id="i-coin" /></span>
+        <h2 className="sec-title">Деньги класса</h2>
+        <span className="sec-note">касса, сборы и расходы</span>
+      </div>
+      <div className="grid cols3 stats-row reveal d3">
         <div className="dstat blue">
           <div className="dstat-top">
             <div className="lbl">Сейчас в кассе</div>
@@ -331,24 +354,6 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           {/* Компактный «Пушистый казначей»: штампует чек «Учтено!» при новом расходе */}
           <TreasurerMascot compact />
         </div>
-      </div>
-
-      <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
-
-      <BirthdaysWidget committee={committee} ev={bdayEv} list={bdays} onTab={onTab} />
-
-      <div className="sec-head reveal d3">
-        <span className="sec-dot gold"><Ic id="i-bell" /></span>
-        <h2 className="sec-title">Требует вашего внимания</h2>
-        <span className="sec-note">{attnCount === 1 ? "1 действие" : `${attnCount} действия`}</span>
-      </div>
-      <div className="attn-card reveal d3">
-        <div className="attn-ico blue"><NavIcon name="schedule" uid="d-attn-sched" size={26} /></div>
-        <div className="attn-body">
-          <div className="attn-title">Рабочие тетради на класс</div>
-          <div className="attn-sub">Закупка планируется · белорусский язык, человек и мир, труд, ИЗО, шкала самооценки, планшет для прописей</div>
-        </div>
-        <button className="pill-btn blue" onClick={() => onTab("expenses")}>Подробнее</button>
       </div>
 
       <div className="sec-head reveal d4">
