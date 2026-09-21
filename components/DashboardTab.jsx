@@ -173,7 +173,7 @@ function ImportantNews({ announcements, reads, family, onTab }) {
       {imp.map((a) => {
         const read = isReadBy(a, reads, family);
         return (
-          <div className="imp-card reveal d1" key={a.id}>
+          <div className="imp-card reveal d1" key={a.id} id={"home-imp-" + a.id}>
             <div className="imp-ico" aria-hidden="true">📣</div>
             <div className="imp-body">
               <div className="imp-tags">
@@ -465,6 +465,33 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     headline = "Сейчас нет задач, требующих вашего действия";
     subline = "Всё важное собрано ниже: расписание, касса класса и дни рождения.";
   }
+  // Реплики облачков маскота (ТЗ §6): только реальные события, по приоритету.
+  // Несколько событий — реплики чередуются, первой идёт самая важная.
+  const scrollHome = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  const cues = [];
+  if (impUnread.length) cues.push({
+    top: "Есть новости!",
+    text: "Важное объявление! Посмотрите ниже ↓",
+    action: () => scrollHome("home-imp-" + impUnread[0].id),
+  });
+  if (pollsNoAnswer.length) cues.push({
+    top: "Решаем вместе!",
+    text: "Нужно ваше мнение. Загляните в голосование",
+    action: () => goFocus("poll", pollsNoAnswer[0].id, "votes", onTab),
+  });
+  if (focusNotes.length) cues.push({
+    top: schedFocus.label === "сегодня" ? "Я рядом!" : "Готовимся к завтра!",
+    text: `${schedFocus.label === "сегодня" ? "Сегодня" : "Завтра"} пригодится: ${focusNotes.join(", ").toLowerCase()}. Не забудьте!`,
+    action: () => scrollHome("home-schedule"),
+  });
+  if (bdayEv.today.length) cues.push({
+    top: "Есть новости!",
+    text: `Сегодня день рождения у ${joinNames(bdayEv.today, false)}!`,
+  });
+  if (!cues.length) cues.push({
+    top: "Я рядом!",
+    text: new Date().getHours() >= 17 ? "На сегодня всё. Хорошего вечера!" : "Сейчас нет срочных дел. Всё важное — ниже",
+  });
   return (
     <section id="tab-dashboard">
       <div className="greet-date">{todayLine()}</div>
@@ -483,7 +510,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         </div>
         <div className="welcome-visual">
           <span className="w-blob green" aria-hidden="true"></span>
-          <ClassMascot ref={mascotRef} allDone={false} greetToken={greetToken} />
+          <ClassMascot ref={mascotRef} cues={cues} greetToken={greetToken} />
         </div>
       </div>
 
@@ -492,7 +519,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       <ActivePolls polls={polls} family={family} onTab={onTab} />
 
       <div className="dash-cols">
-        <div className="dash-col-main">
+        <div className="dash-col-main" id="home-schedule">
           <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
         </div>
         <div className="dash-col-side">

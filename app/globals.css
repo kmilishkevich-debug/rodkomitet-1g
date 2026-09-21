@@ -308,6 +308,24 @@ tr:last-child td{border-bottom:none}
 .cm-bubble{position:relative;z-index:2;max-width:215px;width:max-content;margin:-14px 0 0 auto;background:#F6D96F;color:#302b21;font-size:12.4px;font-weight:800;line-height:1.35;border-radius:17px 17px 17px 5px;padding:12px 15px;box-shadow:0 10px 24px rgba(54,49,40,.12);opacity:0;transform:translateY(8px) scale(.94);transform-origin:20% 0;transition:opacity .25s,transform .5s cubic-bezier(.18,.85,.22,1.2)}
 .cm-bubble:before{content:'';position:absolute;top:-9px;left:23px;border-left:12px solid transparent;border-right:2px solid transparent;border-bottom:13px solid #F6D96F}
 .cm-bubble.show{opacity:1;transform:none}
+/* Два облачка маскота (ТЗ §6): оба жёлтые, тёмно-синий текст, хвостики к маскоту */
+.cm-top-bubble{position:absolute;top:-4px;right:0;z-index:3;background:#F6D96F;color:#274172;font-size:11.4px;font-weight:800;line-height:1.3;padding:7px 12px;border-radius:14px 14px 14px 4px;box-shadow:0 8px 18px rgba(54,49,40,.16);opacity:0;transform:translateY(6px) scale(.9);transform-origin:30% 100%;transition:opacity .4s,transform .5s cubic-bezier(.18,.85,.22,1.2);pointer-events:none;max-width:150px}
+.cm-top-bubble:after{content:'';position:absolute;bottom:-8px;left:16px;border-left:2px solid transparent;border-right:10px solid transparent;border-top:10px solid #F6D96F}
+.cm-top-bubble.show{opacity:1;transform:none}
+.cm-bubble.cm-main{position:absolute;top:32%;right:calc(100% - 4px);left:auto;margin:0;max-width:215px;color:#274172;border-radius:17px 17px 5px 17px;z-index:3;transform-origin:100% 60%;border:0;text-align:left}
+.cm-bubble.cm-main:before{display:none}
+.cm-bubble.cm-main:after{content:'';position:absolute;right:-10px;bottom:12px;border-top:3px solid transparent;border-bottom:10px solid transparent;border-left:12px solid #F6D96F}
+button.cm-bubble.cm-main{font-family:inherit;cursor:pointer}
+button.cm-bubble.cm-main:hover{filter:brightness(1.04)}
+button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+/* Ненавязчивая кнопка паузы декоративного движения (доступность) */
+.cm-pause{position:absolute;right:2px;bottom:2px;z-index:4;width:30px;height:30px;border-radius:50%;border:1.5px solid #e5ddca;background:#fffdf6;color:#8b8474;font-size:10px;line-height:1;cursor:pointer;opacity:.5;transition:opacity .25s;display:flex;align-items:center;justify-content:center;padding:0}
+.cm-pause:hover,.cm-pause:focus-visible{opacity:1}
+.cm-paused .cm-rig,.cm-paused .cm-cup-arm,.cm-paused .cm-tilt{animation:none!important}
+.cm-cup-arm.cm-cup-up{transform:translate(5px,-24px) rotate(6deg)}
+/* Резервная статичная поза, если растровые части маскота не загрузились
+   (у резервного JPG белая подложка — гасим её multiply-смешиванием) */
+.cm-fallback{display:block;width:100%;mix-blend-mode:multiply;border-radius:22px}
 .cm-rig[data-state=greeting]{animation:cm-wake 3.1s ease-in-out both,cm-breathe 4.8s 3.1s ease-in-out infinite}
 .cm-rig[data-state=greeting] .cm-pupil{animation:cm-look-up 1.2s ease both}
 .cm-rig[data-state=greeting] .cm-cup-arm{animation:cm-toast 2.2s .75s ease-in-out both}
@@ -331,7 +349,7 @@ tr:last-child td{border-bottom:none}
 @keyframes cm-sigh{to{transform:translateY(7px) rotate(-1deg) scaleY(.989)}}
 @media(prefers-reduced-motion:reduce){
   .cm-wrap *,.cm-wrap *:before{animation:none!important;transition:none!important}
-  .cm-rig,.cm-cup-arm{transform:none!important}
+  .cm-rig,.cm-cup-arm,.cm-tilt{transform:none!important}
 }
 
 /* stat cards */
@@ -387,6 +405,8 @@ tr:last-child td{border-bottom:none}
 .welcome.compact .welcome-visual{width:160px}
 .welcome.compact .w-blob.green{width:150px;height:150px;top:24px;left:6px}
 .welcome.compact .cm-bubble{max-width:185px;font-size:11.8px;padding:10px 13px;margin-top:-10px}
+.welcome.compact .cm-bubble.cm-main{margin:0;max-width:200px}
+.welcome.compact .cm-top-bubble{top:-8px}
 
 /* ── Двухколонник: расписание + касса ── */
 .dash-cols{display:grid;grid-template-columns:58fr 42fr;gap:22px;align-items:start}
@@ -455,6 +475,9 @@ tr:last-child td{border-bottom:none}
   .w-sticker{right:-16px;font-size:11.5px;padding:10px 12px;max-width:140px}
   .welcome-visual .w-blob.green{top:26px}
   .cm-bubble{font-size:11.4px;max-width:160px;padding:10px 12px;margin-top:-10px}
+  .cm-bubble.cm-main{position:relative;top:auto;right:auto;left:auto;margin:0 0 8px auto;max-width:230px;border-radius:17px 17px 17px 5px}
+  .cm-bubble.cm-main:after{right:22px;bottom:-9px;border-left:9px solid transparent;border-right:9px solid transparent;border-top:10px solid #F6D96F}
+  .cm-top-bubble{top:-2px;right:2px;max-width:130px}
   .welcome-h1{font-size:28px}
   .welcome-sub{font-size:14.5px}
   .stats-row{grid-template-columns:1fr}
