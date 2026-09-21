@@ -60,6 +60,15 @@ function ScheduleChangeBanner({ activeOvs, focusIso, focusLabel, endTime, toast,
   );
 }
 
+// 3D-иконки предметов (как на референсе): штаны, смайлик, книга
+function subject3d(subject) {
+  const s = (subject || "").toLowerCase();
+  if (s.includes("введение")) return "/icons/icon-trousers.webp";
+  if (s.includes("физ")) return "/icons/icon-smiley.webp";
+  if (s.includes("логик")) return "/icons/icon-book.webp";
+  return null;
+}
+
 // Мини-расписание на главной: до 13:00 — уроки сегодня, после — на завтра
 function ScheduleWidget({ liveSchedule, overrides, onTab }) {
   const focus = scheduleFocus();
@@ -81,7 +90,7 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
     <>
       <div className="card dash-sched reveal d3">
         <div className="dash-card-head">
-          <span className="sec-dot gold"><NavIcon name="schedule" uid="d-sched" size={20} /></span>
+          <img src="/icons/icon-calendar.webp" className="head-3d" alt="" />
           <div className="dash-card-titles">
             <h2 className="sec-title">{title}</h2>
             <div className="dash-card-sub">
@@ -97,6 +106,7 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
         {lessons.map((l) => {
           const bell = bellByPos[l.pos];
           const si = subjectIcon(l.subject);
+          const si3 = subject3d(l.subject);
           const ch = changed[l.pos];
           const disp = lessonDisplay(l.subject);
           return (
@@ -104,7 +114,7 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
               <div className="dash-sched-row" style={ch ? { background: "var(--blue-soft)", borderRadius: 10 } : undefined}>
                 <span className="dash-sched-time">{bell ? `${bell.start_time}–${bell.end_time}` : `${l.pos}-й`}</span>
                 <span className="dash-sched-subj">
-                  <CIc id={si.id} tone={si.tone} size="sm" /> {disp.name}
+                  {si3 ? <img src={si3} className="les-3d" alt="" /> : <CIc id={si.id} tone={si.tone} size="sm" />} {disp.name}
                   {disp.tag && <span className="muted" style={{ fontStyle: "italic", fontSize: 12 }}> · {disp.tag}</span>}
                   {ch && ch.old && ch.old.subject !== l.subject && <span className="muted" style={{ fontSize: 12 }}> (вместо: {ch.old.subject})</span>}
                   {ch && ch.added && <span className="muted" style={{ fontSize: 12 }}> (добавлен)</span>}
@@ -130,7 +140,7 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
           </div>
         ))}
         {notes.length > 0 && (
-          <div className="dash-sched-note"><Ic id="i-backpack" /> Взять с собой: {notes.join(", ").toLowerCase()}</div>
+          <div className="dash-sched-note"><img src="/icons/icon-backpack.webp" className="note-3d" alt="" /> Взять с собой: {notes.join(", ").toLowerCase()}</div>
         )}
         {activeOvs.length > 0 && (() => {
           const end = dayEndTime(lessons, bells);
@@ -525,37 +535,32 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         <div className="dash-col-side">
           <div className="card cash-card reveal d3">
             <div className="dash-card-head">
-              <span className="sec-dot gold"><Ic id="i-coin" /></span>
+              <img src="/icons/icon-piggy.webp" className="head-3d" alt="" />
               <div className="dash-card-titles">
-                <h2 className="sec-title">Касса класса</h2>
+                <h2 className="sec-title">Деньги класса</h2>
                 <div className="dash-card-sub">{groupsCount} групп расходов · {FAMILIES_COUNT} семей</div>
               </div>
             </div>
 
             {/* Синий блок остатка */}
             <div className="cash-hero">
-              <div className="cash-hero-lbl">Сейчас в общей кассе</div>
-              <div className="cash-hero-val">{fmt(cash)} BYN</div>
-              <div className="cash-hero-note">
-                {isLive && extras === null ? "поступления обновляются…" : "Без фонда ГПД"}
-              </div>
-              <button className="cash-how" onClick={() => setHowOpen(!howOpen)} aria-expanded={howOpen}>
-                Как рассчитано {howOpen ? "▴" : "▾"}
-              </button>
-              {howOpen && (
-                <div className="cash-how-body">
-                  Остаток по ведомости взносов ({fmt(CASH_NOW)} BYN) + разовые поступления ({fmt(extraIncome)} BYN).
-                  Фонд ГПД собирается отдельно и в эту сумму не входит.
+              <div className="cash-hero-main">
+                <div className="cash-hero-lbl">Сейчас в кассе</div>
+                <div className="cash-hero-val">{fmt(cash)} BYN</div>
+                <div className="cash-hero-note">
+                  {isLive && extras === null ? "поступления обновляются…" : "Без фонда ГПД"}
                 </div>
-              )}
-            </div>
-
-            {/* Расходы за год — включают расходы фонда ГПД (см. раздел «Расходы») */}
-            <div className="cash-rows">
-              <button className="cash-row" onClick={() => onTab("expenses")}>
-                <span className="cash-row-lbl"><Ic id="i-minus" /> Расходы, включая ГПД</span>
-                <span className="cash-row-val">{fmt(spent)} BYN</span>
-              </button>
+                <button className="cash-how" onClick={() => setHowOpen(!howOpen)} aria-expanded={howOpen}>
+                  Как рассчитано {howOpen ? "▴" : "▾"}
+                </button>
+                {howOpen && (
+                  <div className="cash-how-body">
+                    Остаток по ведомости взносов ({fmt(CASH_NOW)} BYN) + разовые поступления ({fmt(extraIncome)} BYN).
+                    Фонд ГПД собирается отдельно и в эту сумму не входит.
+                  </div>
+                )}
+              </div>
+              <img src="/icons/icon-wallet.webp" className="cash-hero-3d" alt="" />
             </div>
 
             {/* Годовой сбор — единственное место с суммой «собрано» */}
@@ -568,13 +573,21 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
               <div className="cash-year-note">Осталось собрать {fmt(Math.max(0, Math.round((200 * FAMILIES_COUNT - TOTAL_COLLECTED) * 100) / 100))} BYN</div>
             </div>
 
+            {/* Расходы за год — включают расходы фонда ГПД (см. раздел «Расходы») */}
+            <div className="cash-rows">
+              <button className="cash-row pinkrow" onClick={() => onTab("expenses")}>
+                <span className="cash-row-lbl"><img src="/icons/icon-receipt.webp" className="row-3d" alt="" /> Расходы, включая ГПД</span>
+                <span className="cash-row-val">{fmt(spent)} BYN</span>
+              </button>
+            </div>
+
             {/* Фонд ГПД одной строкой — вся строка ведёт в «Деньги → Расходы» */}
             <button className="cash-row gpd" onClick={() => onTab("expenses")}>
-              <span className="cash-row-lbl"><Ic id="i-coin" /> Фонд ГПД <span className="tag-pill">отдельный фонд</span></span>
-              <span className="cash-row-val">Остаток: {fmt(GPD_FUND_REST)} BYN <span className="gpd-arrow" aria-hidden="true">→</span></span>
+              <span className="cash-row-lbl"><img src="/icons/icon-people.webp" className="row-3d" alt="" /> Фонд ГПД <span className="tag-pill">Отдельный сбор</span></span>
+              <span className="cash-row-val">Остаток: {fmt(GPD_FUND_REST)} BYN <span className="gpd-arrow" aria-hidden="true">›</span></span>
             </button>
 
-            <button className="pill-btn blue cash-open" onClick={() => onTab("fees")}>Открыть финансы</button>
+            <button className="pill-btn blue cash-open" onClick={() => onTab("fees")}>Открыть финансы →</button>
           </div>
         </div>
       </div>

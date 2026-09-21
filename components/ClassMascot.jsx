@@ -41,6 +41,8 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
   const [gaze, setGaze] = useState(null); // {x,y} сдвиг зрачков
   const [tilt, setTilt] = useState(0); // наклон корпуса, градусы
   const [cupUp, setCupUp] = useState(false); // поднять стакан
+  const [phoneUp, setPhoneUp] = useState(false); // поднести телефон к глазам
+  const [bagFix, setBagFix] = useState(false); // поправить сумку на плече
 
   const jobs = useRef(new Set());
   const reduced = useRef(false);
@@ -70,6 +72,8 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
     setGaze(null);
     setTilt(0);
     setCupUp(false);
+    setPhoneUp(false);
+    setBagFix(false);
   }, []);
 
   // --- Моргание: каждые 4–8 секунд ---
@@ -121,15 +125,20 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
     scheduleAction(15000, 25000, (on) => {
       setTilt(on ? (Math.random() < 0.5 ? -1 : 1) * 1.6 : 0);
     }, 2300);
-    // Взгляд вниз «на телефон»: 20–35 с (телефон вшит в тело —
-    // жест передаём зрачками вниз к руке с телефоном)
+    // Поднести телефон к глазам: 20–35 с (отдельный слой руки с телефоном,
+    // зрачки уходят вниз-влево — «читает экран»)
     scheduleAction(20000, 35000, (on) => {
-      setGaze(on ? { x: -10, y: 12 } : null);
-    }, 1900);
+      setPhoneUp(on);
+      setGaze(on ? { x: -9, y: 10 } : null);
+    }, 2600);
     // Поднять стакан: 25–40 с
     scheduleAction(25000, 40000, (on) => {
       setCupUp(on);
     }, 1900);
+    // Поправить сумку на плече: 30–50 с (отдельный слой руки на ремне)
+    scheduleAction(30000, 50000, (on) => {
+      setBagFix(on);
+    }, 2200);
   }, [scheduleBlink, scheduleAction]);
 
   // --- Взгляд на родителя при появлении основной реплики ---
@@ -347,6 +356,10 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
                 <g className={"cm-cup-arm" + (cupUp ? " cm-cup-up" : "")}>
                   <image href="/mascot-arm.webp" width="1254" height="1254" mask="url(#cm-arm-mask)" onError={() => setFailed(true)} />
                 </g>
+                {/* Жест «поправить сумку»: слой руки на ремне поверх тела */}
+                <g className={"cm-bag-arm" + (bagFix ? " cm-on" : "")}>
+                  <image href="/mascot-bag.webp" width="1254" height="1254" />
+                </g>
                 <g className="cm-eye-left">
                   <ellipse cx="589" cy="342" rx="38" ry="45" fill="url(#cm-orange)" />
                   <g className="cm-eye-open">
@@ -369,6 +382,10 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
                 </g>
                 <path className="cm-mouth cm-smile" d="M620 408 Q641 425 662 408" />
                 <path className="cm-mouth cm-frown" d="M620 421 Q641 405 662 421" />
+                {/* Жест «поднести телефон к глазам»: слой руки с телефоном поверх лица */}
+                <g className={"cm-phone-arm" + (phoneUp ? " cm-on" : "")}>
+                  <image href="/mascot-arm-phone.webp" width="1254" height="1254" />
+                </g>
               </g>
             </g>
           </svg>
