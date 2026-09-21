@@ -336,20 +336,6 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
         <div className="fin-cash-info">
           <h3 className="fin-h3">Общая касса класса <span className="chip blue">1 «Г»</span></h3>
           <div className="muted">Общий бюджет нашего класса</div>
-          <div className="fin-tiles">
-            <div className="fin-tile blue">
-              <div className="fin-tile-head"><Ic id="i-users" />Собрано</div>
-              <Sum value={cashCollected} />
-            </div>
-            <div className="fin-tile pink">
-              <div className="fin-tile-head"><Ic id="i-receipt" />Потрачено</div>
-              <Sum value={cashSpent} />
-            </div>
-            <div className="fin-tile green">
-              <div className="fin-tile-head"><Ic id="i-check" />Осталось</div>
-              <Sum value={cashLeft} />
-            </div>
-          </div>
           <div className="fin-actions">
             <button className="btn teal" onClick={() => setListOpen(!listOpen)} aria-expanded={listOpen}>
               <Ic id="i-users" />{listOpen ? "Скрыть список" : "Взносы по детям"}
@@ -374,6 +360,21 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
         {/* Пушистый казначей с банкой «Общее дело 1Г» — как и раньше, живёт в кассе */}
         <div className="fin-mascot">
           <TreasurerMascot collected={totalPaid} goal={MASCOT_GOAL} />
+        </div>
+        {/* Плитки сумм — на всю ширину карточки, чтобы цифры влезали целиком */}
+        <div className="fin-tiles">
+          <div className="fin-tile blue">
+            <div className="fin-tile-head"><Ic id="i-users" />Собрано</div>
+            <Sum value={cashCollected} />
+          </div>
+          <div className="fin-tile pink">
+            <div className="fin-tile-head"><Ic id="i-receipt" />Потрачено</div>
+            <Sum value={cashSpent} />
+          </div>
+          <div className="fin-tile green">
+            <div className="fin-tile-head"><Ic id="i-check" />Осталось</div>
+            <Sum value={cashLeft} />
+          </div>
         </div>
       </div>
 

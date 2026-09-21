@@ -96,6 +96,24 @@ const POSE = {
   notice: "notice", calc: "calc", drop: "drop", hop: "hop", receipt: "receipt",
 };
 
+// Цикл «жизни» в покое: маскот периодически меняет позы-кадры, как мультяшка.
+// Для каждой стадии — своя последовательность (только живые позы, без «рабочих»).
+const CYCLE = {
+  start: ["idle", "step", "idle", "notice", "idle", "hop"],
+  grow: ["idle", "step", "idle", "hop", "idle", "notice"],
+  near: ["step", "idle", "hop", "step", "notice", "idle"],
+  done: ["top", "hop", "top", "idle", "top", "step"],
+};
+const CYCLE_MS = 1900; // бодрый темп смены кадров
+
+// Все картинки маскота — для предзагрузки (чтобы смена поз шла без мерцания)
+const PRELOAD = [
+  ...["idle", "step", "top", "notice", "calc", "drop", "hop", "receipt"].map((p) => "/mascot/pose-" + p + ".png"),
+  ...["low", "mid", "high", "full"].map((j) => "/mascot/jar-" + j + ".png"),
+  "/mascot/coin.png",
+  "/mascot/receipt.png",
+];
+
 const TreasurerMascot = forwardRef(function TreasurerMascot(
   { collected = 0, goal = MASCOT_GOAL, compact = false },
   ref
@@ -107,6 +125,7 @@ const TreasurerMascot = forwardRef(function TreasurerMascot(
   const [reaction, setReaction] = useState(null);
   const [confetti, setConfetti] = useState(false);
   const [say, setSay] = useState(stage.say);
+  const [idlePose, setIdlePose] = useState(POSE[stage.key]); // текущий кадр цикла покоя
 
   const queue = useRef([]); // очередь событий (батчинг)
   const busy = useRef(false);
@@ -226,6 +245,27 @@ const TreasurerMascot = forwardRef(function TreasurerMascot(
     };
   }, [receive, pump, clearJobs]);
 
+  // Предзагрузка всех кадров маскота — смена поз идёт мгновенно, без мерцания
+  useEffect(() => {
+    PRELOAD.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
+
+  // Цикл «жизни»: раз в ~1.9 c маскот меняет позу-кадр (пауза в фоне и при reduced-motion)
+  useEffect(() => {
+    setIdlePose(POSE[stage.key]);
+    const seq = CYCLE[stage.key] || CYCLE.start;
+    let i = 0;
+    const t = setInterval(() => {
+      if (reduced.current || document.hidden) return;
+      i = (i + 1) % seq.length;
+      setIdlePose(seq[i]);
+    }, CYCLE_MS);
+    return () => clearInterval(t);
+  }, [stage.key]);
+
   // Смена состояния при изменении прогресса + залп конфетти при новом достижении цели
   useEffect(() => {
     if (!busy.current) setSay(stage.say);
@@ -242,7 +282,7 @@ const TreasurerMascot = forwardRef(function TreasurerMascot(
 
   const pose = reaction
     ? POSE[reaction.kind === "coin" ? reaction.phase : "receipt"] || "idle"
-    : POSE[stage.key];
+    : idlePose;
 
   // ===== Компактная версия (блок расходов на главной) =====
   if (compact) {
@@ -251,7 +291,7 @@ const TreasurerMascot = forwardRef(function TreasurerMascot(
         <div className="tm-c-art" aria-hidden="true">
           <SoftConfetti count={6} />
           <span className="tm-monster">
-            <Pic src={"/mascot/pose-" + pose + ".png"} className="tm-monster-img" fallback="🧸" />
+            <Pic key={pose} src={"/mascot/pose-" + pose + ".png"} className="tm-monster-img" fallback="🧸" />
           </span>
           {reaction?.kind === "receipt" && (
             <span className={"tm-receipt " + reaction.phase} aria-hidden="true">
@@ -284,7 +324,7 @@ const TreasurerMascot = forwardRef(function TreasurerMascot(
         <Pic src={"/mascot/jar-" + JAR[stage.key] + ".png"} className="tm-jar-img" fallback="🫙" />
         {/* Слой 2: живой монстрик — прыгает и покачивается CSS-ом */}
         <span className="tm-monster">
-          <Pic src={"/mascot/pose-" + pose + ".png"} className="tm-monster-img" fallback="🧸" />
+          <Pic key={pose} src={"/mascot/pose-" + pose + ".png"} className="tm-monster-img" fallback="🧸" />
         </span>
         {/* Монетка при взносе */}
         {reaction?.kind === "coin" && (
