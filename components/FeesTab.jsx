@@ -331,15 +331,8 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
 
   return (
     <section id="tab-fees" className="fin">
-      {/* ===== Шапка раздела ===== */}
-      <div className="fin-hero reveal d1">
-        <div className="fin-kicker"><span>Наш 1 «Г»</span><i aria-hidden="true">/</i><span>Финансы</span></div>
-        <h2 className="fin-title">Всё по делу, всё на виду</h2>
-        <div className="fin-sub">Взносы, расходы и история изменений</div>
-      </div>
-
-      {/* ===== Общая касса класса ===== */}
-      <div className="card fin-cash reveal d2">
+      {/* ===== Общая касса класса (страница начинается сразу с неё) ===== */}
+      <div className="card fin-cash reveal d1">
         <div className="fin-cash-info">
           <h3 className="fin-h3">Общая касса класса <span className="chip blue">1 «Г»</span></h3>
           <div className="muted">Общий бюджет нашего класса</div>

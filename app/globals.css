@@ -619,26 +619,38 @@ nav.bottomnav .nvi{width:32px;height:32px}
 .tm-scene{display:flex;gap:18px;align-items:stretch;background:linear-gradient(135deg,#FDF3E3,#FBE7EF);border-radius:22px;padding:16px 18px;margin:14px 0 16px;overflow:hidden}
 .tm-stagebox{position:relative;flex:none;width:calc(var(--tm-h)*4/3);height:var(--tm-h)}
 .tm-ph{display:inline-flex;align-items:center;justify-content:center;background:#fff8;border:2px dashed #d9c9a8;border-radius:14px;font-size:34px}
-img.tm-scene-img,img.tm-coin-img,img.tm-receipt-img{display:block;width:100%;height:100%;object-fit:contain}
-/* цельная сцена «монстрик + банка „Общее дело 1Г“» */
-.tm-scene-img{position:absolute;inset:0;transition:opacity .35s ease}
+img.tm-jar-img,img.tm-monster-img,img.tm-coin-img,img.tm-receipt-img{display:block;width:100%;height:100%;object-fit:contain}
+/* сцена из слоёв: неподвижная банка справа + живой монстрик слева */
+.tm-jar-img{position:absolute;right:1%;bottom:2%;width:47%;height:86%;transition:opacity .35s ease}
+span.tm-jar-img.tm-ph{position:absolute;right:1%;bottom:2%;width:47%;height:86%;font-size:40px}
+.tm-monster{position:absolute;left:0;bottom:2%;width:58%;height:94%;transform-origin:50% 100%;animation:tm-idle 3.4s ease-in-out infinite}
+.tm-monster .tm-ph{width:100%;height:100%;font-size:52px}
+/* «Собрано!» — монстрик радуется чаще и выше */
+.tm[data-stage=done] .tm-monster{animation:tm-idle 2.3s ease-in-out infinite}
 .tm-stagebox>.tm-ph{position:absolute;inset:0;width:100%;height:100%;font-size:52px}
-.tm-scene[data-pose=hop] .tm-scene-img{animation:tm-hop .5s ease}
-.tm-scene[data-pose=notice] .tm-scene-img{transform:translateY(-3px)}
+.tm[data-pose=hop] .tm-monster{animation:tm-hop .5s ease}
+.tm[data-pose=notice] .tm-monster{animation:none;transform:translateY(-4px) rotate(-2deg)}
+.tm[data-pose=calc] .tm-monster,.tm[data-pose=drop] .tm-monster,.tm[data-pose=receipt] .tm-monster{animation:none}
 /* монетка: заметил → у калькулятора → полёт в горлышко банки */
-.tm-coin{position:absolute;width:30px;height:30px;left:60px;top:18px;z-index:2;transition:all .55s cubic-bezier(.3,.7,.4,1)}
+.tm-coin{position:absolute;width:12%;aspect-ratio:1;height:auto;left:20%;top:8%;z-index:2;transition:all .55s cubic-bezier(.3,.7,.4,1)}
 .tm-coin .tm-ph{width:100%;height:100%;font-size:18px;border-radius:50%}
-.tm-coin.notice{left:60px;top:18px;animation:tm-wiggle .45s ease infinite}
-.tm-coin.calc{left:96px;top:78px}
-.tm-coin.drop{left:auto;right:38px;top:auto;bottom:86px;animation:tm-drop .7s ease forwards}
+.tm-coin.notice{left:20%;top:8%;animation:tm-wiggle .45s ease infinite}
+.tm-coin.calc{left:32%;top:36%}
+.tm-coin.drop{left:auto;right:18%;top:auto;bottom:62%;animation:tm-drop .7s ease forwards}
 .tm-coin.hop{opacity:0;transition:opacity .2s}
 /* чек: выползает → печать «Учтено!» */
-.tm-receipt{position:absolute;left:78px;bottom:34px;width:64px;height:80px;z-index:2}
+.tm-receipt{position:absolute;left:26%;bottom:14%;width:24%;height:36%;z-index:2}
 .tm-receipt .tm-ph{width:100%;height:100%;font-size:26px}
 .tm-receipt.out{animation:tm-receipt-out .7s ease both}
 .tm-receipt.stamp{transform:none}
 .tm-stamp{position:absolute;inset:auto -14px 16px auto;transform:rotate(-14deg) scale(0);background:#fff;border:3px solid #C2410C;color:#C2410C;font-weight:900;font-size:12px;border-radius:8px;padding:3px 8px;letter-spacing:.4px;animation:tm-stamp .35s .1s cubic-bezier(.2,1.4,.4,1) forwards}
-/* конфетти при достижении цели */
+/* мягкие постоянные конфетти вокруг маскота (бесконечный цикл) */
+.tm-confetti-soft{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.tm-confetti-soft i{position:absolute;top:-12px;left:calc(4% + var(--i)*10%);width:6px;height:9px;border-radius:2px;background:#5B8DEF;opacity:0;animation:tm-conf-soft 5.2s linear infinite;animation-delay:calc(var(--i)*-.65s);animation-duration:calc(4.4s + var(--i)*.4s)}
+.tm-confetti-soft i:nth-child(3n){background:#F6D96F}
+.tm-confetti-soft i:nth-child(3n+1){background:#EF6BA0}
+.tm-confetti-soft i:nth-child(4n){background:#7BC47F}
+/* залп конфетти при достижении цели */
 .tm-confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .tm-confetti i{position:absolute;top:-10px;left:calc(var(--i)*5.5%);width:7px;height:11px;border-radius:2px;background:#5B8DEF;animation:tm-conf 2s linear forwards;animation-delay:calc(var(--i)*40ms)}
 .tm-confetti i:nth-child(3n){background:#F6D96F}
@@ -652,15 +664,36 @@ img.tm-scene-img,img.tm-coin-img,img.tm-receipt-img{display:block;width:100%;hei
 .tm-bar i{display:block;height:100%;background:linear-gradient(90deg,#F6D96F,#E8A13C);border-radius:999px;transition:width .5s ease}
 .tm-nums{display:block;margin-top:6px;font-size:12.5px;color:var(--muted);font-weight:700}
 /* компактная версия у блока расходов */
-.tm-compact{display:flex;align-items:center;gap:10px;margin-top:10px;background:#fff6;border-radius:14px;padding:8px 10px;min-height:56px}
-.tm-c-art{position:relative;flex:none;width:44px;height:48px}
-.tm-c-mascot{width:100%;height:100%;object-fit:contain}
+.tm-compact{--tm-h:56px;display:flex;align-items:center;gap:10px;margin-top:10px;background:#fff6;border-radius:14px;padding:8px 10px;min-height:64px}
+.tm-c-art{position:relative;flex:none;width:52px;height:56px}
+.tm-c-art .tm-monster{position:absolute;inset:0;width:100%;height:100%;left:auto;bottom:auto}
+.tm-c-art .tm-confetti-soft i{width:4px;height:6px}
 .tm-c-art .tm-ph{width:100%;height:100%;font-size:24px;border-radius:12px}
 .tm-c-art .tm-receipt{left:auto;right:-8px;bottom:-4px;width:30px;height:38px}
 .tm-c-art .tm-stamp{inset:auto -10px -6px auto;font-size:9px;padding:2px 5px;border-width:2px}
 .tm-c-text{display:flex;flex-direction:column;font-size:12.5px;line-height:1.3;min-width:0}
 .tm-c-text b{font-size:13px}
 @keyframes tm-hop{30%{transform:translateY(-14px)}60%{transform:translateY(0)}80%{transform:translateY(-5px)}}
+/* весёлый idle монстрика: подпрыгивает, покачивается, приседает */
+@keyframes tm-idle{
+  0%,100%{transform:translateY(0) rotate(0)}
+  8%{transform:translateY(0) scaleY(.96) rotate(0)}
+  16%{transform:translateY(-9px) rotate(-3deg)}
+  24%{transform:translateY(0) rotate(0)}
+  38%{transform:rotate(2.4deg)}
+  52%{transform:rotate(-2.4deg)}
+  64%{transform:rotate(0)}
+  74%{transform:translateY(-5px) rotate(2deg)}
+  82%{transform:translateY(0) scaleY(.97)}
+  90%{transform:translateY(0) rotate(0)}
+}
+/* мягкое падение конфетти по кругу; дальность — от высоты сцены */
+@keyframes tm-conf-soft{
+  0%{transform:translateY(0) rotate(0);opacity:0}
+  8%{opacity:.85}
+  85%{opacity:.7}
+  100%{transform:translateY(calc(var(--tm-h,190px) + 16px)) rotate(320deg);opacity:0}
+}
 @keyframes tm-wiggle{50%{transform:rotate(12deg) translateY(-2px)}}
 @keyframes tm-drop{0%{transform:translateY(-46px);opacity:1}80%{transform:translateY(6px);opacity:1}100%{transform:translateY(10px);opacity:0}}
 @keyframes tm-receipt-out{from{transform:translateY(26px) scaleY(.2);opacity:0}to{transform:none;opacity:1}}
@@ -668,16 +701,13 @@ img.tm-scene-img,img.tm-coin-img,img.tm-receipt-img{display:block;width:100%;hei
 @keyframes tm-conf{to{transform:translateY(210px) rotate(340deg);opacity:.4}}
 @media(max-width:520px){
   .tm-scene{flex-direction:column;gap:10px}
-  .tm-stagebox{width:100%;height:170px}
-  .tm-coin{left:calc(14% + 54px)}
-  .tm-coin.calc{left:calc(14% + 90px)}
-  .tm-coin.drop{right:calc(14% + 32px)}
-  .tm-receipt{left:calc(14% + 72px)}
+  .tm-stagebox{width:100%;height:200px}
 }
 @media(prefers-reduced-motion:reduce){
   .tm *,.tm *:before{animation:none!important;transition:none!important}
   .tm-stamp{transform:rotate(-14deg) scale(1)}
-  .tm-confetti{display:none}
+  .tm-confetti,.tm-confetti-soft{display:none}
+  .tm-monster{animation:none!important}
 }
 
 /* ===== Финансы: редизайн страницы «Сборы» ===== */
@@ -693,13 +723,14 @@ img.tm-scene-img,img.tm-coin-img,img.tm-receipt-img{display:block;width:100%;hei
 
 /* Карточка общей кассы */
 .fin-cash {
-  display: grid; grid-template-columns: 1fr 320px; gap: 24px;
+  display: grid; grid-template-columns: 1fr 400px; gap: 24px;
   border-radius: 28px; padding: 32px; margin-bottom: 20px; align-items: center;
 }
 .fin-cash-info { min-width: 0; }
 .fin-h3 { margin: 0 0 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.fin-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
-.fin-tile { border-radius: 18px; padding: 16px 18px; min-width: 0; }
+/* auto-fit: если сумме тесно, плитки сами перестраиваются и становятся шире (BYN не режется) */
+.fin-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 10px; margin: 18px 0; }
+.fin-tile { border-radius: 18px; padding: 16px 14px; min-width: 0; }
 .fin-tile.blue { background: #EAF0FF; color: #2E49A8; }
 .fin-tile.pink { background: #FDECF2; color: #C0326E; }
 .fin-tile.green { background: #EAF5E6; color: #3E7A34; }
@@ -730,17 +761,13 @@ img.tm-scene-img,img.tm-coin-img,img.tm-receipt-img{display:block;width:100%;hei
 .fin-chevron.end { margin-left: auto; }
 .fin-how { max-width: 640px; color: var(--muted); font-size: 14px; line-height: 1.55; margin: 0 0 6px; }
 
-/* Маскот-казначей в правой колонке */
-.fin-mascot { --tm-h: 230px; display: flex; justify-content: center; }
+/* Маскот-казначей в правой колонке (сам монстрик анимируется в слоях .tm-monster) */
+.fin-mascot { --tm-h: 345px; display: flex; justify-content: center; min-width: 0; }
 .fin-mascot .tm-scene {
   background: transparent; padding: 0; margin: 0; box-shadow: none;
-  flex-direction: column; gap: 8px;
+  flex-direction: column; gap: 8px; max-width: 100%;
 }
-.fin-mascot .tm-stagebox { transform-origin: 50% 90%; animation: fin-sway 5s ease-in-out infinite; }
-@keyframes fin-sway {
-  0%, 100% { transform: rotate(-1.2deg); }
-  50% { transform: rotate(1.2deg); }
-}
+.fin-mascot .tm-stagebox { max-width: 100%; }
 
 /* Фонд ГПД */
 .fin-gpd { margin-bottom: 20px; }
@@ -799,7 +826,7 @@ img.tm-scene-img,img.tm-coin-img,img.tm-receipt-img{display:block;width:100%;hei
 
 @media (max-width: 900px) {
   .fin-cash { grid-template-columns: 1fr; padding: 24px; }
-  .fin-mascot { --tm-h: 150px; order: 2; }
+  .fin-mascot { --tm-h: 200px; order: 2; }
 }
 @media (max-width: 560px) {
   .fin-tiles { grid-template-columns: 1fr; }

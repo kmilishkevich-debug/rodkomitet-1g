@@ -1,9 +1,11 @@
 "use client";
 // «Пушистый казначей» — интерактивный маскот сборов класса 1 «Г».
-// Цельные сцены «монстрик + банка „Общее дело 1Г“» (scene-start/grow/near/done),
-// сгенерированные по фото оригинального монстрика. Реакции (монетка, чек,
-// конфетти) анимируются ПОВЕРХ сцены. Картинки — /public/mascot/scene-*.png;
-// при отсутствии файла рисуется заглушка, вся логика работает и без графики.
+// Сцена собирается из ДВУХ слоёв: неподвижная банка «Общее дело 1Г»
+// (/public/mascot/jar-low|mid|high|full.png) и живой монстрик
+// (/public/mascot/pose-*.png), который анимируется CSS-ом: прыгает,
+// покачивается, радуется. Вокруг — мягкие постоянные конфетти.
+// Реакции (монетка, чек, залп конфетти) анимируются поверх сцены.
+// При отсутствии картинок рисуется заглушка, логика работает и без графики.
 //
 // Разделение обязанностей:
 //  • расчёт прогресса — computeProgress (чистая функция, деньги в копейках);
@@ -45,11 +47,14 @@ export function computeProgress(collected, goal) {
 
 // Состояние сцены по прогрессу (пороги из ТЗ)
 export function stageFor(pct) {
-  if (pct >= 100) return { key: "done", say: "Собрано! Можно выдохнуть" };
-  if (pct >= 70) return { key: "near", say: "Уже близко к цели!" };
-  if (pct >= 25) return { key: "grow", say: "Копилка растёт!" };
-  return { key: "start", say: "Начинаем общее дело" };
+  if (pct >= 100) return { key: "done", say: "Ура! Всё собрано — танцуем!" };
+  if (pct >= 70) return { key: "near", say: "Ещё капельку — и банка полная!" };
+  if (pct >= 25) return { key: "grow", say: "Монетка к монетке — копилка растёт!" };
+  return { key: "start", say: "Стартуем! Банка ждёт первых монеток" };
 }
+
+// Наполнение банки по состоянию сцены
+const JAR = { start: "low", grow: "mid", near: "high", done: "full" };
 
 const fmtByn = (n) =>
   (Math.round((Number(n) || 0) * 100) / 100).toLocaleString("ru-RU", {
@@ -71,6 +76,17 @@ function Pic({ src, className, fallback }) {
       draggable={false}
       onError={() => setBroken(true)}
     />
+  );
+}
+
+// Мягкие постоянные конфетти вокруг маскота (CSS-цикл, чисто декоративные)
+function SoftConfetti({ count = 10 }) {
+  return (
+    <span className="tm-confetti-soft" aria-hidden="true">
+      {Array.from({ length: count }).map((_, i) => (
+        <i key={i} style={{ "--i": i }} />
+      ))}
+    </span>
   );
 }
 
@@ -96,7 +112,7 @@ const TreasurerMascot = forwardRef(function TreasurerMascot(
   const busy = useRef(false);
   const jobs = useRef(new Set());
   const reduced = useRef(false);
-  const wasFull = useRef(full); // конфетти — только при НОВОМ достижении цели
+  const wasFull = useRef(full); // залп конфетти — только при НОВОМ достижении цели
   const pctRef = useRef(pct);
   pctRef.current = pct;
 
@@ -210,7 +226,7 @@ const TreasurerMascot = forwardRef(function TreasurerMascot(
     };
   }, [receive, pump, clearJobs]);
 
-  // Смена состояния при изменении прогресса + конфетти при новом достижении цели
+  // Смена состояния при изменении прогресса + залп конфетти при новом достижении цели
   useEffect(() => {
     if (!busy.current) setSay(stage.say);
     if (full && !wasFull.current) {
@@ -233,7 +249,10 @@ const TreasurerMascot = forwardRef(function TreasurerMascot(
     return (
       <div className="tm tm-compact" data-pose={pose} data-stage={stage.key}>
         <div className="tm-c-art" aria-hidden="true">
-          <Pic src="/mascot/scene-compact.png" className="tm-c-mascot" fallback="🧸" />
+          <SoftConfetti count={6} />
+          <span className="tm-monster">
+            <Pic src={"/mascot/pose-" + pose + ".png"} className="tm-monster-img" fallback="🧸" />
+          </span>
           {reaction?.kind === "receipt" && (
             <span className={"tm-receipt " + reaction.phase} aria-hidden="true">
               <Pic src="/mascot/receipt.png" className="tm-receipt-img" fallback="🧾" />
@@ -255,12 +274,18 @@ const TreasurerMascot = forwardRef(function TreasurerMascot(
     );
   }
 
-  // ===== Полная сцена (карточка «Взносы 2026–2027») =====
+  // ===== Полная сцена (карточка «Общая касса класса») =====
   return (
     <div className="tm tm-scene" data-pose={pose} data-stage={stage.key}>
       <div className="tm-stagebox" aria-hidden="true">
-        {/* Цельная сцена: монстрик + банка «Общее дело 1Г» по текущему состоянию */}
-        <Pic src={"/mascot/scene-" + stage.key + ".png"} className="tm-scene-img" fallback="🧸" />
+        {/* Мягкие постоянные конфетти на фоне */}
+        <SoftConfetti count={10} />
+        {/* Слой 1: неподвижная банка «Общее дело 1Г» с наполнением по прогрессу */}
+        <Pic src={"/mascot/jar-" + JAR[stage.key] + ".png"} className="tm-jar-img" fallback="🫙" />
+        {/* Слой 2: живой монстрик — прыгает и покачивается CSS-ом */}
+        <span className="tm-monster">
+          <Pic src={"/mascot/pose-" + pose + ".png"} className="tm-monster-img" fallback="🧸" />
+        </span>
         {/* Монетка при взносе */}
         {reaction?.kind === "coin" && (
           <span className={"tm-coin " + reaction.phase}>
@@ -274,7 +299,7 @@ const TreasurerMascot = forwardRef(function TreasurerMascot(
             {reaction.phase === "stamp" && <span className="tm-stamp">Учтено!</span>}
           </span>
         )}
-        {/* Конфетти при новом достижении цели */}
+        {/* Залп конфетти при новом достижении цели */}
         {confetti && (
           <span className="tm-confetti">
             {Array.from({ length: 18 }).map((_, i) => (
