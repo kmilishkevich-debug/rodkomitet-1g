@@ -49,10 +49,18 @@ export const FEE_COLUMNS = [
   { key: "books",   title: "Рабочие тетради",    kind: "charge" },
 ];
 
-// Взносы 2026–2027 по таблице класса (сентябрь). Стандартные списания:
-// хознужды 37,52 · подарки 34,14 · значки 6,90 · ГПД 7,02. Бейдж 3,85 — у четверых.
-// Остаток считается автоматически: взнос минус все списания (может быть отрицательным).
-const STD = { hoz: 37.52, badge: 0, gifts: 34.14, ward: 0, magnets: 6.9, gpd: 7.02, books: 0 };
+// Взносы 2026–2027 по таблице казначея (актуально на 21.09.2026).
+// Доли удержаний заданы точными дробями (итог статьи ÷ число детей) — так остатки
+// по каждому ребёнку и общий остаток (1 209,58) сходятся с таблицей копейка в копейку;
+// на экране суммы показываются округлённо: хознужды 44,86 · подарки 34,14 · гардероб 7,35 ·
+// значки 6,90 · ГПД 13,01 · тетради 46,30. Бейдж 3,85 — у четверых.
+const HOZ = 1211.32 / 27;    // хозяйственные нужды
+const GIFTS = 921.85 / 27;   // подарки (сентябрь)
+const WARD = 198.45 / 27;    // гардероб (7,35)
+const MAGNETS = 6.9;         // магнитные значки
+const GPD_CUT = 312.3 / 24;  // ГПД — у 24 детей (без Дорошенко, Сиссауи, Тылецкого)
+const BOOKS = 1250.1 / 27;   // рабочие тетради (46,30)
+const STD = { hoz: HOZ, badge: 0, gifts: GIFTS, ward: WARD, magnets: MAGNETS, gpd: GPD_CUT, books: BOOKS };
 export const FEES = [
   { n: 1,  child: "Белоус Ольга",       ...STD, paid: 175 },
   { n: 2,  child: "Богдан Давид",       ...STD, paid: 200 },
@@ -60,21 +68,21 @@ export const FEES = [
   { n: 4,  child: "Гладкая Карина",     ...STD, paid: 200 },
   { n: 5,  child: "Горлинская Алёна",   ...STD, paid: 215.5 },
   { n: 6,  child: "Гурецкий Роман",     ...STD, paid: 200 },
-  { n: 7,  child: "Дашкевич Варвара",   ...STD, paid: 170, badge: 3.85 },
+  { n: 7,  child: "Дашкевич Варвара",   ...STD, paid: 190, badge: 3.85 },
   { n: 8,  child: "Дехтяр Илья",        ...STD, paid: 200.5 },
-  { n: 9,  child: "Домашевич Милана",   ...STD, paid: 71.4, magnets: 13.8 },
-  { n: 10, child: "Дорошенко Арина",    ...STD, paid: 50, gpd: 0 },
+  { n: 9,  child: "Домашевич Милана",   ...STD, paid: 206.3, magnets: 13.8 },
+  { n: 10, child: "Дорошенко Арина",    ...STD, paid: 175, gpd: 0 },
   { n: 11, child: "Казнадей Анна",      ...STD, paid: 200 },
   { n: 12, child: "Кашуба Тимур",       ...STD, paid: 200 },
   { n: 13, child: "Кнотько София",      ...STD, paid: 200 },
   { n: 14, child: "Коваленков Тимофей", ...STD, paid: 200 },
   { n: 15, child: "Лаппо Егор",         ...STD, paid: 201.3 },
   { n: 16, child: "Левко Арина",        ...STD, paid: 200 },
-  { n: 17, child: "Литош Кирилл",       ...STD, paid: 58.8 },
+  { n: 17, child: "Литош Кирилл",       ...STD, paid: 175 },
   { n: 18, child: "Милишкевич Ева",     ...STD, paid: 200 },
   { n: 19, child: "Савчук Доминик",     ...STD, paid: 205, badge: 3.85 },
   { n: 20, child: "Стасько Павел",      ...STD, paid: 200.8 },
-  { n: 21, child: "Сиссауи Мохаммед",   ...STD, paid: 58.8, gpd: 0 },
+  { n: 21, child: "Сиссауи Мохаммед",   ...STD, paid: 175.8, gpd: 0 },
   { n: 22, child: "Сухабок Артём",      ...STD, paid: 204, badge: 3.85 },
   { n: 23, child: "Талако Алиса",       ...STD, paid: 200.4 },
   { n: 24, child: "Тылецкий Андрей",    ...STD, paid: 183.8, gpd: 0 },
@@ -88,11 +96,57 @@ export const FEES = [
 // Живые пометки и заметки хранятся в базе (таблица child_notes, файл gpd-notes-setup.sql).
 export const GPD_CHILDREN = FEES.filter((f) => (f.gpd || 0) > 0).map((f) => f.child);
 
-// Остаток по ребёнку: взнос минус все списания
+// Остаток по ребёнку: взнос минус все списания.
+// Возвращаем точное значение (без округления) — на экране округляет fmt,
+// а итог по всем 27 детям тогда сходится с ведомостью копейка в копейку: 1 209,58.
 export function feeRest(f) {
   const charges = FEE_COLUMNS.filter((c) => c.kind === "charge").reduce((s, c) => s + (f[c.key] || 0), 0);
-  return Math.round((f.paid - charges) * 100) / 100;
+  return f.paid - charges;
 }
+
+// ===== Отдельный фонд ГПД (ведомость ГПД из таблицы казначея) =====
+// Свой список из 27 детей: без Дорошенко Арины, Сиссауи Мохаммеда и Тылецкого Андрея,
+// зато с ребятами из других классов — Янкевичем Егором, Лапицким Никитой и Точёновой Верой.
+// Взнос 25 BYN с ребёнка; Дашкевич Варвара пока не сдала (остаток у неё отрицательный).
+// Хознужды фонда — точная доля расходов фонда (338,32 ÷ 26), на экране ≈ 13,01.
+export const GPD_FUND_FEE = 25;
+export const GPD_FUND_CHARGE = 338.32 / 26;
+export const GPD_FUND = [
+  { n: 1,  child: "Белоус Ольга",       paid: 25 },
+  { n: 2,  child: "Богдан Давид",       paid: 25 },
+  { n: 3,  child: "Богдан Ульяна",      paid: 25 },
+  { n: 4,  child: "Гладкая Карина",     paid: 25 },
+  { n: 5,  child: "Горлинская Алёна",   paid: 25 },
+  { n: 6,  child: "Гурецкий Роман",     paid: 25 },
+  { n: 7,  child: "Дашкевич Варвара",   paid: 0 },
+  { n: 8,  child: "Дехтяр Илья",        paid: 25 },
+  { n: 9,  child: "Домашевич Милана",   paid: 25 },
+  { n: 10, child: "Казнадей Анна",      paid: 25 },
+  { n: 11, child: "Кашуба Тимур",       paid: 25 },
+  { n: 12, child: "Кнотько София",      paid: 25 },
+  { n: 13, child: "Коваленков Тимофей", paid: 25 },
+  { n: 14, child: "Лаппо Егор",         paid: 25 },
+  { n: 15, child: "Левко Арина",        paid: 25 },
+  { n: 16, child: "Литош Кирилл",       paid: 25 },
+  { n: 17, child: "Милишкевич Ева",     paid: 25 },
+  { n: 18, child: "Савчук Доминик",     paid: 25 },
+  { n: 19, child: "Стасько Павел",      paid: 25 },
+  { n: 20, child: "Сухабок Артём",      paid: 25 },
+  { n: 21, child: "Талако Алиса",       paid: 25 },
+  { n: 22, child: "Шилкин Артём",       paid: 25 },
+  { n: 23, child: "Шило Тимофей",       paid: 25 },
+  { n: 24, child: "Шурова Агата",       paid: 25 },
+  { n: 25, child: "Янкевич Егор",       paid: 25 },
+  { n: 26, child: "Лапицкий Никита",    paid: 25 },
+  { n: 27, child: "Точёнова Вера",      paid: 25 },
+];
+// Точное значение без округления — итог по 27 детям сходится с ведомостью: 298,67
+export function gpdFundRest(r) {
+  return r.paid - GPD_FUND_CHARGE;
+}
+export const GPD_FUND_COLLECTED = Math.round(GPD_FUND.reduce((s, r) => s + r.paid, 0) * 100) / 100; // 650,00
+export const GPD_FUND_SPENT = 338.32; // расходы фонда — группа «ГПД» в разделе «Расходы»
+export const GPD_FUND_REST = Math.round((GPD_FUND_COLLECTED - GPD_FUND.length * GPD_FUND_CHARGE) * 100) / 100; // 298,67
 
 // Расходы — группами, как в таблице. planned: true — позиция без суммы («планируется»), в итог не входит.
 export const EXPENSE_GROUPS = [
@@ -109,7 +163,7 @@ export const EXPENSE_GROUPS = [
       { name: "Савок + щётка",        price: 17,    qty: "1",             sum: 17,    place: "21 Век" },
       { name: "Контейнеры для канцелярии + наклейки", price: 19.24, qty: "27", sum: 519.48, place: "21 Век", comment: "наклейки — 10,41 BYN в составе суммы" },
       { name: "Фильтр (вода) + расходы на школьные награждения", price: 15, qty: "27", sum: 405, place: "ЕРИП: Попечительский совет школы" },
-      { name: "Вешалки и стеллажи в гардероб", planned: true, comment: "8,80 × 27 — сумма уточняется, совместно с 1 «В» классом" },
+      { name: "Вешалки и стеллажи в гардероб", price: 7.35, qty: "27", sum: 198.34, place: "совместно с 1 «В» классом" },
     ],
   },
   {
@@ -123,7 +177,7 @@ export const EXPENSE_GROUPS = [
   },
   {
     id: "gpd",
-    title: "ГПД (группа продлённого дня)",
+    title: "ГПД — оплачено из фонда ГПД",
     items: [
       { name: "Тряпки на швабру",        price: 3,    qty: "2",             sum: 6,     place: "FixPrice" },
       { name: "Савок + щётка",           price: 17,   qty: "1",             sum: 17,    place: "21 Век" },
@@ -131,11 +185,12 @@ export const EXPENSE_GROUPS = [
       { name: "Бумажные полотенца",      price: 2.79, qty: "2",             sum: 5.58,  place: "Мила" },
       { name: "Влажные салфетки",        price: 3.99, qty: "2 уп",          sum: 7.98,  place: "Мила" },
       { name: "Туалетная бумага",        price: 16,   qty: "1 уп (24 шт)",  sum: 16,    place: "FixPrice" },
-      { name: "Контейнеры для игр", planned: true },
-      { name: "Канцелярия общая", qty: "набор", sum: 95, place: "FixPrice, Галамарт", comment: "цветные карандаши, ножницы, тетради, простые карандаши, ластики, блоки А4" },
+      { name: "Контейнеры для игр",      price: 20.42, qty: "2",            sum: 40.84, place: "21 Век" },
+      { name: "Канцелярия общая", qty: "набор", sum: 95, place: "FixPrice, Галамарт", comment: "цветные карандаши 2,75 × 10 уп · ножницы 1,99 × 5 · тетради клетка и линейка 0,19 × 96 · простые карандаши 0,29 × 24 · ластики 0,39 × 10 · бумага А4 14,00 × 2 уп · альбомы" },
       { name: "Ковёр", planned: true },
       { name: "Контейнер для канцелярии", price: 3.9,  qty: "5",            sum: 19.5,  place: "Три цены" },
       { name: "Наклейки на кровати",     price: 0.43, qty: "24",            sum: 10.41, place: "Фотопечать" },
+      { name: "Тетради рабочие (ГПД)",   price: 4.79, qty: "24",            sum: 115.01, place: "Белкнига" },
     ],
   },
   {
@@ -149,12 +204,7 @@ export const EXPENSE_GROUPS = [
     id: "books",
     title: "Рабочие тетради (сентябрь)",
     items: [
-      { name: "Белорусский язык", planned: true },
-      { name: "Человек и мир", planned: true },
-      { name: "Трудовое обучение", planned: true },
-      { name: "ИЗО", planned: true },
-      { name: "Шкала самооценки", planned: true },
-      { name: "Планшет для прописей", planned: true },
+      { name: "Комплект рабочих тетрадей: белорусский язык · человек и мир · трудовое обучение · ИЗО · шкала самооценки · планшет для прописей", price: 46.3, qty: "27", sum: 1250.1, place: "через классного руководителя" },
     ],
   },
 ];
@@ -167,9 +217,9 @@ export function groupTotal(g) {
   return g.items.reduce((s, i) => s + (i.planned ? 0 : i.sum || 0), 0);
 }
 
-export const TOTAL_COLLECTED = Math.round(FEES.reduce((s, f) => s + f.paid, 0) * 100) / 100; // 4699,10
-export const TOTAL_SPENT = Math.round(EXPENSE_GROUPS.reduce((s, g) => s + groupTotal(g), 0) * 100) / 100; // 2310,50
-export const CASH_NOW = Math.round(FEES.reduce((s, f) => s + feeRest(f), 0) * 100) / 100; // 2373,20 — как в таблице класса
+export const TOTAL_COLLECTED = Math.round(FEES.reduce((s, f) => s + f.paid, 0) * 100) / 100; // 5312,20
+export const TOTAL_SPENT = Math.round(EXPENSE_GROUPS.reduce((s, g) => s + groupTotal(g), 0) * 100) / 100; // 3914,79 — включая расходы фонда ГПД
+export const CASH_NOW = Math.round(FEES.reduce((s, f) => s + feeRest(f), 0) * 100) / 100; // 1209,58 — остаток по ведомости взносов
 // Списания из взносов, которых нет в списке расходов (бейджи — покупались через школу)
 export const FEE_ONLY_DEDUCTIONS = Math.round(FEES.reduce((s, f) => s + (f.badge || 0), 0) * 100) / 100; // 15,40
 export const FAMILIES_COUNT = FAMILIES.length; // 27

@@ -2,7 +2,11 @@
 import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
-import { FEES, FEE_COLUMNS, GPD_CHILDREN, fmt, feeRest } from "./data";
+import {
+  FEES, FEE_COLUMNS, GPD_CHILDREN, fmt, feeRest,
+  GPD_FUND, GPD_FUND_FEE, GPD_FUND_CHARGE, gpdFundRest,
+  GPD_FUND_COLLECTED, GPD_FUND_SPENT, GPD_FUND_REST,
+} from "./data";
 import {
   supabase, isLive, fetchFees, fetchChildNotes, saveFeeValue,
   fetchOneOffIncomes, addOneOffIncome, fetchFeeEditsLog, addFeeEdit,
@@ -152,6 +156,7 @@ function OneOffModal({ childNames, onClose, onSave, saving }) {
 
 export default function FeesTab({ committee, toast, onOpenUpload, author }) {
   const [listOpen, setListOpen] = useState(false);
+  const [gpdOpen, setGpdOpen] = useState(false);
   const [live, setLive] = useState(null); // { columns, rows } из базы
   const [editCol, setEditCol] = useState(null); // id колонки в режиме переименования
   const [editVal, setEditVal] = useState("");
@@ -316,7 +321,7 @@ export default function FeesTab({ committee, toast, onOpenUpload, author }) {
           <div>
             <h3>Взносы 2026–2027 <span className="chip violet">идёт</span></h3>
             <div className="fee-meta">
-              Всего {fmt(FEE_TARGET)} BYN с семьи · из взносов списываются: хознужды, подарки, магнитные значки, ГПД · бейджи (3,85) — у четверых
+              Всего {fmt(FEE_TARGET)} BYN с семьи · из взносов списываются: хознужды, подарки, гардероб, магнитные значки, ГПД, рабочие тетради · бейджи (3,85) — у четверых
             </div>
           </div>
           <span className={"chip " + (doneCount === rows.length ? "green" : "amber")}>сдали полностью · {doneCount}/{rows.length}</span>
@@ -509,14 +514,62 @@ export default function FeesTab({ committee, toast, onOpenUpload, author }) {
         )}
       </div>
 
-      <div className="card flat fee-card reveal d3" style={{ opacity: 0.72 }}>
+      {/* ===== Фонд ГПД: отдельный сбор со своим списком детей ===== */}
+      <div className="card fee-card reveal d3">
         <div className="fee-head">
           <div>
-            <h3>Рабочие тетради <span className="chip blue">планируется</span></h3>
-            <div className="fee-meta">Белорусский язык · Человек и мир · Труд · ИЗО · Шкала самооценки · Планшет для прописей — сумма уточняется</div>
+            <h3>Фонд ГПД <span className="chip teal">отдельный сбор</span></h3>
+            <div className="fee-meta">
+              По {fmt(GPD_FUND_FEE)} BYN с ребёнка · свой список из {GPD_FUND.length} детей, посещающих группу продлённого дня (в том числе трое из других классов) · расходы фонда — в разделе «Расходы», группа «ГПД»
+            </div>
           </div>
-          <span className="chip amber">скоро</span>
+          <span className="chip green">остаток · {fmt(GPD_FUND_REST)} BYN</span>
         </div>
+        <div className="muted" style={{ marginBottom: 12 }}>
+          Собрано {fmt(GPD_FUND_COLLECTED)} BYN · потрачено {fmt(GPD_FUND_SPENT)} BYN · остаток {fmt(GPD_FUND_REST)} BYN
+        </div>
+        <div className="row">
+          <button className="btn small white" onClick={() => setGpdOpen(!gpdOpen)}>{gpdOpen ? "Скрыть список" : "Взносы и остатки по детям"}</button>
+        </div>
+        {gpdOpen && (
+          <div style={{ marginTop: 14, overflowX: "auto" }}>
+            <table>
+              <tbody>
+                <tr>
+                  <th>№</th>
+                  <th>Ребёнок</th>
+                  <th>Взнос</th>
+                  <th>Хознужды ГПД</th>
+                  <th>Остаток</th>
+                </tr>
+                {GPD_FUND.map((r) => {
+                  const rest = gpdFundRest(r);
+                  return (
+                    <tr key={r.n}>
+                      <td>{r.n}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>{r.child}</td>
+                      <td>{r.paid ? <b>{fmt(r.paid)}</b> : "—"}</td>
+                      <td>−{fmt(GPD_FUND_CHARGE)}</td>
+                      <td>
+                        <b style={rest < 0 ? { color: "#c2410c" } : undefined}>{fmt(rest)}</b>
+                        {rest < 0 && <span className="chip amber" style={{ marginLeft: 6 }}>доплата</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+                <tr>
+                  <td colSpan={2} style={{ textAlign: "right" }}><b>Итого:</b></td>
+                  <td><b>{fmt(GPD_FUND_COLLECTED)}</b></td>
+                  <td><b>−{fmt(GPD_FUND_SPENT)}</b></td>
+                  <td><b>{fmt(GPD_FUND_REST)}</b></td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="muted" style={{ marginTop: 8 }}>
+              «Хознужды ГПД» — доля каждого ребёнка в общих тратах фонда · отрицательный остаток — взнос ещё не сдан
+            </div>
+          </div>
+        )}
       </div>
 
       {cellEdit && <CellModal cell={cellEdit} onClose={() => setCellEdit(null)} onSave={saveCell} saving={saving} />}

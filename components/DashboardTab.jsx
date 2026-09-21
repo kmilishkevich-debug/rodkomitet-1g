@@ -3,7 +3,10 @@ import { Fragment, useEffect, useState } from "react";
 import { fetchCashExtras } from "@/lib/supabase";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
-import { fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FEE_ONLY_DEDUCTIONS, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal } from "./data";
+import {
+  fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal,
+  GPD_FUND, GPD_FUND_COLLECTED, GPD_FUND_SPENT, GPD_FUND_REST,
+} from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, INFO_HOUR, scheduleFocus, subjectIcon, lessonDisplay } from "./scheduleData";
 import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu, minskDateISO } from "./scheduleOverrides";
 import { BIRTHDAYS_FALLBACK, birthdayEvents, monthBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
@@ -247,8 +250,8 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
 export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName }) {
   // Персональное приветствие: имя берём из базы (user_roles.display_name); если имени нет — без имени
   const greetName = authorName ? `, ${authorName}` : "";
-  // Пока в разделе «Требует внимания» одна карточка — тетради
-  const attnCount = 1;
+  // Сейчас срочных дел нет: тетради куплены, взносы собраны
+  const attnCount = 0;
   const headline = attnCount === 0 ? "Все важные дела выполнены" : "Сегодня есть 1 важное дело";
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
@@ -260,9 +263,10 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     });
   }, []);
   const extraIncome = extras ? extras.oneOff + extras.campaigns : 0;
-  const cash = liveGroups
-    ? Math.round((TOTAL_COLLECTED - spent - FEE_ONLY_DEDUCTIONS + extraIncome) * 100) / 100
-    : Math.round((CASH_NOW + extraIncome) * 100) / 100;
+  // Касса класса = остаток по ведомости взносов (CASH_NOW) + разовые поступления.
+  // Не считаем через «собрано − потрачено»: в «потрачено» входят расходы фонда ГПД,
+  // который собирается отдельно и классную кассу не уменьшает.
+  const cash = Math.round((CASH_NOW + extraIncome) * 100) / 100;
   const groupsCount = (liveGroups || EXPENSE_GROUPS).length;
   const bdays = liveBirthdays || BIRTHDAYS_FALLBACK;
   const bdayEv = birthdayEvents(bdays, committee);
@@ -308,19 +312,13 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
 
       <BirthdaysWidget committee={committee} ev={bdayEv} list={bdays} onTab={onTab} />
 
-      <div className="sec-head reveal d2">
-        <span className="sec-dot gold"><Ic id="i-bell" /></span>
-        <h2 className="sec-title">Требует вашего внимания</h2>
-        <span className="sec-note">{attnCount === 1 ? "1 действие" : `${attnCount} действия`}</span>
-      </div>
-      <div className="attn-card reveal d2">
-        <div className="attn-ico blue"><NavIcon name="schedule" uid="d-attn-sched" size={26} /></div>
-        <div className="attn-body">
-          <div className="attn-title">Рабочие тетради на класс</div>
-          <div className="attn-sub">Закупка планируется · белорусский язык, человек и мир, труд, ИЗО, шкала самооценки, планшет для прописей</div>
+      {attnCount > 0 && (
+        <div className="sec-head reveal d2">
+          <span className="sec-dot gold"><Ic id="i-bell" /></span>
+          <h2 className="sec-title">Требует вашего внимания</h2>
+          <span className="sec-note">{attnCount === 1 ? "1 действие" : `${attnCount} действия`}</span>
         </div>
-        <button className="pill-btn blue" onClick={() => onTab("expenses")}>Подробнее</button>
-      </div>
+      )}
 
       <div className="sec-head reveal d3">
         <span className="sec-dot gold"><Ic id="i-coin" /></span>
@@ -334,7 +332,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
             <button className="dstat-btn" title="История операций" onClick={() => onTab("history")}><Ic id="i-arrow-up-right" /></button>
           </div>
           <div className="val">{fmt(cash)} BYN</div>
-          <div className="note">собрано − расходы − бейджи ({fmt(FEE_ONLY_DEDUCTIONS)})</div>
+          <div className="note">остаток по ведомости взносов + разовые поступления</div>
         </div>
         <div className="dstat gold">
           <div className="dstat-top">
@@ -350,7 +348,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
             <button className="dstat-btn dark" title="Расходы" onClick={() => onTab("expenses")}><Ic id="i-minus" /></button>
           </div>
           <div className="val">{fmt(spent)} BYN</div>
-          <div className="note">{groupsCount} группы расходов</div>
+          <div className="note">{groupsCount} групп расходов · включая фонд ГПД</div>
           {/* Компактный «Пушистый казначей»: штампует чек «Учтено!» при новом расходе */}
           <TreasurerMascot compact />
         </div>
@@ -365,29 +363,29 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         <div className="dfee-head">
           <div>
             <div className="dfee-title">Взнос 2026–2027 <span className="tag-pill">годовой</span></div>
-            <div className="dfee-meta">суммы по таблице класса · собран полностью</div>
+            <div className="dfee-meta">суммы по ведомости казначея · 200 BYN с семьи</div>
           </div>
-          <span className="going-pill">собран</span>
+          <span className="going-pill">идёт</span>
         </div>
         <div className="dfee-progress-labels">
-          <span>Сдали {FAMILIES_COUNT} из {FAMILIES_COUNT} семей</span>
+          <span>Собрано {fmt(TOTAL_COLLECTED)} из {fmt(200 * FAMILIES_COUNT)} BYN · {FAMILIES_COUNT} семей</span>
           <span>{fmt(TOTAL_COLLECTED)} BYN</span>
         </div>
-        <div className="dprogress"><i style={{ width: "100%" }}></i></div>
+        <div className="dprogress"><i style={{ width: Math.round((TOTAL_COLLECTED / (200 * FAMILIES_COUNT)) * 100) + "%" }}></i></div>
       </div>
       <div className="dfee-card reveal d5">
         <div className="dfee-head">
           <div>
-            <div className="dfee-title">Рабочие тетради <span className="tag-pill">планируется</span></div>
-            <div className="dfee-meta">6 позиций · сумма уточняется</div>
+            <div className="dfee-title">Фонд ГПД <span className="tag-pill">отдельный сбор</span></div>
+            <div className="dfee-meta">по 25 BYN с ребёнка · свой список из {GPD_FUND.length} детей</div>
           </div>
-          <span className="going-pill">скоро</span>
+          <span className="going-pill">идёт</span>
         </div>
         <div className="dfee-progress-labels">
-          <span>Белорусский язык · Человек и мир · Труд · ИЗО · Шкала самооценки · Планшет для прописей</span>
-          <span>— BYN</span>
+          <span>Собрано {fmt(GPD_FUND_COLLECTED)} · потрачено {fmt(GPD_FUND_SPENT)} · остаток {fmt(GPD_FUND_REST)}</span>
+          <span>{fmt(GPD_FUND_COLLECTED)} BYN</span>
         </div>
-        <div className="dprogress"><i style={{ width: "0%" }}></i></div>
+        <div className="dprogress"><i style={{ width: Math.round((GPD_FUND.filter((r) => r.paid > 0).length / GPD_FUND.length) * 100) + "%" }}></i></div>
       </div>
 
       <PushSettings committee={committee} role={role} toast={toast} />
