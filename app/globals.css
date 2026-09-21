@@ -389,23 +389,39 @@ tr:last-child td{border-bottom:none}
 .welcome.compact .cm-bubble{max-width:185px;font-size:11.8px;padding:10px 13px;margin-top:-10px}
 
 /* ── Двухколонник: расписание + касса ── */
-.dash-cols{display:grid;grid-template-columns:1.35fr 1fr;gap:20px;align-items:start}
-.dash-cols .sec-head:first-child{margin-top:0}
+.dash-cols{display:grid;grid-template-columns:58fr 42fr;gap:22px;align-items:start}
 .dash-col-main{min-width:0}
 .dash-col-side{min-width:0}
 
+/* Общая шапка карточек двухколонника (заголовок внутри карточки) */
+.dash-card-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}
+.dash-card-titles{min-width:0}
+.dash-card-titles .sec-title{margin:0}
+.dash-card-sub{font-size:12.5px;font-weight:700;color:var(--muted);margin-top:3px}
+.dash-card-side{display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0}
+.time-pill{background:var(--blue-soft);color:var(--blue);font-size:12.5px;font-weight:800;padding:7px 12px;border-radius:999px;white-space:nowrap}
+
 /* ── Карточка кассы ── */
 .cash-card{position:relative;padding:22px 24px}
-.cash-main .lbl{font-size:12.2px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.cash-val{font-family:'Comfortaa','Trebuchet MS',sans-serif;font-weight:700;font-size:clamp(30px,3vw,38px);letter-spacing:-.03em;line-height:1.08;color:var(--blue);margin-bottom:6px}
-.cash-main .note{font-size:12.8px;font-weight:600;color:var(--muted);margin-bottom:14px}
+.cash-hero{background:var(--blue);border-radius:18px;padding:18px 20px 16px;color:#fff;margin-bottom:12px}
+.cash-hero-lbl{font-size:11.8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.75);margin-bottom:6px}
+.cash-hero-val{font-family:'Comfortaa','Trebuchet MS',sans-serif;font-weight:700;font-size:clamp(28px,2.6vw,34px);letter-spacing:-.03em;line-height:1.08;color:#fff;margin-bottom:5px}
+.cash-hero-note{font-size:12.8px;font-weight:600;color:rgba(255,255,255,.82)}
+.cash-how{border:none;background:none;cursor:pointer;font-family:'Onest';padding:0;margin-top:10px;font-size:12.5px;font-weight:700;color:#fff;border-bottom:1px dashed rgba(255,255,255,.55)}
+.cash-how-body{margin-top:10px;font-size:12.5px;font-weight:600;line-height:1.5;color:rgba(255,255,255,.85);border-top:1px dashed rgba(255,255,255,.28);padding-top:10px}
 .cash-rows{display:flex;flex-direction:column;margin-bottom:6px}
-.cash-row{border:none;cursor:pointer;background:none;font-family:'Onest';text-align:left;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px;padding:11px 4px;border-top:1px dashed var(--soft-line);font-size:14.2px;font-weight:700;color:var(--ink);transition:.15s;border-radius:10px}
+.cash-row{border:none;cursor:pointer;background:none;font-family:'Onest';text-align:left;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px;padding:11px 4px;font-size:14.2px;font-weight:700;color:var(--ink);transition:.15s;border-radius:10px;width:100%}
 .cash-row:hover{background:#F8F5EE}
-.cash-row .crv{font-weight:800;white-space:nowrap}
-.cash-row.gpd{background:#F6F3EC;border-radius:14px;border-top:none;padding:11px 12px;margin-top:6px}
+.cash-row-val{font-weight:800;white-space:nowrap}
+.cash-row.gpd{background:#F6F3EC;border-radius:14px;padding:11px 12px;margin-top:10px}
 .cash-row.gpd:hover{background:#F1EDE2}
-.cash-row .crl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cash-row-lbl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gpd-arrow{color:var(--blue);font-weight:800;margin-left:2px}
+.cash-year{border-top:1px dashed var(--soft-line);padding-top:12px;margin-top:2px}
+.cash-year-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:13px;font-weight:700;margin-bottom:8px;flex-wrap:wrap}
+.cash-year-top span{color:var(--muted);font-weight:600}
+.cash-year-note{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:6px}
+.cash-open{width:100%;margin-top:14px;justify-content:center}
 
 /* ── Навигация месяцев в днях рождения ── */
 .bd-nav{display:flex;gap:8px;margin-left:auto}
@@ -443,6 +459,8 @@ tr:last-child td{border-bottom:none}
   .welcome-sub{font-size:14.5px}
   .stats-row{grid-template-columns:1fr}
   .dash-cols{grid-template-columns:1fr}
+  .dash-card-head{flex-wrap:wrap}
+  .dash-card-side{margin-left:0;width:100%;justify-content:space-between}
   .welcome.compact{padding:20px 18px;gap:14px;min-height:0}
   .welcome.compact .welcome-visual{width:150px}
   .welcome.compact .w-blob.green{width:135px;height:135px;top:20px}

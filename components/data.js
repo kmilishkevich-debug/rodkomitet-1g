@@ -209,8 +209,10 @@ export const EXPENSE_GROUPS = [
   },
 ];
 
+// Формат сумм по всему приложению: пробел между тысячами, запятая в копейках — 1 209,58
 export function fmt(n) {
-  return n.toFixed(2).replace(".", ",");
+  const [int, dec] = n.toFixed(2).split(".");
+  return int.replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0") + "," + dec;
 }
 
 export function groupTotal(g) {

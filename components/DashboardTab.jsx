@@ -5,14 +5,13 @@ import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
   fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal,
-  GPD_FUND, GPD_FUND_COLLECTED, GPD_FUND_SPENT, GPD_FUND_REST,
+  GPD_FUND_REST,
 } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, INFO_HOUR, scheduleFocus, subjectIcon, lessonDisplay } from "./scheduleData";
 import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu } from "./scheduleOverrides";
 import { BIRTHDAYS_FALLBACK, BD_MONTHS_PREP, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
 import PushSettings from "./PushSettings";
 import ClassMascot from "./ClassMascot";
-import TreasurerMascot from "./TreasurerMascot";
 
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
@@ -69,21 +68,30 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
   const { lessons, changed } = applyOverridesToDay(allLessons, focus.day, activeOvs);
   const bellByPos = Object.fromEntries(bells.map((b) => [b.pos, b]));
   const notes = [...new Set(lessons.map((l) => l.note).filter(Boolean))];
-  const title =
-    focus.label === "сегодня"
-      ? "Уроки сегодня"
-      : `Уроки ${focus.label} · ${DAY_NAMES[focus.day].toLowerCase()}`;
+  // Заголовок внутри карточки: «Сегодня/Завтра в школе», подстрока — день недели, число уроков, кабинет
+  const title = focus.label === "сегодня" ? "Сегодня в школе" : "Завтра в школе";
+  const subtitle = `${DAY_NAMES[focus.day]} · ${lessons.length} урок${lessons.length === 5 ? "ов" : "а"} · каб. 166`;
+  // Метка времени занятий: от первого звонка до конца последнего урока — из актуальных данных
+  const firstBell = lessons.length ? bellByPos[lessons[0].pos] : null;
+  const endTime = dayEndTime(lessons, bells);
+  const timeRange = firstBell && endTime ? `${firstBell.start_time}–${endTime}` : null;
   return (
     <>
-      <div className={"sec-head dh dh-" + focus.day + " reveal d3"}>
-        <span className="sec-dot gold"><NavIcon name="schedule" uid="d-sched" size={20} /></span>
-        <h2 className="sec-title">{title}</h2>
-        <span className="sec-note">
-          {lessons.length} урок{lessons.length === 5 ? "ов" : "а"} · каб. 166
-          {activeOvs.length > 0 && <> · <b style={{ color: "#b07d0a" }}>изменено</b></>}
-        </span>
-      </div>
       <div className="card dash-sched reveal d3">
+        <div className="dash-card-head">
+          <span className="sec-dot gold"><NavIcon name="schedule" uid="d-sched" size={20} /></span>
+          <div className="dash-card-titles">
+            <h2 className="sec-title">{title}</h2>
+            <div className="dash-card-sub">
+              {subtitle}
+              {activeOvs.length > 0 && <> · <b style={{ color: "#b07d0a" }}>изменено</b></>}
+            </div>
+          </div>
+          <div className="dash-card-side">
+            {timeRange && <span className="time-pill">{timeRange}</span>}
+            <button className="pill-btn blue" onClick={() => onTab("schedule")}>Вся неделя →</button>
+          </div>
+        </div>
         {lessons.map((l) => {
           const bell = bellByPos[l.pos];
           const si = subjectIcon(l.subject);
@@ -130,7 +138,6 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
         })()}
         <div className="dash-sched-foot">
           <span className="muted" style={{ fontSize: 12 }}>Временное расписание · первые 20 учебных дней</span>
-          <button className="pill-btn blue" onClick={() => onTab("schedule")}>Вся неделя</button>
         </div>
       </div>
     </>
@@ -279,6 +286,8 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
   // Поступления сверх старого сбора: платежи по новым сборам + разовые поступления
   const [extras, setExtras] = useState(null);
+  // Раскрытие «Как рассчитано» в синем блоке остатка
+  const [howOpen, setHowOpen] = useState(false);
   useEffect(() => {
     fetchCashExtras().then((data) => {
       if (data) setExtras(data);
@@ -344,69 +353,58 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
         </div>
         <div className="dash-col-side">
-          <div className="sec-head reveal d3">
-            <span className="sec-dot gold"><Ic id="i-coin" /></span>
-            <h2 className="sec-title">Касса класса</h2>
-          </div>
           <div className="card cash-card reveal d3">
-            <div className="cash-main">
-              <div className="lbl">Сейчас в общей кассе</div>
-              <div className="cash-val">{fmt(cash)} BYN</div>
-              <div className="note">
-                {isLive && extras === null
-                  ? "поступления обновляются…"
-                  : "остаток по ведомости взносов + разовые поступления · без фонда ГПД"}
+            <div className="dash-card-head">
+              <span className="sec-dot gold"><Ic id="i-coin" /></span>
+              <div className="dash-card-titles">
+                <h2 className="sec-title">Касса класса</h2>
+                <div className="dash-card-sub">{groupsCount} групп расходов · {FAMILIES_COUNT} семей</div>
               </div>
             </div>
-            <div className="cash-rows">
-              <button className="cash-row" onClick={() => onTab("fees")}>
-                <span className="cash-row-lbl"><Ic id="i-plus" /> Собрано за год</span>
-                <span className="cash-row-val">{fmt(TOTAL_COLLECTED)} BYN</span>
+
+            {/* Синий блок остатка */}
+            <div className="cash-hero">
+              <div className="cash-hero-lbl">Сейчас в общей кассе</div>
+              <div className="cash-hero-val">{fmt(cash)} BYN</div>
+              <div className="cash-hero-note">
+                {isLive && extras === null ? "поступления обновляются…" : "Без фонда ГПД"}
+              </div>
+              <button className="cash-how" onClick={() => setHowOpen(!howOpen)} aria-expanded={howOpen}>
+                Как рассчитано {howOpen ? "▴" : "▾"}
               </button>
+              {howOpen && (
+                <div className="cash-how-body">
+                  Остаток по ведомости взносов ({fmt(CASH_NOW)} BYN) + разовые поступления ({fmt(extraIncome)} BYN).
+                  Фонд ГПД собирается отдельно и в эту сумму не входит.
+                </div>
+              )}
+            </div>
+
+            {/* Расходы за год — включают расходы фонда ГПД (см. раздел «Расходы») */}
+            <div className="cash-rows">
               <button className="cash-row" onClick={() => onTab("expenses")}>
-                <span className="cash-row-lbl"><Ic id="i-minus" /> Потрачено</span>
+                <span className="cash-row-lbl"><Ic id="i-minus" /> Расходы, включая ГПД</span>
                 <span className="cash-row-val">{fmt(spent)} BYN</span>
               </button>
-              <button className="cash-row gpd" onClick={() => onTab("expenses")}>
-                <span className="cash-row-lbl"><Ic id="i-coin" /> Фонд ГПД <span className="tag-pill">отдельный фонд</span></span>
-                <span className="cash-row-val">{fmt(GPD_FUND_REST)} BYN</span>
-              </button>
             </div>
-            <div className="dash-sched-foot">
-              <span className="muted" style={{ fontSize: 12 }}>{groupsCount} групп расходов · {FAMILIES_COUNT} семей</span>
-              <button className="pill-btn blue" onClick={() => onTab("history")}>История операций</button>
-            </div>
-            {/* Компактный «Пушистый казначей»: штампует чек «Учтено!» при новом расходе */}
-            <TreasurerMascot compact />
-          </div>
 
-          <div className="dfee-card slim reveal d4">
-            <div className="dfee-head">
-              <div>
-                <div className="dfee-title">Взнос 2026–2027 <span className="tag-pill">годовой</span></div>
-                <div className="dfee-meta">200 BYN с семьи · ведомость казначея</div>
+            {/* Годовой сбор — единственное место с суммой «собрано» */}
+            <div className="cash-year">
+              <div className="cash-year-top">
+                <b>Годовой сбор 2026–2027</b>
+                <span>Собрано {fmt(TOTAL_COLLECTED)} из {fmt(200 * FAMILIES_COUNT)} BYN</span>
               </div>
-              <span className="going-pill">идёт</span>
+              <div className="dprogress"><i style={{ width: Math.round((TOTAL_COLLECTED / (200 * FAMILIES_COUNT)) * 100) + "%" }}></i></div>
+              <div className="cash-year-note">Осталось собрать {fmt(Math.max(0, Math.round((200 * FAMILIES_COUNT - TOTAL_COLLECTED) * 100) / 100))} BYN</div>
             </div>
-            <div className="dfee-progress-labels">
-              <span>Собрано {fmt(TOTAL_COLLECTED)} из {fmt(200 * FAMILIES_COUNT)} BYN</span>
-              <span>{fmt(TOTAL_COLLECTED)} BYN</span>
-            </div>
-            <div className="dprogress"><i style={{ width: Math.round((TOTAL_COLLECTED / (200 * FAMILIES_COUNT)) * 100) + "%" }}></i></div>
-          </div>
-          <div className="dfee-card slim reveal d5">
-            <div className="dfee-head">
-              <div>
-                <div className="dfee-title">Фонд ГПД <span className="tag-pill">отдельный сбор</span></div>
-                <div className="dfee-meta">по 25 BYN с ребёнка · {GPD_FUND.length} детей</div>
-              </div>
-              <span className="going-pill">идёт</span>
-            </div>
-            <div className="dfee-progress-labels">
-              <span>Собрано {fmt(GPD_FUND_COLLECTED)} · потрачено {fmt(GPD_FUND_SPENT)}</span>
-              <span>остаток {fmt(GPD_FUND_REST)} BYN</span>
-            </div>
-            <div className="dprogress"><i style={{ width: Math.round((GPD_FUND.filter((r) => r.paid > 0).length / GPD_FUND.length) * 100) + "%" }}></i></div>
+
+            {/* Фонд ГПД одной строкой — вся строка ведёт в «Деньги → Расходы» */}
+            <button className="cash-row gpd" onClick={() => onTab("expenses")}>
+              <span className="cash-row-lbl"><Ic id="i-coin" /> Фонд ГПД <span className="tag-pill">отдельный фонд</span></span>
+              <span className="cash-row-val">Остаток: {fmt(GPD_FUND_REST)} BYN <span className="gpd-arrow" aria-hidden="true">→</span></span>
+            </button>
+
+            <button className="pill-btn blue cash-open" onClick={() => onTab("fees")}>Открыть финансы</button>
           </div>
         </div>
       </div>
