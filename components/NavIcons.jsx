@@ -21,7 +21,33 @@ BODIES.announcements = (p) => `<defs><linearGradient id="${p}-GOLD" x1="0" y1="0
 let seq = 0;
 const uids = new Map();
 
+// 3D-иконки навигации (webp, сгенерированы Кристиной). money использует иконку «Сборов».
+const IMG_ICONS = {
+  dashboard: "nav-dashboard",
+  announcements: "nav-announcements",
+  schedule: "nav-schedule",
+  fees: "nav-fees",
+  money: "nav-fees",
+  expenses: "nav-expenses",
+  votes: "nav-votes",
+  class: "nav-class",
+  history: "nav-history",
+};
+
 export default function NavIcon({ name, uid, size = 36, className = "" }) {
+  if (IMG_ICONS[name]) {
+    return (
+      <img
+        className={("nvi " + className).trim()}
+        src={"/icons/" + IMG_ICONS[name] + ".webp"}
+        width={size}
+        height={size}
+        alt=""
+        aria-hidden="true"
+        draggable="false"
+      />
+    );
+  }
   const body = BODIES[name];
   if (!body) return null;
   let p = uid;

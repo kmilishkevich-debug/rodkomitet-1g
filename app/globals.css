@@ -309,12 +309,12 @@ tr:last-child td{border-bottom:none}
 .cm-bubble:before{content:'';position:absolute;top:-9px;left:23px;border-left:12px solid transparent;border-right:2px solid transparent;border-bottom:13px solid #F6D96F}
 .cm-bubble.show{opacity:1;transform:none}
 /* Два облачка маскота (ТЗ §6): оба жёлтые, тёмно-синий текст, хвостики к маскоту */
-.cm-top-bubble{position:absolute;top:-4px;right:0;z-index:3;background:#F6D96F;color:#274172;font-size:11.4px;font-weight:800;line-height:1.3;padding:7px 12px;border-radius:14px 14px 14px 4px;box-shadow:0 8px 18px rgba(54,49,40,.16);opacity:0;transform:translateY(6px) scale(.9);transform-origin:30% 100%;transition:opacity .4s,transform .5s cubic-bezier(.18,.85,.22,1.2);pointer-events:none;max-width:150px}
-.cm-top-bubble:after{content:'';position:absolute;bottom:-8px;left:16px;border-left:2px solid transparent;border-right:10px solid transparent;border-top:10px solid #F6D96F}
+.cm-top-bubble{position:absolute;top:-10px;right:0;z-index:3;background:url(/bubble-left.webp) center/100% 100% no-repeat;color:#274172;font-size:11.4px;font-weight:800;line-height:1.3;padding:14px 16px 24px 18px;text-align:center;filter:drop-shadow(0 6px 10px rgba(54,49,40,.18));opacity:0;transform:translateY(6px) scale(.9);transform-origin:30% 100%;transition:opacity .4s,transform .5s cubic-bezier(.18,.85,.22,1.2);pointer-events:none;max-width:160px}
+.cm-top-bubble:after{display:none}
 .cm-top-bubble.show{opacity:1;transform:none}
-.cm-bubble.cm-main{position:absolute;top:32%;right:calc(100% - 4px);left:auto;margin:0;max-width:215px;color:#274172;border-radius:17px 17px 5px 17px;z-index:3;transform-origin:100% 60%;border:0;text-align:left}
+.cm-bubble.cm-main{position:absolute;top:28%;right:calc(100% - 10px);left:auto;margin:0;max-width:235px;color:#274172;background:url(/bubble-right.webp) center/100% 100% no-repeat;box-shadow:none;filter:drop-shadow(0 8px 14px rgba(54,49,40,.16));padding:18px 24px 30px 22px;text-align:center;border-radius:0;z-index:3;transform-origin:100% 60%;border:0}
 .cm-bubble.cm-main:before{display:none}
-.cm-bubble.cm-main:after{content:'';position:absolute;right:-10px;bottom:12px;border-top:3px solid transparent;border-bottom:10px solid transparent;border-left:12px solid #F6D96F}
+.cm-bubble.cm-main:after{display:none}
 button.cm-bubble.cm-main{font-family:inherit;cursor:pointer}
 button.cm-bubble.cm-main:hover{filter:brightness(1.04)}
 button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
@@ -409,8 +409,8 @@ button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-off
 .welcome.compact .welcome-visual{width:160px}
 .welcome.compact .w-blob.green{width:150px;height:150px;top:24px;left:6px}
 .welcome.compact .cm-bubble{max-width:185px;font-size:11.8px;padding:10px 13px;margin-top:-10px}
-.welcome.compact .cm-bubble.cm-main{margin:0;max-width:200px}
-.welcome.compact .cm-top-bubble{top:-8px}
+.welcome.compact .cm-bubble.cm-main{margin:0;max-width:215px;padding:16px 20px 26px 20px}
+.welcome.compact .cm-top-bubble{top:-12px}
 
 /* ── Двухколонник: расписание + касса ── */
 .dash-cols{display:grid;grid-template-columns:58fr 42fr;gap:22px;align-items:start}
@@ -488,8 +488,8 @@ button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-off
   .w-sticker{right:-16px;font-size:11.5px;padding:10px 12px;max-width:140px}
   .welcome-visual .w-blob.green{top:26px}
   .cm-bubble{font-size:11.4px;max-width:160px;padding:10px 12px;margin-top:-10px}
-  .cm-bubble.cm-main{position:relative;top:auto;right:auto;left:auto;margin:0 0 8px auto;max-width:230px;border-radius:17px 17px 17px 5px}
-  .cm-bubble.cm-main:after{right:22px;bottom:-9px;border-left:9px solid transparent;border-right:9px solid transparent;border-top:10px solid #F6D96F}
+  .cm-bubble.cm-main{position:relative;top:auto;right:auto;left:auto;margin:0 0 8px auto;max-width:230px;padding:16px 20px 26px 20px}
+  .cm-bubble.cm-main:after{display:none}
   .cm-top-bubble{top:-2px;right:2px;max-width:130px}
   .welcome-h1{font-size:28px}
   .welcome-sub{font-size:14.5px}
