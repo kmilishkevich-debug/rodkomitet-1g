@@ -5,12 +5,14 @@ import LoginScreen from "@/components/LoginScreen";
 import Header, { BottomNav } from "@/components/Header";
 import DashboardTab from "@/components/DashboardTab";
 import MoneyTab from "@/components/MoneyTab";
-import VotesTab from "@/components/VotesTab";
+import VotesTab, { pollState } from "@/components/VotesTab";
+import AnnouncementsTab from "@/components/AnnouncementsTab";
 import ClassTab from "@/components/ClassTab";
 import ScheduleTab from "@/components/ScheduleTab";
 import UploadModal from "@/components/UploadModal";
 import LogoutModal from "@/components/LogoutModal";
-import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole } from "@/lib/supabase";
+import { useFamily, loadSeen, saveSeen } from "@/components/FamilyPicker";
+import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls } from "@/lib/supabase";
 import { enablePush, syncPushRole } from "@/lib/push";
 
 export default function Page() {
@@ -84,6 +86,68 @@ export default function Page() {
     }
   }, [role]);
 
+  // ===== Объявления и голосования (Этап 2) =====
+  // Семья на этом устройстве (для голосов и отметок «прочитано»)
+  const [family, setFamily] = useFamily();
+
+  // Объявления (null = таблицы ещё не созданы)
+  const [liveAnnouncements, setLiveAnnouncements] = useState(null);
+  const reloadAnnouncements = useCallback(async () => {
+    setLiveAnnouncements(await fetchAnnouncements());
+  }, []);
+  useEffect(() => {
+    reloadAnnouncements();
+  }, [reloadAnnouncements]);
+
+  // Отметки «прочитано»
+  const [liveReads, setLiveReads] = useState([]);
+  const reloadReads = useCallback(async () => {
+    const data = await fetchNewsReads();
+    if (data) setLiveReads(data);
+  }, []);
+  useEffect(() => {
+    reloadReads();
+  }, [reloadReads]);
+
+  // Голосования
+  const [livePolls, setLivePolls] = useState(null);
+  const reloadPolls = useCallback(async () => {
+    setLivePolls(await fetchPolls());
+  }, []);
+  useEffect(() => {
+    reloadPolls();
+  }, [reloadPolls]);
+
+  // Бейджи в меню: сколько активных объявлений / открытых голосований ещё не видели на этом устройстве
+  const [seenTick, setSeenTick] = useState(0); // перерисовка после отметки «видел»
+  const newsBadge = (() => {
+    if (!liveAnnouncements) return 0;
+    const seen = loadSeen("rk1g-news-seen");
+    return liveAnnouncements.filter((a) => a.status === "active" && !seen.has(a.id)).length;
+  })();
+  const pollsBadge = (() => {
+    if (!livePolls) return 0;
+    const seen = loadSeen("rk1g-polls-seen");
+    return livePolls.filter((p) => pollState(p) === "open" && !seen.has(p.id)).length;
+  })();
+
+  // Открыл вкладку — всё в ней считается просмотренным (бейдж гаснет)
+  useEffect(() => {
+    if (tab === "announcements" && liveAnnouncements?.length) {
+      const seen = loadSeen("rk1g-news-seen");
+      liveAnnouncements.forEach((a) => seen.add(a.id));
+      saveSeen("rk1g-news-seen", seen);
+      setSeenTick((t) => t + 1);
+    }
+    if (tab === "votes" && livePolls?.length) {
+      const seen = loadSeen("rk1g-polls-seen");
+      livePolls.forEach((p) => seen.add(p.id));
+      saveSeen("rk1g-polls-seen", seen);
+      setSeenTick((t) => t + 1);
+    }
+  }, [tab, liveAnnouncements, livePolls]);
+  void seenTick;
+
   // Живые дни рождения из базы (null = встроенный список из birthdaysData.js)
   const [liveBirthdays, setLiveBirthdays] = useState(null);
   useEffect(() => {
@@ -99,7 +163,7 @@ export default function Page() {
     if (["fees", "expenses", "history", "shopping"].includes(t)) {
       setTab("money");
       setMoneySub(t === "shopping" ? "expenses" : t);
-    } else if (["dashboard", "schedule", "votes", "class", "money"].includes(t)) {
+    } else if (["dashboard", "schedule", "announcements", "votes", "class", "money"].includes(t)) {
       setTab(t);
       if (t === "money") setMoneySub((s) => s || "fees");
     }
@@ -208,6 +272,8 @@ export default function Page() {
             tab={tab}
             moneySub={moneySub}
             onTab={showTab}
+            newsBadge={newsBadge}
+            pollsBadge={pollsBadge}
             notifOpen={notifOpen}
             notifSeen={notifSeen}
             onToggleNotif={toggleNotif}
@@ -217,13 +283,14 @@ export default function Page() {
             }}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={liveAnnouncements} polls={livePolls} />}
             {tab === "schedule" && <ScheduleTab committee={committee} canEditSchedule={canEditSchedule} author={author} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} overrides={liveOverrides} onReloadOverrides={reloadOverrides} />}
-            {tab === "votes" && <VotesTab committee={committee} toast={toast} />}
+            {tab === "announcements" && <AnnouncementsTab committee={committee} canEdit={committee || teacher} author={author} toast={toast} announcements={liveAnnouncements} reads={liveReads} onReload={reloadAnnouncements} onReloadReads={reloadReads} family={family} setFamily={setFamily} />}
+            {tab === "votes" && <VotesTab committee={committee} canEdit={committee || teacher} author={author} toast={toast} polls={livePolls} onReload={reloadPolls} family={family} setFamily={setFamily} />}
             {tab === "class" && <ClassTab committee={committee} toast={toast} liveBirthdays={liveBirthdays} />}
             {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} author={author} />}
           </main>
-          <BottomNav tab={tab} moneySub={moneySub} onTab={showTab} />
+          <BottomNav tab={tab} moneySub={moneySub} onTab={showTab} newsBadge={newsBadge} pollsBadge={pollsBadge} />
         </div>
       )}
       <UploadModal open={upload.open} name={upload.name} sum={upload.sum} onClose={closeUpload} toast={toast} />

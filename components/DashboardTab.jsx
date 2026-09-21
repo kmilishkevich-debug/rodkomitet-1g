@@ -12,6 +12,8 @@ import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDate
 import { BIRTHDAYS_FALLBACK, BD_MONTHS_PREP, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
 import PushSettings from "./PushSettings";
 import ClassMascot from "./ClassMascot";
+import { pollState } from "./VotesTab";
+import { fmtNewsDate } from "./FamilyPicker";
 
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
@@ -141,6 +143,47 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
         </div>
       </div>
     </>
+  );
+}
+
+// Блок «Новости класса» на главной: 2–3 свежих объявления и открытые голосования
+function NewsWidget({ announcements, polls, onTab }) {
+  const anns = (announcements || []).filter((a) => a.status === "active").slice(0, 2);
+  const openPolls = (polls || []).filter((p) => pollState(p) === "open").slice(0, anns.length ? 1 : 2);
+  if (!anns.length && !openPolls.length) return null;
+  return (
+    <div className="card news-widget reveal d2">
+      <div className="dash-card-head">
+        <span className="sec-dot blue"><Ic id="i-bell" /></span>
+        <div className="dash-card-titles">
+          <h2 className="sec-title">Новости класса</h2>
+          <div className="dash-card-sub">объявления комитета и открытые голосования</div>
+        </div>
+      </div>
+      {anns.map((a) => (
+        <button className="news-w-row" key={a.id} onClick={() => onTab("announcements")}>
+          <span className="news-w-ico">{a.important ? "❗" : a.pinned ? "📌" : "📣"}</span>
+          <span className="news-w-body">
+            <span className="news-w-title">{a.title}</span>
+            <span className="news-w-sub">{fmtNewsDate(a.created_at)} · {a.author || "Комитет"}</span>
+          </span>
+          <span className="news-w-arr" aria-hidden="true">→</span>
+        </button>
+      ))}
+      {openPolls.map((p) => (
+        <button className="news-w-row" key={p.id} onClick={() => onTab("votes")}>
+          <span className="news-w-ico">🗳️</span>
+          <span className="news-w-body">
+            <span className="news-w-title">{p.question}</span>
+            <span className="news-w-sub">
+              Идёт голосование · проголосовали {p.votes?.length || 0} из {FAMILIES_COUNT} семей
+              {p.deadline ? ` · до ${p.deadline.split("-").reverse().slice(0, 2).join(".")}` : ""}
+            </span>
+          </span>
+          <span className="news-w-arr" aria-hidden="true">→</span>
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -279,7 +322,7 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
   );
 }
 
-export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName }) {
+export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls }) {
   // Персональное приветствие: имя берём из базы (user_roles.display_name); если имени нет — без имени
   const greetName = authorName ? `, ${authorName}` : "";
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
@@ -347,6 +390,8 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           <ClassMascot ref={mascotRef} allDone={false} greetToken={greetToken} />
         </div>
       </div>
+
+      <NewsWidget announcements={announcements} polls={polls} onTab={onTab} />
 
       <div className="dash-cols">
         <div className="dash-col-main">

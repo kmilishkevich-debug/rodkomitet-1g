@@ -15,6 +15,9 @@ const BODIES = {
 // Вкладка «Деньги» использует иконку монетки от «Сборов»
 BODIES.money = BODIES.fees;
 
+// «Объявления» — рупор с летящими новостями в стиле остальных иконок
+BODIES.announcements = (p) => `<defs><linearGradient id="${p}-GOLD" x1="0" y1="0" x2=".7" y2="1"><stop stop-color="#fff2a9"/><stop offset=".5" stop-color="#ffdb69"/><stop offset="1" stop-color="#e8ac3f"/></linearGradient><linearGradient id="${p}-PINK" x1="0" y1="0" x2=".7" y2="1"><stop stop-color="#ffd8ec"/><stop offset=".5" stop-color="#f3a8ce"/><stop offset="1" stop-color="#d979ac"/></linearGradient><linearGradient id="${p}-SKY" x1="0" y1="0" x2=".7" y2="1"><stop stop-color="#c9f1ff"/><stop offset=".5" stop-color="#86c7ed"/><stop offset="1" stop-color="#5a9ed6"/></linearGradient><filter id="${p}-shadow" x="-40%" y="-40%" width="180%" height="190%"><feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#4a3d86" flood-opacity=".18"/></filter></defs><ellipse cx="40" cy="70" rx="24" ry="4" fill="#67548f" opacity=".09"/><g filter="url(#${p}-shadow)"><g class="object"><path d="M14 34q0-5 5-5l24-14q6-3 6 4v36q0 7-6 4L19 45q-5 0-5-5Z" fill="#427bc5"/><path d="M12 31q0-5 5-5l24-14q6-3 6 4v36q0 7-6 4L17 42q-5 0-5-5Z" fill="url(#${p}-SKY)"/><path d="M17 27 40 14" stroke="#effcff" stroke-width="2.5"/><rect x="17" y="42" width="9" height="17" rx="4" fill="url(#${p}-PINK)"/><path d="M55 22q7 2 7 10t-7 10" stroke="url(#${p}-GOLD)" stroke-width="5" fill="none"/><path d="M58 12q13 6 13 20t-13 20" stroke="#f3a8ce" stroke-width="4" fill="none" opacity=".8"/></g></g><path class="spark" d="m68 10 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#f7cb58"/>`;
+
 let seq = 0;
 const uids = new Map();
 

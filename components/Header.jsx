@@ -6,6 +6,7 @@ import NavIcon from "./NavIcons";
 // Верхнее меню (веб-версия): развёрнутое, как раньше — деньги отдельными пунктами
 const TOP_TABS = [
   { id: "dashboard", icon: "i-home", label: "Главная" },
+  { id: "announcements", icon: "i-bell", label: "Объявления" },
   { id: "schedule", icon: "i-clock", label: "Расписание" },
   { id: "fees", icon: "i-coin", label: "Сборы" },
   { id: "expenses", icon: "i-receipt", label: "Расходы" },
@@ -24,6 +25,7 @@ const BOTTOM_TABS = [
 
 // Разделы, которые не попали в иконки нижней панели — живут в каталоге «Ещё»
 const MORE_ITEMS = [
+  { id: "announcements", label: "Объявления" },
   { id: "fees", label: "Сборы" },
   { id: "expenses", label: "Расходы" },
   { id: "history", label: "История" },
@@ -47,9 +49,16 @@ function playOnce(e) {
   }, 0);
 }
 
-export default function Header({ committee, tab, moneySub, onTab, onLogout }) {
+// Числовой бейдж непрочитанного на кнопке меню
+function NavBadge({ n }) {
+  if (!n) return null;
+  return <span className="nav-badge">{n > 9 ? "9+" : n}</span>;
+}
+
+export default function Header({ committee, tab, moneySub, onTab, onLogout, newsBadge = 0, pollsBadge = 0 }) {
   const isActive = (t) =>
     t.id === tab || (tab === "money" && MONEY_SUBS.includes(t.id) && moneySub === t.id);
+  const badgeFor = (id) => (id === "announcements" ? newsBadge : id === "votes" ? pollsBadge : 0);
   return (
     <header>
       <div className="header-inner">
@@ -76,6 +85,7 @@ export default function Header({ committee, tab, moneySub, onTab, onLogout }) {
             onClick={(e) => { playOnce(e); onTab(t.id); }}
           >
             <NavIcon name={t.id} uid={"top-" + t.id} size={36} />{t.label}
+            <NavBadge n={badgeFor(t.id)} />
           </button>
         ))}
       </nav>
@@ -94,9 +104,9 @@ function BurgerIcon({ open }) {
   );
 }
 
-export function BottomNav({ tab, moneySub, onTab }) {
+export function BottomNav({ tab, moneySub, onTab, newsBadge = 0, pollsBadge = 0 }) {
   const [moreOpen, setMoreOpen] = useState(false);
-  const moreActive = tab === "money";
+  const moreActive = tab === "money" || tab === "announcements";
   const pick = (id) => { setMoreOpen(false); onTab(id); };
   return (
     <nav className="bottomnav" id="bottomNav">
@@ -109,6 +119,7 @@ export function BottomNav({ tab, moneySub, onTab }) {
           onClick={(e) => { playOnce(e); setMoreOpen(false); onTab(t.id); }}
         >
           <NavIcon name={t.id} uid={"bot-" + t.id} size={36} />{t.label}
+          {t.id === "votes" && pollsBadge > 0 && <span className="nav-badge">{pollsBadge > 9 ? "9+" : pollsBadge}</span>}
         </button>
       ))}
       <div className="bnav-more-wrap">
@@ -121,6 +132,7 @@ export function BottomNav({ tab, moneySub, onTab }) {
           onClick={() => setMoreOpen((v) => !v)}
         >
           <BurgerIcon open={moreOpen} />Ещё
+          {newsBadge > 0 && <span className="nav-badge">{newsBadge > 9 ? "9+" : newsBadge}</span>}
         </button>
         {moreOpen && (
           <div className="bnav-more-menu" role="menu">
@@ -128,10 +140,11 @@ export function BottomNav({ tab, moneySub, onTab }) {
               <button
                 key={m.id}
                 role="menuitem"
-                className={moreActive && moneySub === m.id ? "active" : ""}
+                className={(tab === "money" && moneySub === m.id) || tab === m.id ? "active" : ""}
                 onClick={() => pick(m.id)}
               >
                 <NavIcon name={m.id} uid={"more-" + m.id} size={26} />{m.label}
+                {m.id === "announcements" && newsBadge > 0 && <span className="nav-badge">{newsBadge > 9 ? "9+" : newsBadge}</span>}
               </button>
             ))}
           </div>

@@ -908,3 +908,109 @@ span.tm-jar-img.tm-ph{position:absolute;right:0;bottom:2%;width:44%;height:76%;f
   .fin-mascot .tm-stagebox { animation: none; }
   .fin-skel i { animation: none; }
 }
+
+/* ===== Этап 2: объявления и голосования ===== */
+
+/* Общие поля форм (редакторы объявлений и голосований) */
+.fld-lbl{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin:12px 0 6px}
+.fld{width:100%;padding:12px 15px;border:none;border-radius:14px;background:var(--input);font-size:15px;font-weight:600;color:var(--ink);font-family:'Onest'}
+.fld:focus{outline:2px solid var(--blue-soft)}
+textarea.fld{resize:vertical}
+.chk-row{display:flex;gap:8px;align-items:center;font-size:13.5px;font-weight:600;cursor:pointer;padding:6px 0}
+.chk-row input{width:17px;height:17px;accent-color:var(--blue);flex:none}
+.icon-btn{border:none;background:var(--input);border-radius:10px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink);transition:.15s}
+.icon-btn:hover{background:var(--blue-soft)}
+.sec-dot.blue{background:var(--blue-soft);color:var(--blue)}
+
+/* Бейдж непрочитанного в меню */
+.nvi-host{position:relative}
+.nav-badge{position:absolute;top:2px;right:4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--red,#D6564F);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+nav.bottomnav .nav-badge{top:0;right:8px}
+.bnav-more-menu button{position:relative}
+.bnav-more-menu .nav-badge{position:static;margin-left:auto}
+
+/* Выбор семьи */
+.fam-modal{max-width:400px}
+.fam-search{width:100%;padding:11px 14px;border:none;border-radius:12px;background:var(--input);font-size:15px;font-weight:600;font-family:'Onest';margin-bottom:10px}
+.fam-search:focus{outline:2px solid var(--blue-soft)}
+.fam-list{max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.fam-row{display:flex;align-items:center;gap:10px;border:none;background:var(--input);border-radius:12px;padding:9px 12px;cursor:pointer;font-family:'Onest';font-size:14.5px;font-weight:600;color:var(--ink);text-align:left;transition:.12s}
+.fam-row:hover{background:var(--blue-soft)}
+.fam-n{flex:none;width:26px;height:26px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--blue)}
+.fam-name{flex:1}
+
+/* Редактор объявления */
+.news-editor-flags{display:flex;flex-wrap:wrap;gap:4px 18px;margin:10px 0}
+.news-editor-photo{margin:10px 0;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.news-editor-photo img{max-width:100%;max-height:180px;border-radius:14px;object-fit:cover}
+
+/* Карточка объявления */
+.news-card{padding:20px 22px;margin-bottom:14px}
+.news-card.important{border:2px solid #F3B7CF;background:linear-gradient(180deg,#FFF7F9,var(--card))}
+.news-head{display:flex;gap:10px;align-items:flex-start}
+.news-titles{flex:1;min-width:0}
+.news-title{font-family:'Comfortaa';font-size:17px;font-weight:800;margin:0 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.news-pin{font-size:15px}
+.news-imp{background:var(--red-soft,#F6D9D9);color:#A33;font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;text-transform:uppercase;letter-spacing:.04em}
+.news-meta{font-size:12.5px;color:var(--muted);font-weight:600}
+.news-tools{display:flex;gap:6px;flex:none}
+.news-body{margin-top:10px}
+.news-p{margin:0 0 8px;font-size:14.5px;line-height:1.55}
+.news-link{color:var(--blue);font-weight:700;text-decoration:underline;text-underline-offset:2px;word-break:break-all}
+.news-photo{display:block;margin-top:10px}
+.news-photo img{max-width:100%;max-height:280px;border-radius:14px;object-fit:cover}
+.news-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+.news-read-count{border:none;background:var(--blue-soft);color:var(--blue);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:'Onest'}
+.news-read-done{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:#4E7B36}
+.news-read-cnt{font-size:12.5px;margin-left:auto}
+.news-readers{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.news-reader{background:var(--input);border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:600}
+.news-empty{padding:22px;text-align:center}
+.news-arch-toggle{margin:6px 0 14px}
+
+/* Голосования */
+.vote-card{padding:20px 22px;margin-bottom:14px}
+.vote-card.closed{opacity:.92}
+.vote-state{font-size:11px;font-weight:800;border-radius:999px;padding:3px 10px;text-transform:uppercase;letter-spacing:.04em;flex:none}
+.vote-state.open{background:#DBE8C4;color:#4E7B36}
+.vote-state.closed{background:var(--input);color:var(--muted)}
+.vote-state.archived{background:var(--input);color:var(--muted)}
+.vote-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.vote-opts{display:flex;flex-direction:column;gap:2px;margin-top:10px}
+.vote-money{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.vote-money-lbl{font-size:13.5px;font-weight:700}
+.vote-money-inp{width:110px;padding:10px 12px;border:none;border-radius:12px;background:var(--input);font-size:15px;font-weight:700;font-family:'Onest'}
+.vote-money-inp:focus{outline:2px solid var(--blue-soft)}
+.vote-money-line{font-size:13.5px;font-weight:700;margin-top:8px}
+.vote-mine{margin-top:12px;background:var(--blue-soft);border-radius:12px;padding:8px 13px;font-size:13.5px;font-weight:700;display:inline-block}
+.vote-results{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.vote-res-top{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;margin-bottom:4px}
+.vote-res-lbl{font-weight:700}
+.vote-res-val{font-weight:800;color:var(--muted)}
+.vote-res.win .vote-res-val{color:var(--blue)}
+.vote-res.win .dprogress i{background:var(--blue)}
+.vote-turnout{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:8px}
+.vote-who{margin-top:12px;border-top:1px dashed var(--soft-line,#E8E4DC);padding-top:10px;display:flex;flex-direction:column;gap:4px}
+.vote-who-row{display:flex;justify-content:space-between;gap:10px;font-size:13px}
+.vote-who-name{font-weight:600}
+.vote-who-val{font-weight:700;color:var(--muted);text-align:right}
+.vote-who-missing{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+
+/* Блок «Новости класса» на главной */
+.news-widget{padding:18px 20px;margin-bottom:16px}
+.news-w-row{display:flex;align-items:center;gap:12px;width:100%;border:none;background:var(--input);border-radius:14px;padding:11px 14px;cursor:pointer;font-family:'Onest';text-align:left;margin-top:8px;transition:.12s}
+.news-w-row:hover{background:var(--blue-soft)}
+.news-w-ico{flex:none;font-size:19px}
+.news-w-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.news-w-title{font-size:14px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.news-w-sub{font-size:12px;font-weight:600;color:var(--muted)}
+.news-w-arr{flex:none;font-weight:800;color:var(--blue)}
+
+@media (max-width:760px){
+  .news-card,.vote-card{padding:16px}
+  .news-title{font-size:15.5px}
+  .news-read-cnt{margin-left:0;width:100%}
+  .vote-who-row{flex-direction:column;gap:0}
+  .vote-who-val{text-align:left}
+  .news-w-title{white-space:normal}
+}
