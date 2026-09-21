@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
 import { FAMILIES_COUNT } from "./data";
@@ -133,7 +133,7 @@ function AnnouncementCard({ a, committee, canEdit, family, reads, toast, onEdit,
   };
 
   return (
-    <article className={"card news-card reveal d2" + (a.important ? " important" : "")}>
+    <article id={"ann-" + a.id} className={"card news-card reveal d2" + (a.important ? " important" : "")}>
       <div className="news-head">
         <div className="news-titles">
           <h3 className="news-title">
@@ -196,6 +196,20 @@ export default function AnnouncementsTab({ committee, canEdit, author, toast, an
   const [showArchive, setShowArchive] = useState(false);
   const [famOpen, setFamOpen] = useState(false);
   const [famAction, setFamAction] = useState(null); // функция, вызываемая после выбора семьи
+
+  // Переход с главной к конкретному объявлению: плавно прокручиваем к его карточке
+  useEffect(() => {
+    let id = null;
+    try {
+      id = sessionStorage.getItem("rk1g-focus-ann");
+      sessionStorage.removeItem("rk1g-focus-ann");
+    } catch {}
+    if (!id) return;
+    const t = setTimeout(() => {
+      document.getElementById("ann-" + id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 250);
+    return () => clearTimeout(t);
+  }, []);
 
   const all = announcements || [];
   const active = all.filter((a) => a.status === "active");

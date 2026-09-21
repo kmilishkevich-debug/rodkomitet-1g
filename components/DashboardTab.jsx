@@ -12,7 +12,7 @@ import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDate
 import { BIRTHDAYS_FALLBACK, BD_MONTHS_PREP, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
 import PushSettings from "./PushSettings";
 import ClassMascot from "./ClassMascot";
-import { pollState } from "./VotesTab";
+import { pollState, fmtDeadline } from "./VotesTab";
 import { fmtNewsDate } from "./FamilyPicker";
 
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
@@ -146,44 +146,122 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
   );
 }
 
-// Блок «Новости класса» на главной: 2–3 свежих объявления и открытые голосования
-function NewsWidget({ announcements, polls, onTab }) {
-  const anns = (announcements || []).filter((a) => a.status === "active").slice(0, 2);
-  const openPolls = (polls || []).filter((p) => pollState(p) === "open").slice(0, anns.length ? 1 : 2);
-  if (!anns.length && !openPolls.length) return null;
+// Короткий фрагмент текста объявления для карточки на главной
+function snippet(text, max = 140) {
+  const t = (text || "").replace(/\s+/g, " ").trim();
+  if (t.length <= max) return t;
+  return t.slice(0, max).replace(/\s+\S*$/, "") + "…";
+}
+
+// Переход к конкретной карточке в разделе: запоминаем цель и открываем вкладку
+function goFocus(kind, id, tab, onTab) {
+  try { sessionStorage.setItem("rk1g-focus-" + kind, String(id)); } catch {}
+  onTab(tab);
+}
+
+// Семья прочитала объявление? (по отметкам в базе)
+function isReadBy(a, reads, family) {
+  return !!(family && (reads || []).some((r) => r.announcement_id === a.id && r.family_n === family.n));
+}
+
+// ===== Важные объявления на главной (ТЗ §7): жёлтая подложка, «Прочитать» =====
+function ImportantNews({ announcements, reads, family, onTab }) {
+  const imp = (announcements || []).filter((a) => a.status === "active" && a.important);
+  if (!imp.length) return null;
   return (
-    <div className="card news-widget reveal d2">
-      <div className="dash-card-head">
+    <>
+      {imp.map((a) => {
+        const read = isReadBy(a, reads, family);
+        return (
+          <div className="imp-card reveal d1" key={a.id}>
+            <div className="imp-ico" aria-hidden="true">📣</div>
+            <div className="imp-body">
+              <div className="imp-tags">
+                <span className="imp-label">Важное объявление</span>
+                {read
+                  ? <span className="imp-read done">Прочитано ✓</span>
+                  : <span className="imp-read">Не прочитано</span>}
+              </div>
+              <div className="imp-title">{a.title}</div>
+              {a.body && <div className="imp-sub">{snippet(a.body)}</div>}
+              <div className="imp-meta">{a.author || "Комитет"} · {fmtNewsDate(a.created_at)}</div>
+            </div>
+            <button className="pill-btn blue imp-btn" onClick={() => goFocus("ann", a.id, "announcements", onTab)}>
+              Прочитать
+            </button>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+// ===== Активные голосования на главной (ТЗ §8): сиреневая подложка, персональный статус =====
+function ActivePolls({ polls, family, onTab }) {
+  const open = (polls || []).filter((p) => pollState(p) === "open");
+  if (!open.length) return null;
+  const voted = (p) => !!(family && (p.votes || []).some((v) => v.family_n === family.n));
+  // Сначала те, где семья ещё не голосовала; внутри — более срочные (ближний срок) выше
+  const sorted = [...open].sort((a, b) => {
+    const va = voted(a) ? 1 : 0, vb = voted(b) ? 1 : 0;
+    if (va !== vb) return va - vb;
+    return (a.deadline || "9999").localeCompare(b.deadline || "9999");
+  });
+  return (
+    <>
+      {sorted.map((p) => {
+        const my = voted(p);
+        return (
+          <div className="pollhome-card reveal d1" key={p.id}>
+            <div className="pollhome-ico" aria-hidden="true">🗳️</div>
+            <div className="pollhome-body">
+              <div className="pollhome-tags">
+                <span className="pollhome-label">Нужно ваше мнение</span>
+                {my
+                  ? <span className="pollhome-state done">Вы проголосовали ✓</span>
+                  : <span className="pollhome-state">Вы ещё не проголосовали</span>}
+              </div>
+              <div className="pollhome-title">{p.question}</div>
+              {p.description && <div className="pollhome-sub">{snippet(p.description, 120)}</div>}
+              <div className="pollhome-meta">
+                {p.deadline ? `Голосуем до ${fmtDeadline(p.deadline)} включительно` : "Срок не ограничен"}
+                {" · "}проголосовали {p.votes?.length || 0} из {FAMILIES_COUNT} семей
+              </div>
+            </div>
+            <button className="pill-btn blue pollhome-btn" onClick={() => goFocus("poll", p.id, "votes", onTab)}>
+              {my ? "Открыть голосование" : "Проголосовать"}
+            </button>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+// ===== Обычные объявления внизу главной (ТЗ §11): без дублирования важных =====
+function RegularNews({ announcements, onTab }) {
+  const regular = (announcements || []).filter((a) => a.status === "active" && !a.important).slice(0, 3);
+  if (!regular.length) return null;
+  return (
+    <>
+      <div className="sec-head reveal d3">
         <span className="sec-dot blue"><Ic id="i-bell" /></span>
-        <div className="dash-card-titles">
-          <h2 className="sec-title">Новости класса</h2>
-          <div className="dash-card-sub">объявления комитета и открытые голосования</div>
-        </div>
+        <h2 className="sec-title">Объявления класса</h2>
       </div>
-      {anns.map((a) => (
-        <button className="news-w-row" key={a.id} onClick={() => onTab("announcements")}>
-          <span className="news-w-ico">{a.important ? "❗" : a.pinned ? "📌" : "📣"}</span>
-          <span className="news-w-body">
-            <span className="news-w-title">{a.title}</span>
-            <span className="news-w-sub">{fmtNewsDate(a.created_at)} · {a.author || "Комитет"}</span>
-          </span>
-          <span className="news-w-arr" aria-hidden="true">→</span>
-        </button>
+      {regular.map((a) => (
+        <div className="card homenews-card reveal d3" key={a.id}>
+          <div className="homenews-body">
+            <div className="homenews-title">{a.pinned && <span title="Закреплено">📌 </span>}{a.title}</div>
+            {a.body && <div className="homenews-sub">{snippet(a.body)}</div>}
+            <div className="homenews-meta">{a.author || "Комитет"} · {fmtNewsDate(a.created_at)}</div>
+          </div>
+          <button className="pill-btn blue" onClick={() => goFocus("ann", a.id, "announcements", onTab)}>Читать</button>
+        </div>
       ))}
-      {openPolls.map((p) => (
-        <button className="news-w-row" key={p.id} onClick={() => onTab("votes")}>
-          <span className="news-w-ico">🗳️</span>
-          <span className="news-w-body">
-            <span className="news-w-title">{p.question}</span>
-            <span className="news-w-sub">
-              Идёт голосование · проголосовали {p.votes?.length || 0} из {FAMILIES_COUNT} семей
-              {p.deadline ? ` · до ${p.deadline.split("-").reverse().slice(0, 2).join(".")}` : ""}
-            </span>
-          </span>
-          <span className="news-w-arr" aria-hidden="true">→</span>
-        </button>
-      ))}
-    </div>
+      <button className="pill-btn news-all-link reveal d3" onClick={() => onTab("announcements")}>
+        Все объявления →
+      </button>
+    </>
   );
 }
 
@@ -322,7 +400,7 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
   );
 }
 
-export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls }) {
+export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls, reads, family }) {
   // Персональное приветствие: имя берём из базы (user_roles.display_name); если имени нет — без имени
   const greetName = authorName ? `, ${authorName}` : "";
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
@@ -352,11 +430,29 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   const schedOvs = activeOverridesFor(overrides, schedIso);
   const focusLessons = applyOverridesToDay(schedAll, schedFocus.day, schedOvs).lessons;
   const schedEnd = schedOvs.length ? dayEndTime(focusLessons, schedBells) : null;
-  // Подпись приветствия по реальному состоянию дня:
-  // вещи с собой → ДР сегодня → изменение расписания → нейтральная
+  // Состояния для приветствия и блоков (ТЗ §4, §7, §8):
+  // важное непрочитанное → голосование без ответа → вещи с собой → ДР сегодня → изменения → нейтральная
+  const impUnread = (announcements || []).filter(
+    (a) => a.status === "active" && a.important && !isReadBy(a, reads, family)
+  );
+  const pollsNoAnswer = (polls || []).filter(
+    (p) => pollState(p) === "open" && !(family && (p.votes || []).some((v) => v.family_n === family.n))
+  );
+  const eventsCount =
+    (impUnread.length ? 1 : 0) + (pollsNoAnswer.length ? 1 : 0) +
+    (bdayEv.today.length ? 1 : 0) + (schedOvs.length ? 1 : 0);
   const focusNotes = [...new Set(focusLessons.map((l) => l.note).filter(Boolean))];
   let headline, subline;
-  if (focusNotes.length) {
+  if (eventsCount >= 2) {
+    headline = "Всё важное для родителей в одном месте";
+    subline = "Сегодня несколько событий: посмотрите блоки ниже — там объявления, голосования и напоминания.";
+  } else if (impUnread.length) {
+    headline = "Есть важная информация для родителей";
+    subline = "Комитет опубликовал важное объявление — карточка с ним сразу под приветствием.";
+  } else if (pollsNoAnswer.length) {
+    headline = "Нужно ваше мнение";
+    subline = "Идёт голосование, где ваша семья ещё не ответила, — карточка ниже ведёт прямо к нему.";
+  } else if (focusNotes.length) {
     headline = schedFocus.label === "сегодня" ? "Сегодня есть что взять с собой" : "На завтра нужно собрать вещи";
     subline = `${schedFocus.label === "сегодня" ? "Сегодня" : "Завтра"} пригодится: ${focusNotes.join(", ").toLowerCase()}. Подробности — в расписании ниже.`;
   } else if (bdayEv.today.length) {
@@ -366,7 +462,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     headline = "В расписании есть изменения";
     subline = `Проверьте уроки ${schedFocus.label} — подробности в баннере выше и в расписании.`;
   } else {
-    headline = "Срочных дел нет";
+    headline = "Сейчас нет задач, требующих вашего действия";
     subline = "Всё важное собрано ниже: расписание, касса класса и дни рождения.";
   }
   return (
@@ -391,7 +487,9 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         </div>
       </div>
 
-      <NewsWidget announcements={announcements} polls={polls} onTab={onTab} />
+      <ImportantNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
+
+      <ActivePolls polls={polls} family={family} onTab={onTab} />
 
       <div className="dash-cols">
         <div className="dash-col-main">
@@ -455,6 +553,8 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       </div>
 
       <BirthdaysWidget committee={committee} ev={bdayEv} list={bdays} onTab={onTab} />
+
+      <RegularNews announcements={announcements} onTab={onTab} />
 
       <PushSettings committee={committee} role={role} toast={toast} />
     </section>

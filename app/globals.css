@@ -996,15 +996,39 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .vote-who-val{font-weight:700;color:var(--muted);text-align:right}
 .vote-who-missing{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
 
-/* Блок «Новости класса» на главной */
-.news-widget{padding:18px 20px;margin-bottom:16px}
-.news-w-row{display:flex;align-items:center;gap:12px;width:100%;border:none;background:var(--input);border-radius:14px;padding:11px 14px;cursor:pointer;font-family:'Onest';text-align:left;margin-top:8px;transition:.12s}
-.news-w-row:hover{background:var(--blue-soft)}
-.news-w-ico{flex:none;font-size:19px}
-.news-w-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.news-w-title{font-size:14px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.news-w-sub{font-size:12px;font-weight:600;color:var(--muted)}
-.news-w-arr{flex:none;font-weight:800;color:var(--blue)}
+/* ===== Главная: важные объявления (ТЗ §7) — светло-жёлтая подложка, золотистая обводка ===== */
+.imp-card{display:flex;align-items:center;gap:18px;width:100%;background:#FFF7DC;border:2px solid #E8C55A;border-radius:26px;padding:20px 24px;margin-bottom:18px}
+.imp-ico{flex:none;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:30px;background:#FBE9AE;border-radius:18px}
+.imp-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.imp-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.imp-label{font-size:12px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:#8a6a12;background:#FBE9AE;border-radius:999px;padding:3px 10px}
+.imp-read{font-size:12px;font-weight:800;color:#a34a1f;background:#FFE3D0;border-radius:999px;padding:3px 10px}
+.imp-read.done{color:#1d7a4a;background:#D9F3E3}
+.imp-title{font-size:17px;font-weight:800;color:var(--ink);line-height:1.3}
+.imp-sub{font-size:14px;font-weight:600;color:#6b5d3a;line-height:1.45}
+.imp-meta{font-size:12.5px;font-weight:600;color:var(--muted)}
+.imp-btn{flex:none;min-height:44px}
+
+/* ===== Главная: активные голосования (ТЗ §8) — светло-сиреневая подложка, фиолетовая обводка ===== */
+.pollhome-card{display:flex;align-items:center;gap:18px;width:100%;background:#F1EDFB;border:2px solid #A78BDF;border-radius:26px;padding:20px 24px;margin-bottom:18px}
+.pollhome-ico{flex:none;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:28px;background:#E3DAF6;border-radius:18px}
+.pollhome-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.pollhome-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pollhome-label{font-size:12px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:#5c3d99;background:#E3DAF6;border-radius:999px;padding:3px 10px}
+.pollhome-state{font-size:12px;font-weight:800;color:#a34a1f;background:#FFE3D0;border-radius:999px;padding:3px 10px}
+.pollhome-state.done{color:#1d7a4a;background:#D9F3E3}
+.pollhome-title{font-size:17px;font-weight:800;color:var(--ink);line-height:1.3}
+.pollhome-sub{font-size:14px;font-weight:600;color:#5d5476;line-height:1.45}
+.pollhome-meta{font-size:12.5px;font-weight:600;color:var(--muted)}
+.pollhome-btn{flex:none;min-height:44px}
+
+/* ===== Главная: обычные объявления внизу (ТЗ §11) ===== */
+.homenews-card{display:flex;align-items:center;gap:16px;padding:18px 22px;margin-bottom:14px}
+.homenews-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.homenews-title{font-size:16px;font-weight:800;color:var(--ink);line-height:1.3}
+.homenews-sub{font-size:14px;font-weight:600;color:var(--muted);line-height:1.45}
+.homenews-meta{font-size:12.5px;font-weight:600;color:var(--muted)}
+.news-all-link{display:inline-flex;margin-bottom:18px}
 
 @media (max-width:760px){
   .news-card,.vote-card{padding:16px}
@@ -1012,5 +1036,9 @@ nav.bottomnav .nav-badge{top:0;right:8px}
   .news-read-cnt{margin-left:0;width:100%}
   .vote-who-row{flex-direction:column;gap:0}
   .vote-who-val{text-align:left}
-  .news-w-title{white-space:normal}
+  .imp-card,.pollhome-card{flex-direction:column;align-items:stretch;gap:12px;padding:16px 18px}
+  .imp-ico,.pollhome-ico{width:46px;height:46px;font-size:24px}
+  .imp-btn,.pollhome-btn{width:100%;justify-content:center;text-align:center}
+  .homenews-card{flex-direction:column;align-items:stretch;gap:10px;padding:16px 18px}
+  .homenews-card .pill-btn{width:100%;text-align:center}
 }

@@ -283,7 +283,7 @@ export default function Page() {
             }}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={liveAnnouncements} polls={livePolls} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={liveAnnouncements} polls={livePolls} reads={liveReads} family={family} />}
             {tab === "schedule" && <ScheduleTab committee={committee} canEditSchedule={canEditSchedule} author={author} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} overrides={liveOverrides} onReloadOverrides={reloadOverrides} />}
             {tab === "announcements" && <AnnouncementsTab committee={committee} canEdit={committee || teacher} author={author} toast={toast} announcements={liveAnnouncements} reads={liveReads} onReload={reloadAnnouncements} onReloadReads={reloadReads} family={family} setFamily={setFamily} />}
             {tab === "votes" && <VotesTab committee={committee} canEdit={committee || teacher} author={author} toast={toast} polls={livePolls} onReload={reloadPolls} family={family} setFamily={setFamily} />}

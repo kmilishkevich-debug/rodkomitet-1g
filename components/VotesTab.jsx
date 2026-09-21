@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
 import { FAMILIES_COUNT, fmt } from "./data";
@@ -26,7 +26,7 @@ export function pollState(p) {
   return "open";
 }
 
-function fmtDeadline(d) {
+export function fmtDeadline(d) {
   if (!d) return null;
   const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
   const dt = new Date(d + "T12:00:00");
@@ -198,7 +198,7 @@ function PollCard({ p, committee, canEdit, family, author, toast, onEdit, onRelo
   };
 
   return (
-    <article className={"card vote-card reveal d2" + (state === "open" ? "" : " closed")}>
+    <article id={"poll-" + p.id} className={"card vote-card reveal d2" + (state === "open" ? "" : " closed")}>
       <div className="news-head">
         <div className="news-titles">
           <h3 className="news-title">{p.question}</h3>
@@ -338,6 +338,20 @@ export default function VotesTab({ committee, canEdit, author, toast, polls, onR
   const [showArchive, setShowArchive] = useState(false);
   const [famOpen, setFamOpen] = useState(false);
   const [famAction, setFamAction] = useState(null);
+
+  // Переход с главной к конкретному голосованию: плавно прокручиваем к его карточке
+  useEffect(() => {
+    let id = null;
+    try {
+      id = sessionStorage.getItem("rk1g-focus-poll");
+      sessionStorage.removeItem("rk1g-focus-poll");
+    } catch {}
+    if (!id) return;
+    const t = setTimeout(() => {
+      document.getElementById("poll-" + id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 250);
+    return () => clearTimeout(t);
+  }, []);
 
   const all = polls || [];
   const open = all.filter((p) => pollState(p) === "open");
