@@ -1,8 +1,8 @@
 :root{
   /* Наш 1 «Г» — cream editorial palette (по референсу) */
-  --cream:#F6F1E7; --card:#FFFDFA; --ink:#171717; --muted:#7A766D; --soft-line:#ECE5D6;
-  --blue:#4665CF;   --blue-soft:#DFE5FA;
-  --teal:#4665CF;   --teal-soft:#DFE5FA; --teal-deep:#2E49A8;
+  --cream:#F4F0E7; --card:#FFFDFA; --ink:#171717; --muted:#7A766D; --soft-line:#ECE5D6;
+  --blue:#4865D6;   --blue-soft:#DFE5FA;
+  --teal:#4865D6;   --teal-soft:#DFE5FA; --teal-deep:#2E49A8;
   --gold:#F3D770;   --gold-soft:#F9EDC4;
   --pink:#E8598E;   --pink-soft:#FBDCE9;
   --rose:#F6C5D8;   --rose-soft:#FCE9F1;
@@ -380,6 +380,43 @@ tr:last-child td{border-bottom:none}
 .dprogress{height:11px;border-radius:999px;background:#EEECE7;overflow:hidden}
 .dprogress i{display:block;height:100%;border-radius:999px;background:var(--blue);transition:width .6s ease}
 
+/* ── Компактное приветствие (редизайн главной) ── */
+.welcome.compact{padding:22px 26px;min-height:180px;gap:22px;margin-bottom:20px}
+.welcome.compact .welcome-h1{font-size:clamp(21px,2.6vw,27px);margin-bottom:8px}
+.welcome.compact .welcome-sub{font-size:15px;margin-bottom:0;max-width:640px}
+.welcome.compact .welcome-visual{width:160px}
+.welcome.compact .w-blob.green{width:150px;height:150px;top:24px;left:6px}
+.welcome.compact .cm-bubble{max-width:185px;font-size:11.8px;padding:10px 13px;margin-top:-10px}
+
+/* ── Двухколонник: расписание + касса ── */
+.dash-cols{display:grid;grid-template-columns:1.35fr 1fr;gap:20px;align-items:start}
+.dash-cols .sec-head:first-child{margin-top:0}
+.dash-col-main{min-width:0}
+.dash-col-side{min-width:0}
+
+/* ── Карточка кассы ── */
+.cash-card{position:relative;padding:22px 24px}
+.cash-main .lbl{font-size:12.2px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.cash-val{font-family:'Comfortaa','Trebuchet MS',sans-serif;font-weight:700;font-size:clamp(30px,3vw,38px);letter-spacing:-.03em;line-height:1.08;color:var(--blue);margin-bottom:6px}
+.cash-main .note{font-size:12.8px;font-weight:600;color:var(--muted);margin-bottom:14px}
+.cash-rows{display:flex;flex-direction:column;margin-bottom:6px}
+.cash-row{border:none;cursor:pointer;background:none;font-family:'Onest';text-align:left;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px;padding:11px 4px;border-top:1px dashed var(--soft-line);font-size:14.2px;font-weight:700;color:var(--ink);transition:.15s;border-radius:10px}
+.cash-row:hover{background:#F8F5EE}
+.cash-row .crv{font-weight:800;white-space:nowrap}
+.cash-row.gpd{background:#F6F3EC;border-radius:14px;border-top:none;padding:11px 12px;margin-top:6px}
+.cash-row.gpd:hover{background:#F1EDE2}
+.cash-row .crl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* ── Навигация месяцев в днях рождения ── */
+.bd-nav{display:flex;gap:8px;margin-left:auto}
+.bd-nav-btn{border:none;cursor:pointer;width:44px;height:44px;border-radius:14px;background:var(--blue-soft);color:var(--blue);font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:.15s}
+.bd-nav-btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(23,23,23,.12)}
+.bday-empty{padding:18px 6px;font-size:14px;font-weight:600}
+
+/* компактные карточки сборов в колонке кассы */
+.dfee-card.slim{padding:16px 18px;margin-bottom:12px}
+.dfee-card.slim .dfee-head{margin-bottom:10px}
+
 /* reveal animation */
 @keyframes revealUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 .reveal{animation:revealUp var(--t-base) var(--ease-out-soft) both}
@@ -405,6 +442,11 @@ tr:last-child td{border-bottom:none}
   .welcome-h1{font-size:28px}
   .welcome-sub{font-size:14.5px}
   .stats-row{grid-template-columns:1fr}
+  .dash-cols{grid-template-columns:1fr}
+  .welcome.compact{padding:20px 18px;gap:14px;min-height:0}
+  .welcome.compact .welcome-visual{width:150px}
+  .welcome.compact .w-blob.green{width:135px;height:135px;top:20px}
+  .welcome.compact .welcome-h1{font-size:21px}
   .attn-card{flex-wrap:wrap}
   .attn-card .pill-btn{width:100%}
   .sec-note{display:none}
@@ -549,9 +591,9 @@ tr:last-child td{border-bottom:none}
 .nvi-inline{vertical-align:-5px;display:inline-block}
 /* плашки навигации: цвета по ТЗ */
 nav.topnav button.nvi-host{gap:8px;color:#26314A;padding:7px 13px 7px 9px}
-nav.topnav button.nvi-host.active{background:#4965D9;color:#fff;box-shadow:0 5px 13px rgba(73,101,217,.13)}
+nav.topnav button.nvi-host.active{background:var(--blue);color:#fff;box-shadow:0 5px 13px rgba(72,101,214,.16)}
 nav.bottomnav button.nvi-host{flex:1 1 0;min-width:0;padding:4px 1px;gap:3px;font-size:9.5px}
-nav.bottomnav button.nvi-host.active{background:#4965D9;color:#fff;padding:4px 1px}
+nav.bottomnav button.nvi-host.active{background:var(--blue);color:#fff;padding:4px 1px;box-shadow:0 4px 12px rgba(72,101,214,.28)}
 nav.bottomnav .nvi{width:32px;height:32px}
 /* светлая круглая подложка за иконкой активной вкладки */
 .nvi-host.active .nvi{background:#f5f3ff;border-radius:50%}

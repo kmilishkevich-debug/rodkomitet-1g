@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
-import { fetchCashExtras } from "@/lib/supabase";
+import { fetchCashExtras, isLive } from "@/lib/supabase";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
@@ -8,8 +8,8 @@ import {
   GPD_FUND, GPD_FUND_COLLECTED, GPD_FUND_SPENT, GPD_FUND_REST,
 } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, INFO_HOUR, scheduleFocus, subjectIcon, lessonDisplay } from "./scheduleData";
-import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu, minskDateISO } from "./scheduleOverrides";
-import { BIRTHDAYS_FALLBACK, birthdayEvents, monthBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
+import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu } from "./scheduleOverrides";
+import { BIRTHDAYS_FALLBACK, BD_MONTHS_PREP, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
 import PushSettings from "./PushSettings";
 import ClassMascot from "./ClassMascot";
 import TreasurerMascot from "./TreasurerMascot";
@@ -17,13 +17,22 @@ import TreasurerMascot from "./TreasurerMascot";
 const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
 
+// Дата и время суток считаем по Минску, а не по часовому поясу устройства
+function minskNow() {
+  try {
+    return new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Minsk" }));
+  } catch {
+    return new Date();
+  }
+}
+
 function todayLine() {
-  const d = new Date();
+  const d = minskNow();
   return `${DAYS[d.getDay()]} · ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
 function greetWord() {
-  const h = new Date().getHours();
+  const h = minskNow().getHours();
   if (h >= 5 && h < 12) return "Доброе утро";
   if (h >= 12 && h < 17) return "Добрый день";
   return "Добрый вечер";
@@ -46,25 +55,6 @@ function ScheduleChangeBanner({ activeOvs, focusIso, focusLabel, endTime, toast,
         </div>
       </div>
       <button className="pill-btn blue" onClick={() => onTab("schedule")}>Подробнее</button>
-    </div>
-  );
-}
-
-// Баннер «Расписание обновлено» — показывается неделю после обновления 14.09.2026
-const NEW_SCHEDULE_BANNER_UNTIL = "2026-09-21";
-function NewScheduleBanner({ onTab }) {
-  if (minskDateISO() >= NEW_SCHEDULE_BANNER_UNTIL) return null;
-  return (
-    <div className="attn-card reveal d1" style={{ background: "var(--blue-soft, #eaf2fb)" }}>
-      <div className="attn-ico blue"><NavIcon name="schedule" uid="d-sched-new" size={26} /></div>
-      <div className="attn-body">
-        <div className="attn-title">Расписание обновлено</div>
-        <div className="attn-sub">
-          Теперь по 5 занятий в день (в четверг — 4, конец в 11:35). Добавлены классный час,
-          факультативы и поддерживающие занятия.
-        </div>
-      </div>
-      <button className="pill-btn blue" onClick={() => onTab("schedule")}>Посмотреть</button>
     </div>
   );
 }
@@ -181,9 +171,38 @@ function BdayBanner({ ev }) {
   return null;
 }
 
-// Блок «Дни рождения»: напоминания + ближайшие именинники
+// Именинники выбранного месяца: дата, сколько исполняется, статус относительно сегодня
+function kidsOfMonth(list, y, m) {
+  const t = new Date();
+  const tm = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  return list
+    .filter((k) => Number(k.born.split("-")[1]) - 1 === m)
+    .map((k) => {
+      const d = Number(k.born.split("-")[2]);
+      const date = new Date(y, m, d);
+      const days = Math.round((date - tm) / 86400000);
+      const bornYear = Number(k.born.slice(0, 4));
+      // Возраст показываем только если год рождения известен и правдоподобен
+      const turns = bornYear >= 2000 && bornYear <= tm.getFullYear() ? y - bornYear : null;
+      return { ...k, date, days, turns, passed: days < 0 };
+    })
+    .sort((a, b) => a.days - b.days);
+}
+
+// Блок «Дни рождения»: напоминания + все именинники месяца с переключением месяцев
 function BirthdaysWidget({ committee, ev, list, onTab }) {
-  const bdMonth = monthBirthdays(list, new Date());
+  // Стартовый месяц — тот, где ближайший день рождения (включая сегодня)
+  const [view, setView] = useState(() => {
+    const nearest = upcomingBirthdays(list, new Date(), 1)[0];
+    const base = nearest ? nearest.next : new Date();
+    return { y: base.getFullYear(), m: base.getMonth() };
+  });
+  const shiftMonth = (dir) =>
+    setView((v) => {
+      const d = new Date(v.y, v.m + dir, 1);
+      return { y: d.getFullYear(), m: d.getMonth() };
+    });
+  const kids = kidsOfMonth(list, view.y, view.m);
   const notices = [];
   if (ev.summerTomorrow) {
     notices.push({
@@ -213,8 +232,11 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
     <>
       <div className="sec-head reveal d3">
         <span className="sec-dot pink"><Ic id="i-cake" /></span>
-        <h2 className="sec-title">Дни рождения в {bdMonth.monthLabel}</h2>
-        <span className="sec-note">поздравляем всем классом</span>
+        <h2 className="sec-title">Дни рождения в {BD_MONTHS_PREP[view.m]}{view.y !== new Date().getFullYear() ? ` ${view.y}` : ""}</h2>
+        <span className="bd-nav" role="group" aria-label="Переключение месяца">
+          <button className="bd-nav-btn" aria-label="Предыдущий месяц" onClick={() => shiftMonth(-1)}>‹</button>
+          <button className="bd-nav-btn" aria-label="Следующий месяц" onClick={() => shiftMonth(1)}>›</button>
+        </span>
       </div>
       {notices.map((n) => (
         <div className={"attn-card bday-notice reveal d3"} key={n.key}>
@@ -226,11 +248,14 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
         </div>
       ))}
       <div className="card bday-upcoming reveal d3">
-        {bdMonth.kids.map((k) => (
+        {kids.length === 0 && (
+          <div className="bday-empty muted">В {BD_MONTHS_PREP[view.m]} дней рождения нет</div>
+        )}
+        {kids.map((k) => (
           <div className={"bday-row" + (k.passed ? " past" : "")} key={k.id}>
             <span className="bday-date">{fmtBd(k.born)}</span>
             <span className="bday-name"><Ic id="i-cake" /> {bdName(k)}</span>
-            <span className="bday-turns">{k.passed ? `исполнилось ${k.turns}` : `исполнится ${k.turns}`}</span>
+            <span className="bday-turns">{k.turns == null ? "" : k.passed ? `исполнилось ${k.turns}` : `исполнится ${k.turns}`}</span>
             <span className={"bday-when" + (k.passed ? " past" : k.days >= 0 && k.days <= 5 ? " close" : "")}>
               {k.passed ? "уже отметили" : k.days === 0 ? "сегодня!" : inDaysWord(k.days)}
             </span>
@@ -250,9 +275,6 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
 export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName }) {
   // Персональное приветствие: имя берём из базы (user_roles.display_name); если имени нет — без имени
   const greetName = authorName ? `, ${authorName}` : "";
-  // Сейчас срочных дел нет: тетради куплены, взносы собраны
-  const attnCount = 0;
-  const headline = attnCount === 0 ? "Все важные дела выполнены" : "Сегодня есть 1 важное дело";
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
   // Поступления сверх старого сбора: платежи по новым сборам + разовые поступления
@@ -276,31 +298,40 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   const schedAll = liveSchedule?.lessons?.length ? liveSchedule.lessons : LESSONS_FALLBACK;
   const schedIso = weekDates()[schedFocus.day];
   const schedOvs = activeOverridesFor(overrides, schedIso);
-  const schedEnd = schedOvs.length ? dayEndTime(applyOverridesToDay(schedAll, schedFocus.day, schedOvs).lessons, schedBells) : null;
+  const focusLessons = applyOverridesToDay(schedAll, schedFocus.day, schedOvs).lessons;
+  const schedEnd = schedOvs.length ? dayEndTime(focusLessons, schedBells) : null;
+  // Подпись приветствия по реальному состоянию дня:
+  // вещи с собой → ДР сегодня → изменение расписания → нейтральная
+  const focusNotes = [...new Set(focusLessons.map((l) => l.note).filter(Boolean))];
+  let headline, subline;
+  if (focusNotes.length) {
+    headline = schedFocus.label === "сегодня" ? "Сегодня есть что взять с собой" : "На завтра нужно собрать вещи";
+    subline = `${schedFocus.label === "сегодня" ? "Сегодня" : "Завтра"} пригодится: ${focusNotes.join(", ").toLowerCase()}. Подробности — в расписании ниже.`;
+  } else if (bdayEv.today.length) {
+    headline = "Сегодня в классе праздник!";
+    subline = `День рождения у ${joinNames(bdayEv.today, false)} — не забудьте поздравить.`;
+  } else if (schedOvs.length) {
+    headline = "В расписании есть изменения";
+    subline = `Проверьте уроки ${schedFocus.label} — подробности в баннере выше и в расписании.`;
+  } else {
+    headline = "Срочных дел нет";
+    subline = "Всё важное собрано ниже: расписание, касса класса и дни рождения.";
+  }
   return (
     <section id="tab-dashboard">
       <div className="greet-date">{todayLine()}</div>
 
       <BdayBanner ev={bdayEv} />
 
-      <NewScheduleBanner onTab={onTab} />
-
       <ScheduleChangeBanner activeOvs={schedOvs} focusIso={schedIso} focusLabel={schedFocus.label} endTime={schedEnd} toast={toast} onTab={onTab} />
 
-      <div className="welcome reveal d1">
+      <div className="welcome compact reveal d1">
         <div className="welcome-copy">
           <h1 className="welcome-h1">
             {greetWord()}{greetName}!<br />
             <span className="blue">{headline}</span>
           </h1>
-          <p className="welcome-sub">
-            Сразу показываем только то, что требует вашего внимания. Остальная
-            информация аккуратно собрана ниже.
-          </p>
-          <div className="welcome-chips">
-            <button className="w-chip blue" onClick={() => onTab("schedule")}><NavIcon name="schedule" uid="d-schd" size={18} className="nvi-inline" /> Расписание на неделю</button>
-            <button className="w-chip pink" onClick={() => onTab("expenses")}><NavIcon name="expenses" uid="d-exp" size={18} className="nvi-inline" /> Посмотреть расходы за сентябрь</button>
-          </div>
+          <p className="welcome-sub">{subline}</p>
         </div>
         <div className="welcome-visual">
           <span className="w-blob green" aria-hidden="true"></span>
@@ -308,85 +339,79 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         </div>
       </div>
 
-      <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
+      <div className="dash-cols">
+        <div className="dash-col-main">
+          <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
+        </div>
+        <div className="dash-col-side">
+          <div className="sec-head reveal d3">
+            <span className="sec-dot gold"><Ic id="i-coin" /></span>
+            <h2 className="sec-title">Касса класса</h2>
+          </div>
+          <div className="card cash-card reveal d3">
+            <div className="cash-main">
+              <div className="lbl">Сейчас в общей кассе</div>
+              <div className="cash-val">{fmt(cash)} BYN</div>
+              <div className="note">
+                {isLive && extras === null
+                  ? "поступления обновляются…"
+                  : "остаток по ведомости взносов + разовые поступления · без фонда ГПД"}
+              </div>
+            </div>
+            <div className="cash-rows">
+              <button className="cash-row" onClick={() => onTab("fees")}>
+                <span className="cash-row-lbl"><Ic id="i-plus" /> Собрано за год</span>
+                <span className="cash-row-val">{fmt(TOTAL_COLLECTED)} BYN</span>
+              </button>
+              <button className="cash-row" onClick={() => onTab("expenses")}>
+                <span className="cash-row-lbl"><Ic id="i-minus" /> Потрачено</span>
+                <span className="cash-row-val">{fmt(spent)} BYN</span>
+              </button>
+              <button className="cash-row gpd" onClick={() => onTab("expenses")}>
+                <span className="cash-row-lbl"><Ic id="i-coin" /> Фонд ГПД <span className="tag-pill">отдельный фонд</span></span>
+                <span className="cash-row-val">{fmt(GPD_FUND_REST)} BYN</span>
+              </button>
+            </div>
+            <div className="dash-sched-foot">
+              <span className="muted" style={{ fontSize: 12 }}>{groupsCount} групп расходов · {FAMILIES_COUNT} семей</span>
+              <button className="pill-btn blue" onClick={() => onTab("history")}>История операций</button>
+            </div>
+            {/* Компактный «Пушистый казначей»: штампует чек «Учтено!» при новом расходе */}
+            <TreasurerMascot compact />
+          </div>
+
+          <div className="dfee-card slim reveal d4">
+            <div className="dfee-head">
+              <div>
+                <div className="dfee-title">Взнос 2026–2027 <span className="tag-pill">годовой</span></div>
+                <div className="dfee-meta">200 BYN с семьи · ведомость казначея</div>
+              </div>
+              <span className="going-pill">идёт</span>
+            </div>
+            <div className="dfee-progress-labels">
+              <span>Собрано {fmt(TOTAL_COLLECTED)} из {fmt(200 * FAMILIES_COUNT)} BYN</span>
+              <span>{fmt(TOTAL_COLLECTED)} BYN</span>
+            </div>
+            <div className="dprogress"><i style={{ width: Math.round((TOTAL_COLLECTED / (200 * FAMILIES_COUNT)) * 100) + "%" }}></i></div>
+          </div>
+          <div className="dfee-card slim reveal d5">
+            <div className="dfee-head">
+              <div>
+                <div className="dfee-title">Фонд ГПД <span className="tag-pill">отдельный сбор</span></div>
+                <div className="dfee-meta">по 25 BYN с ребёнка · {GPD_FUND.length} детей</div>
+              </div>
+              <span className="going-pill">идёт</span>
+            </div>
+            <div className="dfee-progress-labels">
+              <span>Собрано {fmt(GPD_FUND_COLLECTED)} · потрачено {fmt(GPD_FUND_SPENT)}</span>
+              <span>остаток {fmt(GPD_FUND_REST)} BYN</span>
+            </div>
+            <div className="dprogress"><i style={{ width: Math.round((GPD_FUND.filter((r) => r.paid > 0).length / GPD_FUND.length) * 100) + "%" }}></i></div>
+          </div>
+        </div>
+      </div>
 
       <BirthdaysWidget committee={committee} ev={bdayEv} list={bdays} onTab={onTab} />
-
-      {attnCount > 0 && (
-        <div className="sec-head reveal d2">
-          <span className="sec-dot gold"><Ic id="i-bell" /></span>
-          <h2 className="sec-title">Требует вашего внимания</h2>
-          <span className="sec-note">{attnCount === 1 ? "1 действие" : `${attnCount} действия`}</span>
-        </div>
-      )}
-
-      <div className="sec-head reveal d3">
-        <span className="sec-dot gold"><Ic id="i-coin" /></span>
-        <h2 className="sec-title">Деньги класса</h2>
-        <span className="sec-note">касса, сборы и расходы</span>
-      </div>
-      <div className="grid cols3 stats-row reveal d3">
-        <div className="dstat blue">
-          <div className="dstat-top">
-            <div className="lbl">Сейчас в кассе</div>
-            <button className="dstat-btn" title="История операций" onClick={() => onTab("history")}><Ic id="i-arrow-up-right" /></button>
-          </div>
-          <div className="val">{fmt(cash)} BYN</div>
-          <div className="note">остаток по ведомости взносов + разовые поступления</div>
-        </div>
-        <div className="dstat gold">
-          <div className="dstat-top">
-            <div className="lbl">Собрано за год</div>
-            <button className="dstat-btn dark" title="Сборы" onClick={() => onTab("fees")}><Ic id="i-plus" /></button>
-          </div>
-          <div className="val">{fmt(TOTAL_COLLECTED)} BYN</div>
-          <div className="note">взнос 2026–2027 · {FAMILIES_COUNT} семей</div>
-        </div>
-        <div className="dstat pink">
-          <div className="dstat-top">
-            <div className="lbl">Потрачено</div>
-            <button className="dstat-btn dark" title="Расходы" onClick={() => onTab("expenses")}><Ic id="i-minus" /></button>
-          </div>
-          <div className="val">{fmt(spent)} BYN</div>
-          <div className="note">{groupsCount} групп расходов · включая фонд ГПД</div>
-          {/* Компактный «Пушистый казначей»: штампует чек «Учтено!» при новом расходе */}
-          <TreasurerMascot compact />
-        </div>
-      </div>
-
-      <div className="sec-head reveal d4">
-        <span className="sec-dot gold"><NavIcon name="fees" uid="d-fees" size={20} /></span>
-        <h2 className="sec-title">Активные сборы</h2>
-        <span className="sec-note">Показываем сумму, срок и прогресс</span>
-      </div>
-      <div className="dfee-card reveal d4">
-        <div className="dfee-head">
-          <div>
-            <div className="dfee-title">Взнос 2026–2027 <span className="tag-pill">годовой</span></div>
-            <div className="dfee-meta">суммы по ведомости казначея · 200 BYN с семьи</div>
-          </div>
-          <span className="going-pill">идёт</span>
-        </div>
-        <div className="dfee-progress-labels">
-          <span>Собрано {fmt(TOTAL_COLLECTED)} из {fmt(200 * FAMILIES_COUNT)} BYN · {FAMILIES_COUNT} семей</span>
-          <span>{fmt(TOTAL_COLLECTED)} BYN</span>
-        </div>
-        <div className="dprogress"><i style={{ width: Math.round((TOTAL_COLLECTED / (200 * FAMILIES_COUNT)) * 100) + "%" }}></i></div>
-      </div>
-      <div className="dfee-card reveal d5">
-        <div className="dfee-head">
-          <div>
-            <div className="dfee-title">Фонд ГПД <span className="tag-pill">отдельный сбор</span></div>
-            <div className="dfee-meta">по 25 BYN с ребёнка · свой список из {GPD_FUND.length} детей</div>
-          </div>
-          <span className="going-pill">идёт</span>
-        </div>
-        <div className="dfee-progress-labels">
-          <span>Собрано {fmt(GPD_FUND_COLLECTED)} · потрачено {fmt(GPD_FUND_SPENT)} · остаток {fmt(GPD_FUND_REST)}</span>
-          <span>{fmt(GPD_FUND_COLLECTED)} BYN</span>
-        </div>
-        <div className="dprogress"><i style={{ width: Math.round((GPD_FUND.filter((r) => r.paid > 0).length / GPD_FUND.length) * 100) + "%" }}></i></div>
-      </div>
 
       <PushSettings committee={committee} role={role} toast={toast} />
     </section>
