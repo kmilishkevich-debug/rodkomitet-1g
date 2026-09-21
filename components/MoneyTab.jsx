@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import FeesTab from "./FeesTab";
 import ExpensesTab from "./ExpensesTab";
 import HistoryTab from "./HistoryTab";
@@ -11,6 +12,12 @@ const SUBS = [
 ];
 
 export default function MoneyTab({ sub, onSub, committee, toast, onOpenUpload, liveGroups, onReload, author }) {
+  // Переход из «Сборов» в «Расходы»: с флагом подсветки группы ГПД
+  const [gpdFocus, setGpdFocus] = useState(false);
+  const goExpenses = (gpd) => {
+    setGpdFocus(!!gpd);
+    onSub("expenses");
+  };
   return (
     <section id="tab-money">
       <div className="money-subnav reveal d1">
@@ -25,8 +32,8 @@ export default function MoneyTab({ sub, onSub, committee, toast, onOpenUpload, l
           </button>
         ))}
       </div>
-      {sub === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={onOpenUpload} author={author} />}
-      {sub === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={onReload} />}
+      {sub === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={onOpenUpload} author={author} onGoExpenses={goExpenses} />}
+      {sub === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={onReload} focusGpd={gpdFocus} onFocusDone={() => setGpdFocus(false)} />}
       {sub === "history" && <HistoryTab toast={toast} />}
     </section>
   );

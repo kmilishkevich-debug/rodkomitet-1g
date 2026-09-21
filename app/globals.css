@@ -679,3 +679,136 @@ img.tm-scene-img,img.tm-coin-img,img.tm-receipt-img{display:block;width:100%;hei
   .tm-stamp{transform:rotate(-14deg) scale(1)}
   .tm-confetti{display:none}
 }
+
+/* ===== Финансы: редизайн страницы «Сборы» ===== */
+.fin-hero { text-align: center; margin: 6px 0 22px; }
+.fin-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #EDE7FB; color: var(--blue);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 7px 16px; border-radius: 999px;
+}
+.fin-title { font-size: clamp(30px, 4.5vw, 44px); margin: 14px 0 6px; }
+.fin-sub { color: var(--muted); font-size: 15px; margin: 0; }
+
+/* Карточка общей кассы */
+.fin-cash {
+  display: grid; grid-template-columns: 1fr 320px; gap: 24px;
+  border-radius: 28px; padding: 32px; margin-bottom: 20px; align-items: center;
+}
+.fin-cash-info { min-width: 0; }
+.fin-h3 { margin: 0 0 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fin-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+.fin-tile { border-radius: 18px; padding: 16px 18px; min-width: 0; }
+.fin-tile.blue { background: #EAF0FF; color: #2E49A8; }
+.fin-tile.pink { background: #FDECF2; color: #C0326E; }
+.fin-tile.green { background: #EAF5E6; color: #3E7A34; }
+.fin-tile-head {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12.5px; font-weight: 700; margin-bottom: 8px; opacity: 0.85;
+}
+.fin-tile-head svg { width: 18px; height: 18px; flex: none; }
+.fin-sum {
+  font-variant-numeric: tabular-nums; font-weight: 800;
+  font-size: clamp(24px, 2.6vw, 38px); line-height: 1.05; white-space: nowrap;
+}
+.fin-cur { font-size: 0.45em; font-weight: 700; }
+.fin-sum.neg { color: #C2410C; }
+.fin-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 4px 0 12px; }
+.fin-actions .btn { min-height: 44px; }
+.btn.outline { background: #fff; color: var(--blue); border: 1.6px solid var(--blue); }
+.btn.outline:hover { background: var(--blue-soft); }
+.fin-how-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: none; border: none; cursor: pointer; padding: 10px 0;
+  color: var(--muted); font: inherit; font-size: 13.5px; font-weight: 700; min-height: 44px;
+}
+.fin-how-toggle:hover { color: var(--ink); }
+.fin-chevron { display: inline-flex; transition: transform 0.2s; }
+.fin-chevron svg { width: 16px; height: 16px; }
+.fin-chevron.open { transform: rotate(90deg); }
+.fin-chevron.end { margin-left: auto; }
+.fin-how { max-width: 640px; color: var(--muted); font-size: 14px; line-height: 1.55; margin: 0 0 6px; }
+
+/* Маскот-казначей в правой колонке */
+.fin-mascot { --tm-h: 230px; display: flex; justify-content: center; }
+.fin-mascot .tm-scene {
+  background: transparent; padding: 0; margin: 0; box-shadow: none;
+  flex-direction: column; gap: 8px;
+}
+.fin-mascot .tm-stagebox { transform-origin: 50% 90%; animation: fin-sway 5s ease-in-out infinite; }
+@keyframes fin-sway {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50% { transform: rotate(1.2deg); }
+}
+
+/* Фонд ГПД */
+.fin-gpd { margin-bottom: 20px; }
+.fin-gpd-stats { display: flex; gap: 22px; flex-wrap: wrap; margin: 14px 0; }
+.fin-gpd-stat { min-width: 120px; }
+.fin-gpd-stat.blue { color: #2E49A8; }
+.fin-gpd-stat.pink { color: #C0326E; }
+.fin-gpd-stat.green { color: #3E7A34; }
+.fin-gpd-lb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px;
+}
+.fin-gpd-lb svg { width: 15px; height: 15px; }
+.fin-gpd-sum { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 24px; white-space: nowrap; }
+.fin-gpd-sum i { font-style: normal; font-size: 0.55em; }
+
+/* Разовые поступления */
+.fin-oneoff { margin-bottom: 20px; }
+.fin-oneoff-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.fin-oneoff-title { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.fin-ic-circle {
+  width: 52px; height: 52px; border-radius: 50%; flex: none;
+  background: #EDE7FB; color: #7C5CBF;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.fin-ic-circle svg { width: 24px; height: 24px; }
+
+/* История изменений — компактная строка */
+.fin-history { margin-bottom: 20px; padding: 0; overflow: hidden; }
+.fin-hist-row {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  background: none; border: none; cursor: pointer; text-align: left;
+  padding: 18px 20px; font: inherit; font-weight: 700; color: var(--ink); min-height: 44px;
+}
+.fin-hist-row:hover { background: var(--input); }
+.fin-hist-body { padding: 0 20px 18px; }
+
+/* Скелетоны загрузки (только для данных из базы) */
+.fin-load { padding: 6px 0; }
+.fin-skel { display: flex; flex-direction: column; gap: 8px; }
+.fin-skel i {
+  display: block; height: 14px; border-radius: 8px;
+  background: linear-gradient(90deg, #EEEAE2 25%, #F7F4EE 50%, #EEEAE2 75%);
+  background-size: 200% 100%; animation: fin-shimmer 1.2s linear infinite;
+}
+.fin-skel i:nth-child(2) { width: 70%; }
+.fin-skel i:nth-child(3) { width: 45%; }
+.fin-skel.chipload i { height: 22px; width: 92px; border-radius: 999px; }
+@keyframes fin-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Подсветка группы ГПД на вкладке «Расходы» */
+.exp-hl { outline: 3px solid var(--blue); outline-offset: 2px; transition: outline-color 0.4s; }
+
+@media (max-width: 900px) {
+  .fin-cash { grid-template-columns: 1fr; padding: 24px; }
+  .fin-mascot { --tm-h: 150px; order: 2; }
+}
+@media (max-width: 560px) {
+  .fin-tiles { grid-template-columns: 1fr; }
+  .fin-actions { flex-direction: column; }
+  .fin-actions .btn { width: 100%; }
+  .fin-cash { padding: 20px; }
+  .fin-gpd-stats { gap: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fin-mascot .tm-stagebox { animation: none; }
+  .fin-skel i { animation: none; }
+}

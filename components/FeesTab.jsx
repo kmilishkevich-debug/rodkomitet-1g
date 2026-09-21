@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Ic } from "./Art";
-import NavIcon from "./NavIcons";
 import {
   FEES, FEE_COLUMNS, GPD_CHILDREN, fmt, feeRest,
   GPD_FUND, GPD_FUND_FEE, GPD_FUND_CHARGE, gpdFundRest,
@@ -40,6 +39,15 @@ const round2 = (n) => Math.round(n * 100) / 100;
 const dateRu = (d) => {
   try { return new Date(d).toLocaleDateString("ru-RU"); } catch { return String(d || ""); }
 };
+
+// Русские окончания: 1 запись, 2 записи, 5 записей
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 14) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
 
 // Переключатель «наличные / перевод»
 function MethodPick({ value, onChange }) {
@@ -154,9 +162,19 @@ function OneOffModal({ childNames, onClose, onSave, saving }) {
   );
 }
 
-export default function FeesTab({ committee, toast, onOpenUpload, author }) {
-  const [listOpen, setListOpen] = useState(false);
+// Крупная сумма плитки кассы: число крупно, BYN меньше, табличные цифры
+function Sum({ value, className = "" }) {
+  return (
+    <div className={"fin-sum " + className + (value < 0 ? " neg" : "")}>
+      {fmt(value)} <span className="fin-cur">BYN</span>
+    </div>
+  );
+}
+
+export default function FeesTab({ committee, toast, onOpenUpload, author, onGoExpenses }) {
+  const [listOpen, setListOpen] = useState(true); // ведомость по детям раскрыта по умолчанию
   const [gpdOpen, setGpdOpen] = useState(false);
+  const [howOpen, setHowOpen] = useState(false); // «Как устроена общая касса»
   const [live, setLive] = useState(null); // { columns, rows } из базы
   const [editCol, setEditCol] = useState(null); // id колонки в режиме переименования
   const [editVal, setEditVal] = useState("");
@@ -263,8 +281,10 @@ export default function FeesTab({ committee, toast, onOpenUpload, author }) {
         target: "Разовые поступления", child: from, field: purpose + " (" + METHOD_LABEL[method] + ")",
         old_amount: null, new_amount: amount, editor,
       });
+      // Пушистый казначей радуется поступлению один раз (id защищает от повтора)
+      notifyTreasurer({ type: "contribution", id: "oneoff:" + Date.now(), child: from, amount: round2(amount) });
       setOneOffOpen(false);
-      toast("Разовое поступление добавлено — оно уже учтено в кассе на главной");
+      toast("Разовое поступление добавлено — оно уже учтено в кассе");
       reloadOneOffs(); reloadLog();
     } catch (e) {
       toast("Не получилось сохранить: " + e.message);
@@ -303,40 +323,89 @@ export default function FeesTab({ committee, toast, onOpenUpload, author }) {
 
   const oneOffTotal = round2((oneOffs || []).reduce((s, o) => s + o.amount, 0));
 
+  // ===== Общая касса класса: собрано / потрачено / осталось (без сумм фонда ГПД) =====
+  const totalCharges = round2(columns.filter((c) => c.kind === "charge").reduce((s, c) => s + (totals[c.id] || 0), 0));
+  const cashCollected = round2(totalPaid + oneOffTotal); // взносы семей + разовые поступления
+  const cashSpent = totalCharges; // все списания из взносов
+  const cashLeft = round2(cashCollected - cashSpent);
+
   return (
-    <section id="tab-fees">
-      <div className="section-cover reveal d1" style={{ background: "var(--gold)" }}>
-        <svg className="cover-deco"><use href="#i-flower" /></svg>
-        <h2><NavIcon name="fees" uid="h-fees" size={32} className="nvi-big" />Сборы и взносы</h2>
-        {committee && (
-          <button className="btn small" onClick={addColumn}>
-            <Ic id="i-plus" />Новая статья
-          </button>
-        )}
+    <section id="tab-fees" className="fin">
+      {/* ===== Шапка раздела ===== */}
+      <div className="fin-hero reveal d1">
+        <div className="fin-kicker"><span>Наш 1 «Г»</span><i aria-hidden="true">/</i><span>Финансы</span></div>
+        <h2 className="fin-title">Всё по делу, всё на виду</h2>
+        <div className="fin-sub">Взносы, расходы и история изменений</div>
       </div>
 
-      {/* ===== Единый сбор: взносы 2026–2027 (всего 200 руб с семьи) ===== */}
-      <div className="card fee-card reveal d2">
-        <div className="fee-head">
-          <div>
-            <h3>Взносы 2026–2027 <span className="chip violet">идёт</span></h3>
-            <div className="fee-meta">
-              Всего {fmt(FEE_TARGET)} BYN с семьи · из взносов списываются: хознужды, подарки, гардероб, магнитные значки, ГПД, рабочие тетради · бейджи (3,85) — у четверых
+      {/* ===== Общая касса класса ===== */}
+      <div className="card fin-cash reveal d2">
+        <div className="fin-cash-info">
+          <h3 className="fin-h3">Общая касса класса <span className="chip blue">1 «Г»</span></h3>
+          <div className="muted">Общий бюджет нашего класса</div>
+          <div className="fin-tiles">
+            <div className="fin-tile blue">
+              <div className="fin-tile-head"><Ic id="i-users" />Собрано</div>
+              <Sum value={cashCollected} />
+            </div>
+            <div className="fin-tile pink">
+              <div className="fin-tile-head"><Ic id="i-receipt" />Потрачено</div>
+              <Sum value={cashSpent} />
+            </div>
+            <div className="fin-tile green">
+              <div className="fin-tile-head"><Ic id="i-check" />Осталось</div>
+              <Sum value={cashLeft} />
             </div>
           </div>
-          <span className={"chip " + (doneCount === rows.length ? "green" : "amber")}>сдали полностью · {doneCount}/{rows.length}</span>
+          <div className="fin-actions">
+            <button className="btn teal" onClick={() => setListOpen(!listOpen)} aria-expanded={listOpen}>
+              <Ic id="i-users" />{listOpen ? "Скрыть список" : "Взносы по детям"}
+            </button>
+            <button className="btn outline" onClick={() => onGoExpenses && onGoExpenses(false)}>
+              <Ic id="i-receipt" />Расходы класса
+            </button>
+          </div>
+          <button className="fin-how-toggle" onClick={() => setHowOpen(!howOpen)} aria-expanded={howOpen}>
+            <span className={"fin-chevron" + (howOpen ? " open" : "")} aria-hidden="true"><Ic id="i-arrow-right" /></span>
+            Как устроена общая касса
+          </button>
+          {howOpen && (
+            <div className="fin-how muted">
+              Каждая семья сдаёт {fmt(FEE_TARGET)} BYN за учебный год. Из взносов списываются общие траты:
+              хознужды, подарки, гардероб, магнитные значки, доля класса на ГПД и рабочие тетради.
+              Разовые поступления плюсуются в кассу. Фонд ГПД — отдельный сбор со своим списком детей,
+              его суммы в кассе класса не учитываются. Каждая правка сумм попадает в историю изменений внизу страницы.
+            </div>
+          )}
         </div>
-        <div className="progress"><i style={{ width: Math.round((doneCount / Math.max(1, rows.length)) * 100) + "%" }}></i></div>
-        <div className="muted" style={{ marginBottom: 12 }}>
-          Сдали полностью {doneCount} из {rows.length} · собрано {fmt(totalPaid)} BYN · осталось собрать {fmt(totalDue)} BYN · остаток на детях {fmt(totalRest)} BYN
+        {/* Пушистый казначей с банкой «Общее дело 1Г» — как и раньше, живёт в кассе */}
+        <div className="fin-mascot">
+          <TreasurerMascot collected={totalPaid} goal={MASCOT_GOAL} />
         </div>
-        {/* «Пушистый казначей»: банка «Общее дело 1Г», цель — 200 BYN × 27 семей */}
-        <TreasurerMascot collected={totalPaid} goal={MASCOT_GOAL} />
-        <div className="row">
-          <button className="btn small teal" onClick={() => onOpenUpload("Взносы 2026–2027", "до " + fmt(FEE_TARGET) + " BYN с семьи")}>Загрузить чек об оплате</button>
-          <button className="btn small white" onClick={() => setListOpen(!listOpen)}>{listOpen ? "Скрыть список" : "Взносы и остатки по детям"}</button>
-        </div>
-        {listOpen && (
+      </div>
+
+      {/* ===== Ведомость взносов по детям (раскрыта по умолчанию) ===== */}
+      {listOpen && (
+        <div className="card fee-card reveal d2">
+          <div className="fee-head">
+            <div>
+              <h3>Взносы 2026–2027 <span className="chip violet">идёт</span></h3>
+              <div className="fee-meta">
+                Всего {fmt(FEE_TARGET)} BYN с семьи · из взносов списываются: хознужды, подарки, гардероб, магнитные значки, ГПД, рабочие тетради · бейджи (3,85) — у четверых
+              </div>
+            </div>
+            <span className={"chip " + (doneCount === rows.length ? "green" : "amber")}>сдали полностью · {doneCount}/{rows.length}</span>
+          </div>
+          <div className="progress"><i style={{ width: Math.round((doneCount / Math.max(1, rows.length)) * 100) + "%" }}></i></div>
+          <div className="muted" style={{ marginBottom: 12 }}>
+            Сдали полностью {doneCount} из {rows.length} · собрано {fmt(totalPaid)} BYN · осталось собрать {fmt(totalDue)} BYN · остаток на детях {fmt(totalRest)} BYN
+          </div>
+          <div className="row" style={{ marginBottom: 4 }}>
+            <button className="btn small teal" onClick={() => onOpenUpload("Взносы 2026–2027", "до " + fmt(FEE_TARGET) + " BYN с семьи")}>Загрузить чек об оплате</button>
+            {committee && (
+              <button className="btn small white" onClick={addColumn}><Ic id="i-plus" />Новая статья</button>
+            )}
+          </div>
           <div style={{ marginTop: 14, overflowX: "auto" }}>
             <table>
               <tbody>
@@ -432,104 +501,44 @@ export default function FeesTab({ committee, toast, onOpenUpload, author }) {
               {committee ? " · нажмите на сумму, чтобы исправить её (изменение попадёт в журнал)" : ""}
             </div>
           </div>
-        )}
-      </div>
-
-      {/* ===== Разовые поступления ===== */}
-      <div className="card fee-card reveal d3">
-        <div className="fee-head">
-          <div>
-            <h3>Разовые поступления {oneOffs && oneOffs.length > 0 && <span className="chip green">+{fmt(oneOffTotal)} BYN</span>}</h3>
-            <div className="fee-meta">Вне сборов: например, другой ученик сдал 25 руб на ГПД · плюсуются в кассу на главной</div>
-          </div>
-          {committee && (
-            <button className="btn small teal" onClick={() => {
-              if (!isLive || oneOffs === null) return toast("Заработает после запуска файла fees2-setup.sql в Supabase");
-              setOneOffOpen(true);
-            }}>
-              <Ic id="i-plus" />Добавить
-            </button>
-          )}
         </div>
-        {oneOffs && oneOffs.length > 0 ? (
-          <div style={{ overflowX: "auto" }}>
-            <table>
-              <tbody>
-                <tr><th>Дата</th><th>От кого</th><th>На что</th><th>Сумма</th><th>Как</th><th>Комментарий</th></tr>
-                {oneOffs.map((o) => (
-                  <tr key={o.id}>
-                    <td style={{ whiteSpace: "nowrap" }}>{dateRu(o.date)}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>{o.from_name}</td>
-                    <td>{o.purpose}</td>
-                    <td><b>{fmt(o.amount)}</b></td>
-                    <td>{METHOD_LABEL[o.method] || "—"}</td>
-                    <td className="muted">{o.comment || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="muted">Пока нет разовых поступлений{committee ? " — добавьте первое кнопкой выше" : ""}</div>
-        )}
-      </div>
+      )}
 
-      {/* ===== Журнал правок (виден всем — прозрачность) ===== */}
-      <div className="card flat fee-card reveal d3">
+      {/* ===== Фонд ГПД: отдельный компактный сбор ===== */}
+      <div className="card fin-gpd reveal d3">
         <div className="fee-head">
           <div>
-            <h3>Журнал изменений</h3>
-            <div className="fee-meta">Каждая правка сумм записывается: что, было → стало, кто и когда</div>
-          </div>
-          <button className="btn small white" onClick={() => setLogOpen(!logOpen)}>
-            {logOpen ? "Скрыть" : "Показать" + (log && log.length ? " (" + log.length + ")" : "")}
-          </button>
-        </div>
-        {logOpen && (
-          log && log.length > 0 ? (
-            <div style={{ overflowX: "auto" }}>
-              <table>
-                <tbody>
-                  <tr><th>Когда</th><th>Где</th><th>Кого касается</th><th>Что</th><th>Было → стало</th><th>Кто</th></tr>
-                  {log.map((e) => (
-                    <tr key={e.id}>
-                      <td style={{ whiteSpace: "nowrap" }}>{dateRu(e.at)}</td>
-                      <td>{e.target}</td>
-                      <td style={{ whiteSpace: "nowrap" }}>{e.child || "—"}</td>
-                      <td>{e.field || "—"}</td>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        {e.old_amount != null ? fmt(Number(e.old_amount)) : "—"} → <b>{e.new_amount != null ? fmt(Number(e.new_amount)) : "—"}</b>
-                      </td>
-                      <td style={{ whiteSpace: "nowrap" }}>{e.editor || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="muted">
-              {log === null ? "Журнал появится после запуска файла fees2-setup.sql в Supabase" : "Пока изменений не было"}
-            </div>
-          )
-        )}
-      </div>
-
-      {/* ===== Фонд ГПД: отдельный сбор со своим списком детей ===== */}
-      <div className="card fee-card reveal d3">
-        <div className="fee-head">
-          <div>
-            <h3>Фонд ГПД <span className="chip teal">отдельный сбор</span></h3>
+            <h3>Фонд ГПД <span className="chip violet">Дополнительный сбор</span></h3>
             <div className="fee-meta">
-              По {fmt(GPD_FUND_FEE)} BYN с ребёнка · свой список из {GPD_FUND.length} детей, посещающих группу продлённого дня (в том числе трое из других классов) · расходы фонда — в разделе «Расходы», группа «ГПД»
+              {GPD_FUND.length} детей · {fmt(GPD_FUND_FEE)} BYN с ребёнка · свой список: без троих ребят класса, зато с тремя из других классов
             </div>
           </div>
-          <span className="chip green">остаток · {fmt(GPD_FUND_REST)} BYN</span>
+        </div>
+        <div className="fin-gpd-stats">
+          <div className="fin-gpd-stat blue">
+            <span className="fin-gpd-lb"><Ic id="i-users" />Собрано</span>
+            <span className="fin-gpd-sum">{fmt(GPD_FUND_COLLECTED)} <i>BYN</i></span>
+          </div>
+          <div className="fin-gpd-stat pink">
+            <span className="fin-gpd-lb"><Ic id="i-receipt" />Потрачено</span>
+            <span className="fin-gpd-sum">{fmt(GPD_FUND_SPENT)} <i>BYN</i></span>
+          </div>
+          <div className="fin-gpd-stat green">
+            <span className="fin-gpd-lb"><Ic id="i-check" />Остаток</span>
+            <span className="fin-gpd-sum">{fmt(GPD_FUND_REST)} <i>BYN</i></span>
+          </div>
         </div>
         <div className="muted" style={{ marginBottom: 12 }}>
-          Собрано {fmt(GPD_FUND_COLLECTED)} BYN · потрачено {fmt(GPD_FUND_SPENT)} BYN · остаток {fmt(GPD_FUND_REST)} BYN
+          Остаток {fmt(GPD_FUND_REST)} BYN — как в таблице казначея: в кассе фонда 650,00 − 338,32 = 311,68,
+          минус 13,01 — доля расходов Дашкевич Варвары, взнос которой ещё не сдан.
         </div>
-        <div className="row">
-          <button className="btn small white" onClick={() => setGpdOpen(!gpdOpen)}>{gpdOpen ? "Скрыть список" : "Взносы и остатки по детям"}</button>
+        <div className="fin-actions">
+          <button className="btn outline" onClick={() => setGpdOpen(!gpdOpen)} aria-expanded={gpdOpen}>
+            <Ic id="i-users" />{gpdOpen ? "Скрыть взносы ГПД" : "Взносы ГПД"}
+          </button>
+          <button className="btn outline" onClick={() => onGoExpenses && onGoExpenses(true)}>
+            <Ic id="i-receipt" />Расходы ГПД
+          </button>
         </div>
         {gpdOpen && (
           <div style={{ marginTop: 14, overflowX: "auto" }}>
@@ -568,6 +577,100 @@ export default function FeesTab({ committee, toast, onOpenUpload, author }) {
             <div className="muted" style={{ marginTop: 8 }}>
               «Хознужды ГПД» — доля каждого ребёнка в общих тратах фонда · отрицательный остаток — взнос ещё не сдан
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ===== Разовые поступления ===== */}
+      <div className="card fin-oneoff reveal d3">
+        <div className="fin-oneoff-head">
+          <div className="fin-oneoff-title">
+            <span className="fin-ic-circle" aria-hidden="true"><Ic id="i-coin" /></span>
+            <div>
+              <h3 style={{ margin: 0 }}>Разовые поступления {oneOffs && oneOffs.length > 0 && <span className="chip green">+{fmt(oneOffTotal)} BYN</span>}</h3>
+              <div className="fee-meta">Пополнения общей кассы вне сборов</div>
+            </div>
+          </div>
+          {committee && (
+            <button className="btn outline" onClick={() => {
+              if (!isLive || oneOffs === null) return toast("Заработает после запуска файла fees2-setup.sql в Supabase");
+              setOneOffOpen(true);
+            }}>
+              <Ic id="i-plus" />Добавить поступление
+            </button>
+          )}
+        </div>
+        {oneOffs === null ? (
+          <div className="fin-load">
+            <div className="fin-skel" aria-hidden="true"><i /><i /><i /></div>
+            <button className="btn small white" onClick={reloadOneOffs}>Повторить загрузку</button>
+          </div>
+        ) : oneOffs.length > 0 ? (
+          <div style={{ overflowX: "auto", marginTop: 12 }}>
+            <table>
+              <tbody>
+                <tr><th>Дата</th><th>От кого</th><th>На что</th><th>Сумма</th><th>Как</th><th>Комментарий</th></tr>
+                {oneOffs.map((o) => (
+                  <tr key={o.id}>
+                    <td style={{ whiteSpace: "nowrap" }}>{dateRu(o.date)}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{o.from_name}</td>
+                    <td>{o.purpose}</td>
+                    <td><b>{fmt(o.amount)}</b></td>
+                    <td>{METHOD_LABEL[o.method] || "—"}</td>
+                    <td className="muted">{o.comment || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div style={{ marginTop: 12 }}><span className="chip gray">Поступлений пока нет</span></div>
+        )}
+      </div>
+
+      {/* ===== История изменений: компактная раскрываемая строка ===== */}
+      <div className="card fin-history reveal d3">
+        <button className="fin-hist-row" onClick={() => setLogOpen(!logOpen)} aria-expanded={logOpen}>
+          <span className="fin-ic-circle" aria-hidden="true"><Ic id="i-clock" /></span>
+          <b>История изменений</b>
+          {log === null ? (
+            <span className="fin-skel chipload" aria-hidden="true"><i /></span>
+          ) : (
+            <span className="chip violet">{log.length} {plural(log.length, "запись", "записи", "записей")}</span>
+          )}
+          <span className={"fin-chevron end" + (logOpen ? " open" : "")} aria-hidden="true"><Ic id="i-arrow-right" /></span>
+        </button>
+        {logOpen && (
+          <div className="fin-hist-body">
+            {log === null ? (
+              <div className="fin-load">
+                <div className="fin-skel" aria-hidden="true"><i /><i /><i /></div>
+                <button className="btn small white" onClick={reloadLog}>Повторить загрузку</button>
+              </div>
+            ) : log.length > 0 ? (
+              <div style={{ overflowX: "auto" }}>
+                <table>
+                  <tbody>
+                    <tr><th>Когда</th><th>Где</th><th>Кого касается</th><th>Что</th><th>Было → стало</th><th>Кто</th></tr>
+                    {log.map((e) => (
+                      <tr key={e.id}>
+                        <td style={{ whiteSpace: "nowrap" }}>{dateRu(e.at)}</td>
+                        <td>{e.target}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>{e.child || "—"}</td>
+                        <td>{e.field || "—"}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          {e.old_amount != null ? fmt(Number(e.old_amount)) : "—"} → <b>{e.new_amount != null ? fmt(Number(e.new_amount)) : "—"}</b>
+                        </td>
+                        <td style={{ whiteSpace: "nowrap" }}>{e.editor || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="muted" style={{ marginTop: 8 }}>Каждая правка сумм записывается: что, было → стало, кто и когда</div>
+              </div>
+            ) : (
+              <div className="muted">Пока изменений не было</div>
+            )}
           </div>
         )}
       </div>

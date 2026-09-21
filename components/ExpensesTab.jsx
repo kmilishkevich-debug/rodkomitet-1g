@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Ic, MascotPeek } from "./Art";
 import NavIcon from "./NavIcons";
 import { EXPENSE_GROUPS, fmt, groupTotal } from "./data";
@@ -12,14 +12,32 @@ function fmtDate(d) {
   return `${day}.${m}.${y.slice(2)}`;
 }
 
-export default function ExpensesTab({ committee, toast, liveGroups, onReload }) {
+export default function ExpensesTab({ committee, toast, liveGroups, onReload, focusGpd, onFocusDone }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [editGroup, setEditGroup] = useState(null); // id группы в режиме переименования
   const [editVal, setEditVal] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
+  const [hlId, setHlId] = useState(null); // подсвеченная группа (переход «Расходы ГПД»)
 
   const groups = liveGroups || EXPENSE_GROUPS;
+
+  // Переход со страницы «Сборы» по кнопке «Расходы ГПД»: подсветить и показать группу ГПД
+  useEffect(() => {
+    if (!focusGpd) return;
+    const g = groups.find((x) => /гпд/i.test(x.title || ""));
+    if (g) {
+      setHlId(g.id);
+      const t1 = setTimeout(() => {
+        document.getElementById("exp-group-" + g.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+      const t2 = setTimeout(() => setHlId(null), 3200);
+      onFocusDone?.();
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+    onFocusDone?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusGpd]);
   const totalSpent = groups.reduce((s, g) => s + groupTotal(g), 0);
 
   const openAdd = () => {
@@ -83,7 +101,7 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload }) 
       )}
 
       {groups.map((g) => (
-        <div className="card reveal d2" key={g.id} style={{ marginBottom: 14 }}>
+        <div className={"card reveal d2" + (hlId === g.id ? " exp-hl" : "")} id={"exp-group-" + g.id} key={g.id} style={{ marginBottom: 14 }}>
           <h3 style={{ marginTop: 0 }}>
             {editGroup === g.id ? (
               <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
