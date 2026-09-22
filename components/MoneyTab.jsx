@@ -11,7 +11,7 @@ const SUBS = [
   { id: "history", label: "История" },
 ];
 
-export default function MoneyTab({ sub, onSub, committee, toast, onOpenUpload, liveGroups, onReload, author }) {
+export default function MoneyTab({ sub, onSub, committee, toast, onOpenUpload, liveGroups, onReload, author, family }) {
   // Переход из «Сборов» в «Расходы»: с флагом подсветки группы ГПД
   const [gpdFocus, setGpdFocus] = useState(false);
   const goExpenses = (gpd) => {
@@ -32,7 +32,7 @@ export default function MoneyTab({ sub, onSub, committee, toast, onOpenUpload, l
           </button>
         ))}
       </div>
-      {sub === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={onOpenUpload} author={author} onGoExpenses={goExpenses} />}
+      {sub === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={onOpenUpload} author={author} onGoExpenses={goExpenses} family={family} />}
       {sub === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={onReload} focusGpd={gpdFocus} onFocusDone={() => setGpdFocus(false)} />}
       {sub === "history" && <HistoryTab toast={toast} />}
     </section>

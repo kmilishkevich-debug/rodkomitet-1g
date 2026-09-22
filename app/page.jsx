@@ -12,7 +12,7 @@ import ScheduleTab from "@/components/ScheduleTab";
 import UploadModal from "@/components/UploadModal";
 import LogoutModal from "@/components/LogoutModal";
 import { useFamily, loadSeen, saveSeen } from "@/components/FamilyPicker";
-import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls } from "@/lib/supabase";
+import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes } from "@/lib/supabase";
 import { enablePush, syncPushRole } from "@/lib/push";
 
 export default function Page() {
@@ -198,6 +198,43 @@ export default function Page() {
   }, [tab, liveAnnouncements, livePolls]);
   void seenTick;
 
+  // Личные заметки и напоминания семьи (null = таблица не создана / семья не выбрана).
+  // Про новое напоминание от комитета показываем тост.
+  const [liveNotes, setLiveNotes] = useState(null);
+  const knownNoteIds = useRef(null);
+  const familyNRef = useRef(null);
+  familyNRef.current = family?.n || null;
+  const reloadNotes = useCallback(async () => {
+    if (!familyNRef.current) {
+      setLiveNotes(null);
+      knownNoteIds.current = null;
+      return;
+    }
+    const data = await fetchFamilyNotes(familyNRef.current);
+    if (!data) return;
+    setLiveNotes(data);
+    const ids = new Set(data.map((n) => n.id));
+    if (knownNoteIds.current) {
+      const fresh = data.find((n) => n.from_committee && !n.done && !knownNoteIds.current.has(n.id));
+      if (fresh) {
+        toast("Вам напоминание от комитета — нажмите, чтобы посмотреть", () => showTabRef.current("dashboard"));
+      }
+    }
+    knownNoteIds.current = ids;
+  }, [toast]);
+  useEffect(() => {
+    knownNoteIds.current = null; // сменилась семья — считаем список новым
+    reloadNotes();
+  }, [reloadNotes, family?.n]);
+
+  // Бейдж «Главная»: невыполненные напоминания, чей срок сегодня или уже прошёл
+  const notesBadge = (() => {
+    if (!liveNotes) return 0;
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    return liveNotes.filter((n) => !n.done && n.remind_date && n.remind_date <= iso).length;
+  })();
+
   // Живые дни рождения из базы (null = встроенный список из birthdaysData.js)
   const [liveBirthdays, setLiveBirthdays] = useState(null);
   const reloadBirthdays = useCallback(async () => {
@@ -218,7 +255,8 @@ export default function Page() {
     reloadSchedule();
     reloadOverrides();
     reloadBirthdays();
-  }, [reloadAnnouncements, reloadReads, reloadPolls, reloadExpenses, reloadSchedule, reloadOverrides, reloadBirthdays]);
+    reloadNotes();
+  }, [reloadAnnouncements, reloadReads, reloadPolls, reloadExpenses, reloadSchedule, reloadOverrides, reloadBirthdays, reloadNotes]);
 
   // При возврате в приложение (переключение окна/вкладки браузера) и раз в минуту — свежие данные
   useEffect(() => {
@@ -258,11 +296,12 @@ export default function Page() {
     ch = listen(ch, "expenses", reloadExpenses);
     ch = listen(ch, "receipts", reloadExpenses);
     ch = listen(ch, "birthdays", reloadBirthdays);
+    ch = listen(ch, "family_notes", reloadNotes);
     ch.subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [role, reloadAnnouncements, reloadReads, reloadPolls, reloadOverrides, reloadSchedule, reloadExpenses, reloadBirthdays]);
+  }, [role, reloadAnnouncements, reloadReads, reloadPolls, reloadOverrides, reloadSchedule, reloadExpenses, reloadBirthdays, reloadNotes]);
 
   // Разбор адреса раздела: /?tab=... → вкладка (старые адреса денег ведут в «Деньги»)
   const applyRoute = useCallback((t) => {
@@ -400,6 +439,7 @@ export default function Page() {
             onTab={showTab}
             newsBadge={newsBadge}
             pollsBadge={pollsBadge}
+            notesBadge={notesBadge}
             notifOpen={notifOpen}
             notifSeen={notifSeen}
             onToggleNotif={toggleNotif}
@@ -409,14 +449,14 @@ export default function Page() {
             }}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={liveAnnouncements} polls={livePolls} reads={liveReads} family={family} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={liveAnnouncements} polls={livePolls} reads={liveReads} family={family} setFamily={setFamily} notes={liveNotes} onReloadNotes={reloadNotes} />}
             {tab === "schedule" && <ScheduleTab committee={committee} canEditSchedule={canEditSchedule} author={author} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} overrides={liveOverrides} onReloadOverrides={reloadOverrides} />}
             {tab === "announcements" && <AnnouncementsTab committee={committee} canEdit={committee || teacher} author={author} toast={toast} announcements={liveAnnouncements} reads={liveReads} onReload={reloadAnnouncements} onReloadReads={reloadReads} family={family} setFamily={setFamily} />}
             {tab === "votes" && <VotesTab committee={committee} canEdit={committee || teacher} author={author} toast={toast} polls={livePolls} onReload={reloadPolls} family={family} setFamily={setFamily} />}
             {tab === "class" && <ClassTab committee={committee} toast={toast} liveBirthdays={liveBirthdays} />}
-            {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} author={author} />}
+            {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} author={author} family={family} />}
           </main>
-          <BottomNav tab={tab} moneySub={moneySub} onTab={showTab} newsBadge={newsBadge} pollsBadge={pollsBadge} />
+          <BottomNav tab={tab} moneySub={moneySub} onTab={showTab} newsBadge={newsBadge} pollsBadge={pollsBadge} notesBadge={notesBadge} />
         </div>
       )}
       <UploadModal open={upload.open} name={upload.name} sum={upload.sum} onClose={closeUpload} toast={toast} />

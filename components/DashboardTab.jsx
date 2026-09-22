@@ -1,15 +1,16 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
-import { fetchCashExtras, isLive } from "@/lib/supabase";
+import { fetchCashExtras, fetchFees, addFamilyNote, toggleFamilyNote, deleteFamilyNote, isLive } from "@/lib/supabase";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
   fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal,
-  GPD_FUND_REST,
+  GPD_FUND_REST, FEES, feeRest,
 } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, INFO_HOUR, scheduleFocus, subjectIcon, lessonDisplay } from "./scheduleData";
 import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu } from "./scheduleOverrides";
-import { BIRTHDAYS_FALLBACK, BD_MONTHS_PREP, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, inDaysWord } from "./birthdaysData";
+import { BIRTHDAYS_FALLBACK, BD_MONTHS_PREP, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, bdInfo, inDaysWord } from "./birthdaysData";
+import FamilyPicker from "./FamilyPicker";
 import PushSettings from "./PushSettings";
 import ClassMascot from "./ClassMascot";
 import { pollState, fmtDeadline } from "./VotesTab";
@@ -410,9 +411,342 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
   );
 }
 
-export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls, reads, family }) {
-  // Персональное приветствие: имя берём из базы (user_roles.display_name); если имени нет — без имени
-  const greetName = authorName ? `, ${authorName}` : "";
+// ===== Персонализация (заметки, виджет семьи) =====
+
+// Имя ребёнка в родительном падеже: Тимофей → Тимофея, Арина → Арины, Соня → Сони, Кирилл → Кирилла
+export function ruGenitive(name) {
+  const n = (name || "").trim();
+  if (!n) return n;
+  const low = n.toLowerCase();
+  if (low.endsWith("й") || low.endsWith("ь")) return n.slice(0, -1) + "я";
+  if (low.endsWith("а")) {
+    const prev = low[low.length - 2] || "";
+    return n.slice(0, -1) + ("гкхжчшщ".includes(prev) ? "и" : "ы");
+  }
+  if (low.endsWith("я")) return n.slice(0, -1) + "и";
+  if (/[бвгджзклмнпрстфхцчшщ]$/.test(low)) return n + "а";
+  return n;
+}
+
+// Имя ребёнка из записи «Фамилия Имя»
+function childFirstName(child) {
+  const parts = (child || "").trim().split(/\s+/);
+  return parts[1] || parts[0] || "";
+}
+
+// Сегодняшняя дата по Минску в формате ГГГГ-ММ-ДД (для сравнения с датами напоминаний)
+function minskIso() {
+  const d = minskNow();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// «22 сентября» из ISO-даты напоминания
+function fmtNoteDate(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${d} ${MONTHS[m - 1]}${y !== minskNow().getFullYear() ? ` ${y}` : ""}`;
+}
+
+// ===== Виджет «Ваша семья»: взнос, день рождения, голосования своего ребёнка =====
+function FamilyWidget({ family, polls, bdays, onTab }) {
+  const [fees, setFees] = useState(null);
+  useEffect(() => {
+    fetchFees().then((data) => { if (data) setFees(data); });
+  }, []);
+  // Внесено и остаток своей семьи: из живой ведомости, иначе — из встроенных данных
+  let paid = null, rest = null;
+  if (fees) {
+    const row = fees.rows.find((r) => r.n === family.n);
+    if (row) {
+      paid = 0; rest = 0;
+      fees.columns.forEach((c) => {
+        const v = row.values[c.id] || 0;
+        if (c.kind === "paid") { paid += v; rest += v; } else rest -= v;
+      });
+      paid = Math.round(paid * 100) / 100;
+      rest = Math.round(rest * 100) / 100;
+    }
+  }
+  if (paid === null) {
+    const f = FEES.find((x) => x.n === family.n);
+    if (f) { paid = f.paid; rest = Math.round(feeRest(f) * 100) / 100; }
+  }
+  const due = paid === null ? null : Math.max(0, Math.round((200 - paid) * 100) / 100);
+  // Свой день рождения
+  const kid = (bdays || []).find((k) => k.id === family.n);
+  const bd = kid ? bdInfo(kid.born) : null;
+  // Голосования, где семья ещё не ответила
+  const noAnswer = (polls || []).filter(
+    (p) => pollState(p) === "open" && !(p.votes || []).some((v) => v.family_n === family.n)
+  );
+  const first = childFirstName(family.child);
+  return (
+    <div className="card fam-widget reveal d2">
+      <div className="dash-card-head">
+        <img src="/icons/icon-people.webp" className="head-3d" alt="" />
+        <div className="dash-card-titles">
+          <h2 className="sec-title">Ваша семья · {family.child}</h2>
+          <div className="dash-card-sub">Личная сводка: только про {ruGenitive(first)}</div>
+        </div>
+      </div>
+      <div className="fam-rows">
+        {paid !== null && (
+          <button className="fam-row" onClick={() => onTab("fees")}>
+            <span className="fam-row-ico" aria-hidden="true">💰</span>
+            <span className="fam-row-body">
+              <b>Взносы: внесено {fmt(paid)} из {fmt(200)} BYN</b>
+              <span className="fam-row-sub">
+                {due > 0 ? `Осталось сдать ${fmt(due)} BYN` : "Годовой взнос сдан полностью — спасибо!"}
+                {rest !== null ? ` · остаток после списаний: ${fmt(rest)} BYN` : ""}
+              </span>
+            </span>
+            <span className="fam-row-arrow" aria-hidden="true">›</span>
+          </button>
+        )}
+        {bd && (
+          <button className="fam-row" onClick={() => onTab("class")}>
+            <span className="fam-row-ico" aria-hidden="true">🎂</span>
+            <span className="fam-row-body">
+              <b>День рождения {ruGenitive(first)} — {fmtBd(kid.born)}</b>
+              <span className="fam-row-sub">
+                {bd.days === 0 ? `Сегодня исполняется ${bd.turns} — поздравляем!` : `Исполнится ${bd.turns} — ${inDaysWord(bd.days)}`}
+              </span>
+            </span>
+            <span className="fam-row-arrow" aria-hidden="true">›</span>
+          </button>
+        )}
+        <button className="fam-row" onClick={() => onTab("votes")}>
+          <span className="fam-row-ico" aria-hidden="true">🗳️</span>
+          <span className="fam-row-body">
+            <b>{noAnswer.length ? `Голосования без вашего ответа: ${noAnswer.length}` : "Во всех голосованиях вы уже ответили"}</b>
+            <span className="fam-row-sub">{noAnswer.length ? "Комитету важно мнение каждой семьи" : "Новые голосования появятся здесь"}</span>
+          </span>
+          <span className="fam-row-arrow" aria-hidden="true">›</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ===== Привязка семьи для комитета и учителя: один раз выбрать своего ребёнка =====
+function BindFamilyCard({ setFamily, toast }) {
+  const [open, setOpen] = useState(false);
+  const [hidden, setHidden] = useState(() => {
+    try { return localStorage.getItem("rk1g-no-child") === "1"; } catch { return false; }
+  });
+  if (hidden) return null;
+  return (
+    <>
+      <div className="attn-card reveal d2">
+        <div className="attn-ico blue"><Ic id="i-spark" /></div>
+        <div className="attn-body">
+          <div className="attn-title">Настройте личную сводку</div>
+          <div className="attn-sub">Укажите своего ребёнка — на главной появятся ваши взносы, заметки и напоминания.</div>
+        </div>
+        <div className="bind-actions">
+          <button className="pill-btn blue" onClick={() => setOpen(true)}>Выбрать ребёнка</button>
+          <button className="pill-btn" onClick={() => {
+            try { localStorage.setItem("rk1g-no-child", "1"); } catch {}
+            setHidden(true);
+          }}>У меня нет ребёнка в классе</button>
+        </div>
+      </div>
+      <FamilyPicker
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Кто ваш ребёнок?"
+        onPick={(f) => {
+          setOpen(false);
+          setFamily(f);
+          toast(`Готово! Личная сводка настроена: ${f.child}`);
+        }}
+      />
+    </>
+  );
+}
+
+// Порядок заметок: просроченные и сегодняшние → будущие по дате → без даты → выполненные внизу
+function sortNotes(notes, todayIso) {
+  const rank = (n) => {
+    if (n.done) return 4;
+    if (n.remind_date && n.remind_date <= todayIso) return 0;
+    if (n.remind_date) return 1;
+    return 2;
+  };
+  return [...notes].sort((a, b) => {
+    const ra = rank(a), rb = rank(b);
+    if (ra !== rb) return ra - rb;
+    if (a.remind_date && b.remind_date && a.remind_date !== b.remind_date) return a.remind_date < b.remind_date ? -1 : 1;
+    return (a.created_at || "") < (b.created_at || "") ? 1 : -1;
+  });
+}
+
+// ===== Блок «Мои заметки»: личные заметки и напоминания семьи =====
+function NotesWidget({ family, notes, onReload, toast }) {
+  const [text, setText] = useState("");
+  const [date, setDate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const todayIso = minskIso();
+  const list = sortNotes(notes || [], todayIso);
+  const add = async () => {
+    const t = text.trim();
+    if (!t) { toast("Напишите текст заметки"); return; }
+    setSaving(true);
+    try {
+      await addFamilyNote({ family_n: family.n, text: t, remind_date: date || null });
+      setText(""); setDate("");
+      onReload();
+      toast(date ? "Напоминание добавлено" : "Заметка добавлена");
+    } catch (e) {
+      console.error(e);
+      toast("Не получилось сохранить — попробуйте ещё раз");
+    }
+    setSaving(false);
+  };
+  const toggle = async (n) => {
+    try { await toggleFamilyNote(n.id, !n.done); onReload(); } catch (e) { console.error(e); toast("Не получилось отметить"); }
+  };
+  const del = async (n) => {
+    try { await deleteFamilyNote(n.id); onReload(); toast("Заметка удалена"); } catch (e) { console.error(e); toast("Не получилось удалить"); }
+  };
+  return (
+    <div className="card notes-widget reveal d2">
+      <div className="dash-card-head">
+        <img src="/icons/icon-book.webp" className="head-3d" alt="" />
+        <div className="dash-card-titles">
+          <h2 className="sec-title">Мои заметки и напоминания</h2>
+          <div className="dash-card-sub">Видны только вашей семье · выполненные удаляются через 7 дней</div>
+        </div>
+      </div>
+      <div className="note-form">
+        <input
+          className="note-input"
+          type="text"
+          placeholder="Например: сдать 50 BYN до пятницы"
+          value={text}
+          maxLength={300}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") add(); }}
+        />
+        <input
+          className="note-date"
+          type="date"
+          value={date}
+          min={todayIso}
+          aria-label="Дата напоминания (необязательно)"
+          onChange={(e) => setDate(e.target.value)}
+        />
+        <button className="pill-btn blue" onClick={add} disabled={saving}>{saving ? "Сохраняю…" : "Добавить"}</button>
+      </div>
+      {list.length === 0 && (
+        <div className="muted" style={{ fontSize: 13, padding: "6px 2px" }}>
+          Пока пусто. Добавьте заметку — а если указать дату, в этот день на «Главной» появится напоминание.
+        </div>
+      )}
+      {list.map((n) => {
+        const overdue = !n.done && n.remind_date && n.remind_date < todayIso;
+        const today = !n.done && n.remind_date === todayIso;
+        return (
+          <div className={"note-row" + (n.done ? " done" : "") + (overdue || today ? " due" : "")} key={n.id}>
+            <label className="note-check">
+              <input type="checkbox" checked={n.done} onChange={() => toggle(n)} aria-label="Выполнено" />
+            </label>
+            <div className="note-body">
+              <div className="note-text">{n.text}</div>
+              <div className="note-meta">
+                {n.from_committee && <span className="note-tag">от комитета{n.author ? ` · ${n.author}` : ""}</span>}
+                {n.remind_date && (
+                  <span className={"note-when" + (overdue ? " overdue" : today ? " today" : "")}>
+                    {overdue ? `просрочено · ${fmtNoteDate(n.remind_date)}` : today ? "сегодня!" : fmtNoteDate(n.remind_date)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <button className="note-del" onClick={() => del(n)} aria-label="Удалить заметку" title="Удалить">✕</button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ===== Кнопка комитета «Напомнить семье»: персональное напоминание конкретной семье =====
+function CommitteeRemind({ authorName, toast }) {
+  const [pickOpen, setPickOpen] = useState(false);
+  const [target, setTarget] = useState(null); // {n, child}
+  const [text, setText] = useState("");
+  const [date, setDate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const todayIso = minskIso();
+  const send = async () => {
+    const t = text.trim();
+    if (!target) return;
+    if (!t) { toast("Напишите текст напоминания"); return; }
+    setSaving(true);
+    try {
+      await addFamilyNote({
+        family_n: target.n, text: t, remind_date: date || null,
+        from_committee: true, author: authorName || "Комитет",
+      });
+      toast(`Напоминание отправлено семье: ${target.child}`);
+      setTarget(null); setText(""); setDate("");
+    } catch (e) {
+      console.error(e);
+      toast("Не получилось отправить — попробуйте ещё раз");
+    }
+    setSaving(false);
+  };
+  return (
+    <div className="card remind-card reveal d2">
+      <div className="dash-card-head">
+        <img src="/icons/icon-calendar.webp" className="head-3d" alt="" />
+        <div className="dash-card-titles">
+          <h2 className="sec-title">Напомнить семье</h2>
+          <div className="dash-card-sub">Персональное напоминание появится у семьи на «Главной» с пометкой «от комитета»</div>
+        </div>
+        {!target && <button className="pill-btn blue" onClick={() => setPickOpen(true)}>Выбрать семью</button>}
+      </div>
+      {target && (
+        <div className="note-form remind-form">
+          <div className="remind-target">
+            Семья: <b>{target.child}</b>
+            <button className="pill-btn" onClick={() => setPickOpen(true)}>Сменить</button>
+          </div>
+          <input
+            className="note-input"
+            type="text"
+            placeholder="Например: пожалуйста, сдайте 50 BYN до пятницы"
+            value={text}
+            maxLength={300}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+          />
+          <input
+            className="note-date"
+            type="date"
+            value={date}
+            min={todayIso}
+            aria-label="Дата напоминания (необязательно)"
+            onChange={(e) => setDate(e.target.value)}
+          />
+          <button className="pill-btn blue" onClick={send} disabled={saving}>{saving ? "Отправляю…" : "Отправить"}</button>
+        </div>
+      )}
+      <FamilyPicker
+        open={pickOpen}
+        onClose={() => setPickOpen(false)}
+        title="Какой семье напомнить?"
+        onPick={(f) => { setTarget(f); setPickOpen(false); }}
+      />
+    </div>
+  );
+}
+
+export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls, reads, family, setFamily, notes, onReloadNotes }) {
+  // Персональное приветствие: у комитета/учителя — имя из базы; у семьи — по ребёнку («семья Тимофея»)
+  const greetName = authorName
+    ? `, ${authorName}`
+    : family ? `, семья ${ruGenitive(childFirstName(family.child))}` : "";
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
   // Поступления сверх старого сбора: платежи по новым сборам + разовые поступления
@@ -526,6 +860,12 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       <ImportantNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
 
       <ActivePolls polls={polls} family={family} onTab={onTab} />
+
+      {/* Персонализация: привязка семьи (для комитета/учителя), сводка семьи, заметки, напоминания семьям */}
+      {!family && (committee || role === "teacher") && <BindFamilyCard setFamily={setFamily} toast={toast} />}
+      {family && <FamilyWidget family={family} polls={polls} bdays={bdays} onTab={onTab} />}
+      {family && <NotesWidget family={family} notes={notes} onReload={onReloadNotes} toast={toast} />}
+      {committee && <CommitteeRemind authorName={authorName} toast={toast} />}
 
       <div className="dash-cols">
         <div className="dash-col-main" id="home-schedule">

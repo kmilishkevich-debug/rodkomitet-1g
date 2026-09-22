@@ -55,10 +55,10 @@ function NavBadge({ n }) {
   return <span className="nav-badge">{n > 9 ? "9+" : n}</span>;
 }
 
-export default function Header({ committee, tab, moneySub, onTab, onLogout, newsBadge = 0, pollsBadge = 0 }) {
+export default function Header({ committee, tab, moneySub, onTab, onLogout, newsBadge = 0, pollsBadge = 0, notesBadge = 0 }) {
   const isActive = (t) =>
     t.id === tab || (tab === "money" && MONEY_SUBS.includes(t.id) && moneySub === t.id);
-  const badgeFor = (id) => (id === "announcements" ? newsBadge : id === "votes" ? pollsBadge : 0);
+  const badgeFor = (id) => (id === "announcements" ? newsBadge : id === "votes" ? pollsBadge : id === "dashboard" ? notesBadge : 0);
   return (
     <header>
       <div className="header-inner">
@@ -104,7 +104,7 @@ function BurgerIcon({ open }) {
   );
 }
 
-export function BottomNav({ tab, moneySub, onTab, newsBadge = 0, pollsBadge = 0 }) {
+export function BottomNav({ tab, moneySub, onTab, newsBadge = 0, pollsBadge = 0, notesBadge = 0 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreActive = tab === "money" || tab === "announcements";
   const pick = (id) => { setMoreOpen(false); onTab(id); };
@@ -120,6 +120,7 @@ export function BottomNav({ tab, moneySub, onTab, newsBadge = 0, pollsBadge = 0 
         >
           <NavIcon name={t.id} uid={"bot-" + t.id} size={36} />{t.label}
           {t.id === "votes" && pollsBadge > 0 && <span className="nav-badge">{pollsBadge > 9 ? "9+" : pollsBadge}</span>}
+          {t.id === "dashboard" && notesBadge > 0 && <span className="nav-badge">{notesBadge > 9 ? "9+" : notesBadge}</span>}
         </button>
       ))}
       <div className="bnav-more-wrap">

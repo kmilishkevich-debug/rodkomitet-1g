@@ -171,7 +171,7 @@ function Sum({ value, className = "" }) {
   );
 }
 
-export default function FeesTab({ committee, toast, onOpenUpload, author, onGoExpenses }) {
+export default function FeesTab({ committee, toast, onOpenUpload, author, onGoExpenses, family }) {
   const [listOpen, setListOpen] = useState(true); // ведомость по детям раскрыта по умолчанию
   const [gpdOpen, setGpdOpen] = useState(false);
   const [howOpen, setHowOpen] = useState(false); // «Как устроена общая касса»
@@ -230,6 +230,12 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
   const totalRest = round2(rows.reduce((s, r) => s + r.rest, 0));
   const totalDue = round2(rows.reduce((s, r) => s + r.due, 0));
   const doneCount = rows.filter((r) => r.due <= 0.005).length;
+
+  // Своя семья — первой строкой и с подсветкой
+  const myN = family ? family.n : null;
+  const displayRows = myN
+    ? [...rows.filter((r) => r.n === myN), ...rows.filter((r) => r.n !== myN)]
+    : rows;
 
   // ===== Правка ячейки общей таблицы взносов =====
   const openCell = (row, column) => {
@@ -435,13 +441,16 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
                   <th>Остаток</th>
                   <th>Осталось сдать</th>
                 </tr>
-                {rows.map((r) => (
-                  <tr key={r.id}>
+                {displayRows.map((r) => (
+                  <tr key={r.id} className={myN && r.n === myN ? "fee-my-row" : undefined}>
                     <td>{r.n}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       {r.child}
                       {isGpd(r.child) && (
                         <span className="chip green" style={{ marginLeft: 6, padding: "2px 8px", fontSize: 10.5 }}>ГПД</span>
+                      )}
+                      {myN && r.n === myN && (
+                        <span className="chip blue" style={{ marginLeft: 6, padding: "2px 8px", fontSize: 10.5 }}>ваш ребёнок</span>
                       )}
                     </td>
                     {columns.map((c) => {
