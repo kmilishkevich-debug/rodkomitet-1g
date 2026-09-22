@@ -95,6 +95,24 @@ export default function Page() {
     reloadOverrides();
   }, [reloadOverrides]);
 
+  // Экранная клавиатура: прячем нижнюю панель, пока она открыта
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return;
+    const sync = () => {
+      const hidden = window.innerHeight - vv.height > 140;
+      document.body.classList.toggle("kb-open", hidden);
+    };
+    sync();
+    vv.addEventListener("resize", sync);
+    vv.addEventListener("scroll", sync);
+    return () => {
+      vv.removeEventListener("resize", sync);
+      vv.removeEventListener("scroll", sync);
+      document.body.classList.remove("kb-open");
+    };
+  }, []);
+
   // Имя вошедшего (для подписи изменений расписания)
   useEffect(() => {
     if (role === "committee" || role === "teacher") {
@@ -394,6 +412,8 @@ export default function Page() {
     applyRoute(t);
     pushTab(t);
     setNotifOpen(false);
+    // На мобильных прокручивается внутренний слой .app-scroll, на десктопе — окно
+    document.querySelector(".app-scroll")?.scrollTo({ top: 0 });
     window.scrollTo({ top: 0 });
     // Переключение вкладки — заодно подтягиваем свежие данные этого раздела
     if (t === "announcements") {
@@ -432,6 +452,7 @@ export default function Page() {
         <LoginScreen onLogin={login} />
       ) : (
         <div id="app">
+          <div className="app-scroll">
           <Header
             committee={committee}
             tab={tab}
@@ -456,6 +477,7 @@ export default function Page() {
             {tab === "class" && <ClassTab committee={committee} toast={toast} liveBirthdays={liveBirthdays} />}
             {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} author={author} family={family} />}
           </main>
+          </div>
           <BottomNav tab={tab} moneySub={moneySub} onTab={showTab} newsBadge={newsBadge} pollsBadge={pollsBadge} notesBadge={notesBadge} />
         </div>
       )}

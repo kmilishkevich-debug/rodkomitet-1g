@@ -138,14 +138,27 @@ nav.topnav button{border:none;background:#fff;padding:9px 17px;font-size:13.5px;
 nav.topnav button:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(23,23,23,.1)}
 nav.topnav button.active{background:var(--ink);color:#fff}
 /* bottom nav (mobile) */
-nav.bottomnav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--soft-line);z-index:60;justify-content:space-around;padding:10px 2px calc(12px + env(safe-area-inset-bottom));transform:translateZ(0);will-change:transform}
+nav.bottomnav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--soft-line);z-index:60;justify-content:space-around;padding:10px 2px calc(12px + env(safe-area-inset-bottom))}
 nav.bottomnav button{border:none;background:none;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 9px;border-radius:14px;font-family:'Onest';transition:.15s}
 nav.bottomnav button.active{color:#fff;background:var(--ink);padding:8px 11px}
 @media(max-width:760px){
   nav.topnav{display:none}
   nav.bottomnav{display:flex}
-  main{padding-bottom:112px!important}
   .user-chip .name-block{display:none}
+
+  /* Мобильная «оболочка»: экран фиксированной высоты, прокручивается только внутренний слой.
+     Панель с иконками — обычный сосед этого слоя, поэтому физически не может уплыть. */
+  body:has(#app){height:100vh;height:100dvh;overflow:hidden}
+  #app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+  .app-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
+  #app header{position:relative}
+  #app>nav.bottomnav{position:relative;flex:0 0 auto}
+  main{padding-bottom:28px!important}
+
+  /* Панель уходит, когда открыта модалка или клавиатура */
+  body:has(.overlay) nav.bottomnav,
+  body:has(.pwa-install-overlay) nav.bottomnav,
+  body.kb-open nav.bottomnav{display:none}
 }
 main{max-width:1080px;margin:0 auto;padding:22px 18px 60px}
 
