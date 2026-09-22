@@ -486,7 +486,7 @@ function FamilyWidget({ family, polls, bdays, onTab }) {
         <img src="/icons/icon-people.webp" className="head-3d" alt="" />
         <div className="dash-card-titles">
           <h2 className="sec-title">Ваша семья · {family.child}</h2>
-          <div className="dash-card-sub">Личная сводка: только про {ruGenitive(first)}</div>
+          <div className="dash-card-sub">Личная сводка семьи {ruGenitive(first)}</div>
         </div>
       </div>
       <div className="fam-rows">

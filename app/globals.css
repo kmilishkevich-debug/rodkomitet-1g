@@ -138,7 +138,7 @@ nav.topnav button{border:none;background:#fff;padding:9px 17px;font-size:13.5px;
 nav.topnav button:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(23,23,23,.1)}
 nav.topnav button.active{background:var(--ink);color:#fff}
 /* bottom nav (mobile) */
-nav.bottomnav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--soft-line);z-index:60;justify-content:space-around;padding:10px 2px calc(12px + env(safe-area-inset-bottom))}
+nav.bottomnav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--soft-line);z-index:60;justify-content:space-around;padding:10px 2px calc(12px + env(safe-area-inset-bottom));transform:translateZ(0);will-change:transform}
 nav.bottomnav button{border:none;background:none;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 9px;border-radius:14px;font-family:'Onest';transition:.15s}
 nav.bottomnav button.active{color:#fff;background:var(--ink);padding:8px 11px}
 @media(max-width:760px){
@@ -1068,6 +1068,7 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .news-all-link{display:inline-flex;margin-bottom:18px}
 
 /* ===== Главная: личная сводка семьи, заметки и напоминания ===== */
+.fam-widget,.notes-widget,.remind-card{margin-bottom:16px}
 .fam-rows{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .fam-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--cream);
   border:none;border-radius:18px;padding:12px 14px;cursor:pointer;font:inherit;color:var(--ink);transition:background .15s}
