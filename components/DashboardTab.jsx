@@ -499,8 +499,8 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     text: `Сегодня день рождения у ${joinNames(bdayEv.today, false)}!`,
   });
   if (!cues.length) cues.push({
-    top: "Я рядом!",
-    text: new Date().getHours() >= 17 ? "На сегодня всё. Хорошего вечера!" : "Сейчас нет срочных дел. Всё важное — ниже",
+    top: "Всё под контролем",
+    text: "Посмотрим, что завтра?",
   });
   return (
     <section id="tab-dashboard">
@@ -519,7 +519,6 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           <p className="welcome-sub">{subline}</p>
         </div>
         <div className="welcome-visual">
-          <span className="w-blob green" aria-hidden="true"></span>
           <ClassMascot ref={mascotRef} cues={cues} greetToken={greetToken} />
         </div>
       </div>

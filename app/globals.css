@@ -274,7 +274,7 @@ tr:last-child td{border-bottom:none}
 .greet-date{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:4px 0 14px}
 
 /* hero welcome */
-.welcome{background:#FFFDF9;border-radius:34px;box-shadow:0 14px 38px rgba(54,49,40,.08);padding:38px 40px;display:flex;align-items:center;gap:28px;margin-bottom:26px;position:relative;overflow:hidden}
+.welcome{background:#FFFDF9;border-radius:34px;box-shadow:0 14px 38px rgba(54,49,40,.08);padding:38px 40px;display:flex;align-items:center;gap:28px;margin-bottom:26px;position:relative;overflow:visible}
 .welcome-copy{flex:1;min-width:0}
 .welcome-h1{font-family:'Comfortaa','Trebuchet MS','Arial Rounded MT Bold',sans-serif;font-weight:700;font-size:clamp(29px,4.4vw,52px);line-height:1.12;letter-spacing:-.015em;margin-bottom:14px}
 .welcome-h1 .blue{color:var(--blue)}
@@ -284,20 +284,21 @@ tr:last-child td{border-bottom:none}
 .w-chip:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(23,23,23,.12)}
 .w-chip.blue{background:#DCE4FF}
 .w-chip.pink{background:#FDE6EF}
-.welcome-visual{position:relative;width:230px;flex:none;display:flex;align-items:center;justify-content:center;isolation:isolate}
-.w-blob{position:absolute;border-radius:50%;filter:blur(0)}
-.w-blob.green{width:210px;height:210px;background:#DFF3D8;top:6px;left:14px;border-radius:48% 52% 55% 45%/50% 46% 54% 50%}
+/* Сцена маскота: занимает правую часть карточки, элементы выступают за её границы (ТЗ §1, §5) */
+.welcome-visual{position:relative;width:600px;flex:none;align-self:stretch}
 .w-mascot{position:relative;width:190px;height:190px;border-radius:50%;overflow:hidden;box-shadow:0 14px 34px rgba(54,49,40,.18);border:5px solid #fff}
 .w-mascot img{width:100%;height:100%;object-fit:cover;display:block}
 .w-sticker{position:absolute;bottom:-4px;right:-10px;background:#F6D96F;border-radius:17px 17px 17px 5px;padding:12px 14px;font-size:12.2px;font-weight:800;box-shadow:0 10px 24px rgba(54,49,40,.12);max-width:170px;line-height:1.3}
 
 /* ── Анимированный маскот на главной (компонент ClassMascot) ── */
-.welcome-visual .w-blob.green{top:36px;z-index:0;pointer-events:none}
-.cm-wrap{position:relative;width:100%;padding-bottom:4px}
+/* Маскот стоит на нижней границе карточки, голова выступает над верхней (ТЗ §1) */
+.cm-wrap{position:absolute;right:36px;bottom:-22px;width:279px;height:310px}
+/* Мягкая овальная тень под ногами (ТЗ §1) */
+.cm-wrap:before{content:'';position:absolute;left:6%;right:6%;bottom:-5px;height:26px;background:radial-gradient(50% 50% at 50% 50%,rgba(92,76,40,.20),rgba(92,76,40,0) 72%);z-index:0;pointer-events:none}
 /* SVG alpha masks isolate body and arm. Normal source-over compositing preserves opaque foreground colors; never use multiply on the character. */
-.cm-character{all:unset;display:block;cursor:pointer;width:100%;position:relative;z-index:1;mix-blend-mode:normal;touch-action:manipulation}
+.cm-character{all:unset;display:block;cursor:pointer;width:100%;height:100%;position:relative;z-index:1;mix-blend-mode:normal;touch-action:manipulation}
 .cm-character:focus-visible{outline:3px solid var(--blue);border-radius:35px;outline-offset:4px}
-.cm-wrap svg{display:block;width:100%;overflow:visible}
+.cm-wrap svg{display:block;width:100%;height:100%;overflow:visible}
 .cm-rig{transform-origin:627px 1158px;animation:cm-breathe 4.8s ease-in-out infinite}
 .cm-cup-arm{transform-origin:330px 692px;transition:transform .8s cubic-bezier(.2,.7,.3,1)}
 .cm-pupil{transition:transform .7s ease}
@@ -308,11 +309,15 @@ tr:last-child td{border-bottom:none}
 .cm-bubble{position:relative;z-index:2;max-width:215px;width:max-content;margin:-14px 0 0 auto;background:#F6D96F;color:#302b21;font-size:12.4px;font-weight:800;line-height:1.35;border-radius:17px 17px 17px 5px;padding:12px 15px;box-shadow:0 10px 24px rgba(54,49,40,.12);opacity:0;transform:translateY(8px) scale(.94);transform-origin:20% 0;transition:opacity .25s,transform .5s cubic-bezier(.18,.85,.22,1.2)}
 .cm-bubble:before{content:'';position:absolute;top:-9px;left:23px;border-left:12px solid transparent;border-right:2px solid transparent;border-bottom:13px solid #F6D96F}
 .cm-bubble.show{opacity:1;transform:none}
-/* Два облачка маскота (ТЗ §6): оба жёлтые, тёмно-синий текст, хвостики к маскоту */
-.cm-top-bubble{position:absolute;top:-10px;right:0;z-index:3;background:url(/bubble-left.webp) center/100% 100% no-repeat;color:#274172;font-size:11.4px;font-weight:800;line-height:1.3;padding:14px 16px 24px 18px;text-align:center;filter:drop-shadow(0 6px 10px rgba(54,49,40,.18));opacity:0;transform:translateY(6px) scale(.9);transform-origin:30% 100%;transition:opacity .4s,transform .5s cubic-bezier(.18,.85,.22,1.2);pointer-events:none;max-width:160px}
+/* Два облачка маскота (ТЗ §2–§4): светло-жёлтые, тёмно-синий текст, хвостики к маскоту,
+   мягкие тёплые тени, выступают за границы карточки */
+.cm-top-bubble{position:absolute;top:2px;right:-20px;z-index:3;width:200px;height:92px;display:flex;align-items:center;justify-content:center;background:url(/bubble-left.webp) center/100% 100% no-repeat;color:#274172;font-size:18px;font-weight:800;line-height:1.25;padding:12px 16px 30px 20px;text-align:center;white-space:nowrap;filter:drop-shadow(0 10px 14px rgba(92,76,40,.14));opacity:0;transform:translateY(6px) scale(.9);transform-origin:30% 100%;transition:opacity .4s,transform .5s cubic-bezier(.18,.85,.22,1.2);pointer-events:none}
 .cm-top-bubble:after{display:none}
-.cm-top-bubble.show{opacity:1;transform:none}
-.cm-bubble.cm-main{position:absolute;top:28%;right:calc(100% - 10px);left:auto;margin:0;max-width:235px;color:#274172;background:url(/bubble-right.webp) center/100% 100% no-repeat;box-shadow:none;filter:drop-shadow(0 8px 14px rgba(54,49,40,.16));padding:18px 24px 30px 22px;text-align:center;border-radius:0;z-index:3;transform-origin:100% 60%;border:0}
+.cm-top-bubble.show{opacity:1;transform:none;animation:cm-float 3.8s ease-in-out .9s infinite}
+.cm-bubble.cm-main{position:absolute;top:24%;right:calc(100% + 8px);left:auto;margin:0;width:300px;max-width:none;min-height:150px;display:flex;align-items:center;justify-content:center;color:#274172;font-size:19px;line-height:1.32;background:url(/bubble-right.webp) center/100% 100% no-repeat;box-shadow:none;filter:drop-shadow(0 10px 14px rgba(92,76,40,.14));padding:26px 32px 48px 30px;text-align:center;border-radius:0;z-index:3;transform-origin:100% 60%;border:0}
+.cm-bubble.cm-main.show{animation:cm-float 4.6s ease-in-out .2s infinite}
+@keyframes cm-float{50%{transform:translateY(-3px)}}
+.cm-paused .cm-top-bubble,.cm-paused .cm-bubble.cm-main{animation:none!important}
 .cm-bubble.cm-main:before{display:none}
 .cm-bubble.cm-main:after{display:none}
 button.cm-bubble.cm-main{font-family:inherit;cursor:pointer}
@@ -402,15 +407,18 @@ button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-off
 .dprogress{height:11px;border-radius:999px;background:#EEECE7;overflow:hidden}
 .dprogress i{display:block;height:100%;border-radius:999px;background:var(--blue);transition:width .6s ease}
 
-/* ── Компактное приветствие (редизайн главной) ── */
-.welcome.compact{padding:22px 26px;min-height:180px;gap:22px;margin-bottom:20px}
+/* ── Компактное приветствие (редизайн главной) ──
+   Сверху зарезервировано место под выступающие облачка и голову маскота (ТЗ §5) */
+.welcome.compact{padding:22px 26px;min-height:258px;gap:22px;margin:58px 0 20px}
 .welcome.compact .welcome-h1{font-size:clamp(21px,2.6vw,27px);margin-bottom:8px}
 .welcome.compact .welcome-sub{font-size:15px;margin-bottom:0;max-width:640px}
-.welcome.compact .welcome-visual{width:160px}
-.welcome.compact .w-blob.green{width:150px;height:150px;top:24px;left:6px}
-.welcome.compact .cm-bubble{max-width:185px;font-size:11.8px;padding:10px 13px;margin-top:-10px}
-.welcome.compact .cm-bubble.cm-main{margin:0;max-width:215px;padding:16px 20px 26px 20px}
-.welcome.compact .cm-top-bubble{top:-12px}
+
+/* Планшет: справа не хватает места — сцена с маскотом уходит ниже приветствия (ТЗ §6) */
+@media(max-width:1150px) and (min-width:761px){
+  .welcome.compact{flex-direction:column;align-items:stretch;gap:12px}
+  .welcome.compact .welcome-visual{width:auto;height:330px}
+  .cm-wrap{right:48px}
+}
 
 /* ── Двухколонник: расписание + касса ── */
 .dash-cols{display:grid;grid-template-columns:58fr 42fr;gap:22px;align-items:start}
@@ -481,25 +489,21 @@ button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-off
 
 /* dashboard mobile */
 @media(max-width:760px){
-  .welcome{flex-direction:column;padding:26px 22px;text-align:left;gap:20px}
-  .welcome-visual{width:170px}
-  .w-blob.green{width:150px;height:150px;top:4px;left:10px}
-  .w-mascot{width:140px;height:140px}
-  .w-sticker{right:-16px;font-size:11.5px;padding:10px 12px;max-width:140px}
-  .welcome-visual .w-blob.green{top:26px}
-  .cm-bubble{font-size:11.4px;max-width:160px;padding:10px 12px;margin-top:-10px}
-  .cm-bubble.cm-main{position:relative;top:auto;right:auto;left:auto;margin:0 0 8px auto;max-width:230px;padding:16px 20px 26px 20px}
-  .cm-bubble.cm-main:after{display:none}
-  .cm-top-bubble{top:-2px;right:2px;max-width:130px}
+  /* Мобайл (ТЗ §6): приветствие сверху, сцена с маскотом ниже; голова выступает
+     над светлой фоновой плашкой сцены, оба облачка с тенями */
+  .welcome{flex-direction:column;align-items:stretch;padding:26px 22px;text-align:left;gap:16px}
+  .welcome-visual{width:auto;align-self:stretch;height:320px}
+  .welcome-visual:before{content:'';position:absolute;left:-10px;right:-10px;bottom:-12px;height:200px;background:#FBF6EA;border-radius:26px;pointer-events:none}
+  .cm-wrap{right:6px;bottom:-12px;width:225px;height:250px}
+  .cm-bubble.cm-main{top:-46px;right:calc(100% - 60px);width:158px;min-height:96px;font-size:14px;padding:12px 14px 32px 14px}
+  .cm-top-bubble{top:-52px;right:2px;width:164px;height:72px;font-size:14px;padding:8px 10px 24px 14px}
   .welcome-h1{font-size:28px}
   .welcome-sub{font-size:14.5px}
   .stats-row{grid-template-columns:1fr}
   .dash-cols{grid-template-columns:1fr}
   .dash-card-head{flex-wrap:wrap}
   .dash-card-side{margin-left:0;width:100%;justify-content:space-between}
-  .welcome.compact{padding:20px 18px;gap:14px;min-height:0}
-  .welcome.compact .welcome-visual{width:150px}
-  .welcome.compact .w-blob.green{width:135px;height:135px;top:20px}
+  .welcome.compact{padding:20px 18px;gap:12px;min-height:0;margin-top:20px}
   .welcome.compact .welcome-h1{font-size:21px}
   .attn-card{flex-wrap:wrap}
   .attn-card .pill-btn{width:100%}
