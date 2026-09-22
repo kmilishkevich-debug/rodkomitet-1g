@@ -3,14 +3,13 @@
 // Растровые части (тело и рука со стаканом) лежат в /public как WebP,
 // поверх — SVG-риг: маски, глаза со зрачками, рот.
 // Маскот движется сам после загрузки: дыхание (CSS), моргание 4–8 с,
-// перевод взгляда 8–14 с, наклон корпуса 15–25 с, взгляд вниз «на телефон»
-// 20–35 с, подъём стакана 25–40 с. Крупные действия идут последовательно
-// (busy-замок), интервалы каждый раз случайные.
-// Два жёлтых облачка: верхнее — короткая реакция, основное — реплика по
-// реальным данным (cues), видна ~10–12 с, пауза 15–25 с, hover/фокус
-// приостанавливают смену. Реплика с действием — облачко-кнопка.
-// Кнопка паузы отключает декоративное движение; prefers-reduced-motion — тоже.
-// При скрытой вкладке всё останавливается, очередь не копится.
+// перевод взгляда 8–14 с, наклон корпуса 15–25 с, подъём стакана 25–40 с.
+// Крупные действия идут последовательно (busy-замок), интервалы случайные.
+// Два жёлтых облачка видны ПОСТОЯННО: верхнее — короткая реакция, основное —
+// реплика по реальным данным (cues); тексты сменяются каждые ~12–18 с без
+// исчезновения облачек, hover/фокус приостанавливают смену.
+// Реплика с действием — облачко-кнопка. prefers-reduced-motion отключает
+// декоративное движение. При скрытой вкладке таймеры останавливаются.
 // Если растровые части не загрузились — статичная резервная поза.
 import {
   forwardRef,
@@ -32,7 +31,6 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
   const [state, setState] = useState("idle");
   const [blink, setBlink] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [paused, setPaused] = useState(false);
   // Облачка
   const [topMsg, setTopMsg] = useState("");
   const [mainCue, setMainCue] = useState(null); // {text, action?}
@@ -41,8 +39,6 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
   const [gaze, setGaze] = useState(null); // {x,y} сдвиг зрачков
   const [tilt, setTilt] = useState(0); // наклон корпуса, градусы
   const [cupUp, setCupUp] = useState(false); // поднять стакан
-  const [phoneUp, setPhoneUp] = useState(false); // поднести телефон к глазам
-  const [bagFix, setBagFix] = useState(false); // поправить сумку на плече
 
   const jobs = useRef(new Set());
   const reduced = useRef(false);
@@ -52,8 +48,6 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
   const cueIdx = useRef(0);
   const cuesRef = useRef([NEUTRAL_CUE]);
   cuesRef.current = cues && cues.length ? cues : [NEUTRAL_CUE];
-  const pausedRef = useRef(false);
-  pausedRef.current = paused;
 
   const later = useCallback((fn, ms) => {
     const id = setTimeout(() => {
@@ -72,13 +66,11 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
     setGaze(null);
     setTilt(0);
     setCupUp(false);
-    setPhoneUp(false);
-    setBagFix(false);
   }, []);
 
   // --- Моргание: каждые 4–8 секунд ---
   const scheduleBlink = useCallback(() => {
-    if (reduced.current || pausedRef.current) return;
+    if (reduced.current) return;
     later(() => {
       setBlink(true);
       later(() => {
@@ -94,7 +86,7 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
     (minMs, maxMs, run, durMs) => {
       const plan = (delay) =>
         later(() => {
-          if (reduced.current || pausedRef.current) return;
+          if (reduced.current) return;
           if (busyRef.current || overrideRef.current) {
             plan(1800 + Math.random() * 1600); // занят — попробуем чуть позже
             return;
@@ -125,51 +117,41 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
     scheduleAction(15000, 25000, (on) => {
       setTilt(on ? (Math.random() < 0.5 ? -1 : 1) * 1.6 : 0);
     }, 2300);
-    // Поднести телефон к глазам: 20–35 с (отдельный слой руки с телефоном,
-    // зрачки уходят вниз-влево — «читает экран»)
-    scheduleAction(20000, 35000, (on) => {
-      setPhoneUp(on);
-      setGaze(on ? { x: -9, y: 10 } : null);
-    }, 2600);
     // Поднять стакан: 25–40 с
     scheduleAction(25000, 40000, (on) => {
       setCupUp(on);
     }, 1900);
-    // Поправить сумку на плече: 30–50 с (отдельный слой руки на ремне)
-    scheduleAction(30000, 50000, (on) => {
-      setBagFix(on);
-    }, 2200);
   }, [scheduleBlink, scheduleAction]);
 
   // --- Взгляд на родителя при появлении основной реплики ---
   const lookAtParent = useCallback(() => {
-    if (reduced.current || pausedRef.current) return;
+    if (reduced.current) return;
     setGaze({ x: 2, y: -4 });
     later(() => setGaze(null), 1700);
   }, [later]);
 
-  // --- Цикл основного облачка: показ 10–12 с, пауза 15–25 с ---
+  // --- Цикл основного облачка: облачка видны всегда, тексты сменяются
+  // каждые ~12–18 с (если реплик несколько), без исчезновения ---
   const cycle = useCallback(() => {
-    if (overrideRef.current || pausedRef.current) return;
+    if (overrideRef.current) return;
     const list = cuesRef.current;
     const cue = list[cueIdx.current % list.length];
     setTopMsg(cue.top || "Я рядом!");
     setMainCue(cue);
     setMainShown(true);
     lookAtParent();
-    const hide = () => {
+    const next = () => {
       if (hoverRef.current) {
-        later(hide, 2000); // наведён курсор/фокус — не убираем реплику
+        later(next, 2000); // наведён курсор/фокус — не менять реплику
         return;
       }
-      setMainShown(false);
       cueIdx.current += 1;
-      later(cycle, 15000 + Math.random() * 10000);
+      cycle();
     };
-    later(hide, 10000 + Math.random() * 2000);
+    later(next, 12000 + Math.random() * 6000);
   }, [later, lookAtParent]);
 
-  // --- Полный запуск (после загрузки, возвращения на вкладку, снятия паузы) ---
+  // --- Полный запуск (после загрузки или возвращения на вкладку) ---
   const startAll = useCallback(() => {
     clear();
     if (reduced.current) {
@@ -234,7 +216,7 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
     const onVisibility = () => {
       if (document.hidden) {
         clear(); // стоп всем таймерам — очередь не копится
-      } else if (!pausedRef.current) {
+      } else {
         overrideRef.current = false;
         setState("idle");
         startAllRef.current(); // свежий цикл, без «догоняющих» реплик
@@ -261,16 +243,6 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [greetToken]);
 
-  // Пауза: выключаем всё декоративное, текущая реплика остаётся на месте
-  useEffect(() => {
-    if (paused) {
-      clear();
-    } else {
-      startAllRef.current();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paused]);
-
   const gazeStyle = gaze
     ? { transform: `translate(${gaze.x}px, ${gaze.y}px)` }
     : undefined;
@@ -280,7 +252,7 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
 
   return (
     <div
-      className={"cm-wrap" + (paused ? " cm-paused" : "")}
+      className="cm-wrap"
       onMouseEnter={() => { hoverRef.current = true; }}
       onMouseLeave={() => { hoverRef.current = false; }}
     >
@@ -296,18 +268,6 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
       >
         {mainText}
       </MainTag>
-
-      {/* Кнопка паузы декоративного движения (доступность) */}
-      <button
-        type="button"
-        className="cm-pause"
-        aria-pressed={paused}
-        aria-label={paused ? "Включить движение маскота" : "Остановить движение маскота"}
-        title={paused ? "Включить движение" : "Остановить движение"}
-        onClick={() => setPaused((p) => !p)}
-      >
-        {paused ? "▶" : "❚❚"}
-      </button>
 
       {failed ? (
         // Резервная статичная поза, если растровые части не загрузились
@@ -356,10 +316,6 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
                 <g className={"cm-cup-arm" + (cupUp ? " cm-cup-up" : "")}>
                   <image href="/mascot-arm.webp" width="1254" height="1254" mask="url(#cm-arm-mask)" onError={() => setFailed(true)} />
                 </g>
-                {/* Жест «поправить сумку»: слой руки на ремне поверх тела */}
-                <g className={"cm-bag-arm" + (bagFix ? " cm-on" : "")}>
-                  <image href="/mascot-bag.webp" width="1254" height="1254" />
-                </g>
                 <g className="cm-eye-left">
                   <ellipse cx="589" cy="342" rx="38" ry="45" fill="url(#cm-orange)" />
                   <g className="cm-eye-open">
@@ -382,10 +338,6 @@ const ClassMascot = forwardRef(function ClassMascot({ cues, greetToken = 0, allD
                 </g>
                 <path className="cm-mouth cm-smile" d="M620 408 Q641 425 662 408" />
                 <path className="cm-mouth cm-frown" d="M620 421 Q641 405 662 421" />
-                {/* Жест «поднести телефон к глазам»: слой руки с телефоном поверх лица */}
-                <g className={"cm-phone-arm" + (phoneUp ? " cm-on" : "")}>
-                  <image href="/mascot-arm-phone.webp" width="1254" height="1254" />
-                </g>
               </g>
             </g>
           </svg>

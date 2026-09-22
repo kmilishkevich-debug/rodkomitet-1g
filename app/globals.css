@@ -317,21 +317,12 @@ tr:last-child td{border-bottom:none}
 .cm-bubble.cm-main{position:absolute;top:24%;right:calc(100% + 8px);left:auto;margin:0;width:300px;max-width:none;min-height:150px;display:flex;align-items:center;justify-content:center;color:#274172;font-size:19px;line-height:1.32;background:url(/bubble-right.webp) center/100% 100% no-repeat;box-shadow:none;filter:drop-shadow(0 10px 14px rgba(92,76,40,.14));padding:26px 32px 48px 30px;text-align:center;border-radius:0;z-index:3;transform-origin:100% 60%;border:0}
 .cm-bubble.cm-main.show{animation:cm-float 4.6s ease-in-out .2s infinite}
 @keyframes cm-float{50%{transform:translateY(-3px)}}
-.cm-paused .cm-top-bubble,.cm-paused .cm-bubble.cm-main{animation:none!important}
 .cm-bubble.cm-main:before{display:none}
 .cm-bubble.cm-main:after{display:none}
 button.cm-bubble.cm-main{font-family:inherit;cursor:pointer}
 button.cm-bubble.cm-main:hover{filter:brightness(1.04)}
 button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
-/* Ненавязчивая кнопка паузы декоративного движения (доступность) */
-.cm-pause{position:absolute;right:2px;bottom:2px;z-index:4;width:30px;height:30px;border-radius:50%;border:1.5px solid #e5ddca;background:#fffdf6;color:#8b8474;font-size:10px;line-height:1;cursor:pointer;opacity:.5;transition:opacity .25s;display:flex;align-items:center;justify-content:center;padding:0}
-.cm-pause:hover,.cm-pause:focus-visible{opacity:1}
-.cm-paused .cm-rig,.cm-paused .cm-cup-arm,.cm-paused .cm-tilt{animation:none!important}
 .cm-cup-arm.cm-cup-up{transform:translate(5px,-24px) rotate(6deg)}
-/* Жесты «телефон к глазам» и «поправить сумку»: слои плавно проявляются */
-.cm-phone-arm,.cm-bag-arm{opacity:0;transition:opacity .55s ease;pointer-events:none}
-.cm-phone-arm.cm-on,.cm-bag-arm.cm-on{opacity:1}
-.cm-paused .cm-phone-arm,.cm-paused .cm-bag-arm{opacity:0!important}
 /* Резервная статичная поза, если растровые части маскота не загрузились
    (у резервного JPG белая подложка — гасим её multiply-смешиванием) */
 .cm-fallback{display:block;width:100%;mix-blend-mode:multiply;border-radius:22px}
