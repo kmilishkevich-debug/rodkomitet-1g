@@ -400,7 +400,7 @@ button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-off
 
 /* ── Компактное приветствие (редизайн главной) ──
    Сверху зарезервировано место под выступающие облачка и голову маскота (ТЗ §5) */
-.welcome.compact{padding:22px 26px;min-height:258px;gap:22px;margin:132px 0 20px}
+.welcome.compact{padding:22px 26px;min-height:258px;gap:22px;margin:148px 0 20px}
 .welcome.compact .welcome-h1{font-size:clamp(21px,2.6vw,27px);margin-bottom:8px}
 .welcome.compact .welcome-sub{font-size:15px;margin-bottom:0;max-width:640px}
 
