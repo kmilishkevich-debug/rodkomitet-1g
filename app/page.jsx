@@ -14,6 +14,7 @@ import LogoutModal from "@/components/LogoutModal";
 import { useFamily, loadSeen, saveSeen } from "@/components/FamilyPicker";
 import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes } from "@/lib/supabase";
 import { enablePush, syncPushRole } from "@/lib/push";
+import { isFormOpen, onFormsChange } from "@/lib/formGuard";
 
 export default function Page() {
   const [role, setRole] = useState(null); // null | 'parent' | 'committee' | 'teacher'
@@ -276,20 +277,30 @@ export default function Page() {
     reloadNotes();
   }, [reloadAnnouncements, reloadReads, reloadPolls, reloadExpenses, reloadSchedule, reloadOverrides, reloadBirthdays, reloadNotes]);
 
-  // При возврате в приложение (переключение окна/вкладки браузера) и раз в минуту — свежие данные
+  // При возврате в приложение (переключение окна/вкладки браузера) и раз в минуту — свежие данные.
+  // Пока открыта любая форма — обновление на паузе (иначе оно стирает набранное),
+  // а сразу после закрытия формы данные подтягиваются один раз.
   useEffect(() => {
     if (!role) return;
-    const onWake = () => {
-      if (document.visibilityState === "visible") reloadAll();
+    let pending = false;
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      if (isFormOpen()) { pending = true; return; }
+      reloadAll();
     };
-    window.addEventListener("focus", onWake);
-    document.addEventListener("visibilitychange", onWake);
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") reloadAll();
-    }, 60000);
+    const offForms = onFormsChange((busy) => {
+      if (!busy && pending) {
+        pending = false;
+        refresh();
+      }
+    });
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    const timer = setInterval(refresh, 60000);
     return () => {
-      window.removeEventListener("focus", onWake);
-      document.removeEventListener("visibilitychange", onWake);
+      offForms();
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
       clearInterval(timer);
     };
   }, [role, reloadAll]);

@@ -18,6 +18,7 @@ import {
   fmtDateShort, fmtDateRu, periodLabel, viberText,
 } from "./scheduleOverrides";
 import ScheduleUpdateModal from "./ScheduleUpdateModal";
+import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
 // Модалка редактирования урока основного расписания (только для комитета)
 function LessonModal({ lesson, onClose, onSaved, toast }) {
@@ -26,14 +27,41 @@ function LessonModal({ lesson, onClose, onSaved, toast }) {
   const [room, setRoom] = useState("");
   const [teacher, setTeacher] = useState("");
   const [saving, setSaving] = useState(false);
+  const [base, setBase] = useState(null);
+  const [restored, setRestored] = useState(false);
+
+  const lessonId = lesson?.id || null;
+  const dkey = lessonId ? "lesson:" + lessonId : "";
 
   useEffect(() => {
     if (!lesson) return;
-    setSubject(lesson.subject || "");
-    setNote(lesson.note || "");
-    setRoom(lesson.room || "166");
-    setTeacher(lesson.teacher || "");
-  }, [lesson]);
+    const b = {
+      subject: lesson.subject || "",
+      note: lesson.note || "",
+      room: lesson.room || "166",
+      teacher: lesson.teacher || "",
+    };
+    const d = readDraft("lesson:" + lesson.id);
+    const v = d ? { ...b, ...d } : b;
+    setSubject(v.subject);
+    setNote(v.note);
+    setRoom(v.room);
+    setTeacher(v.teacher);
+    setBase(b);
+    setRestored(!!d);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+
+  useRefreshPause(!!lesson);
+  const values = { subject, note, room, teacher };
+  const dirty = !!lesson && isDirty(values, base);
+  useDraftAutosave(!!lesson, dkey, values, dirty);
+
+  const close = () => {
+    if (!confirmDiscard(dirty, "Закрыть урок без сохранения? Набранный текст пропадёт.")) return;
+    clearDraft(dkey);
+    onClose();
+  };
 
   if (!lesson) return null;
 
@@ -51,6 +79,7 @@ function LessonModal({ lesson, onClose, onSaved, toast }) {
       .eq("id", lesson.id);
     setSaving(false);
     if (error) return toast("Не получилось сохранить: " + error.message);
+    clearDraft(dkey);
     toast("Урок обновлён — родители уже видят изменения");
     sendManualPush({
       title: "📅 Изменение в расписании",
@@ -63,10 +92,11 @@ function LessonModal({ lesson, onClose, onSaved, toast }) {
   };
 
   return (
-    <div className="overlay">
+    <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && close()}>
       <div className="modal exp-modal">
         <h3>{DAY_NAMES[lesson.day]} · {lesson.pos}-й урок</h3>
         <div className="muted">Это правка основного расписания. Для временной замены нажмите «Внести изменения».</div>
+        {restored && <div className="chip amber" style={{ marginTop: 6 }}>Восстановлен незаконченный черновик</div>}
         <div className="exp-form">
           <label>Урок</label>
           <input value={subject} onChange={(e) => setSubject(e.target.value)} />
@@ -78,7 +108,7 @@ function LessonModal({ lesson, onClose, onSaved, toast }) {
           <input placeholder="Например: Головко В. П." value={teacher} onChange={(e) => setTeacher(e.target.value)} />
         </div>
         <div className="actions">
-          <button className="btn small white" onClick={onClose} disabled={saving}>Отмена</button>
+          <button className="btn small white" onClick={close} disabled={saving}>Отмена</button>
           <button className="btn small teal" onClick={save} disabled={saving}>{saving ? "Сохраняю…" : "Сохранить"}</button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { MascotPhone } from "./Art";
+import { useRefreshPause, confirmDiscard } from "@/lib/formGuard";
 
 export default function UploadModal({ open, name, sum, onClose, toast }) {
   const [attached, setAttached] = useState(false);
@@ -13,6 +14,13 @@ export default function UploadModal({ open, name, sum, onClose, toast }) {
     }
   }, [open, name, sum]);
 
+  useRefreshPause(open);
+
+  const close = () => {
+    if (!confirmDiscard(attached || confirmed, "Закрыть загрузку чека? Прикреплённый файл не отправится.")) return;
+    onClose();
+  };
+
   if (!open) return null;
 
   const submit = () => {
@@ -23,7 +31,7 @@ export default function UploadModal({ open, name, sum, onClose, toast }) {
   };
 
   return (
-    <div className="overlay" id="uploadModal">
+    <div className="overlay" id="uploadModal" onClick={(e) => e.target === e.currentTarget && close()}>
       <div className="modal">
         <MascotPhone className="modal-blob mascot-wrap" />
         <h3>Загрузка чека о переводе</h3>
@@ -41,7 +49,7 @@ export default function UploadModal({ open, name, sum, onClose, toast }) {
           <span>Подтверждаю, что перевёл(а) указанную сумму в кассу род. комитета</span>
         </label>
         <div className="actions">
-          <button className="btn small white" onClick={onClose}>Отмена</button>
+          <button className="btn small white" onClick={close}>Отмена</button>
           <button className="btn small teal" onClick={submit}>Отправить на подтверждение</button>
         </div>
       </div>

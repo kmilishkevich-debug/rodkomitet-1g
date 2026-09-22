@@ -11,22 +11,50 @@ import {
 } from "./scheduleOverrides";
 import { saveScheduleOverride, addScheduleHistory, uploadReceipt, isLive } from "@/lib/supabase";
 import { sendManualPush } from "@/lib/push";
+import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard } from "@/lib/formGuard";
 
 const EMPTY_CHANGE = { day: "", pos: "", action: "replace", subject: "", note: "", room: "166", teacher: "" };
 
 export default function ScheduleUpdateModal({ open, draft, lessons, bells, overrides, author, onClose, onSaved, toast }) {
+  const dkey = "schedule:" + (draft?.id || "new");
+  const base = {
+    kind: draft?.kind || "date",
+    dateFrom: draft?.date_from || minskDateISO(1),
+    dateTo: draft?.date_to || "",
+    changes: draft?.changes?.length ? draft.changes.map((c) => ({ ...EMPTY_CHANGE, ...c })) : [{ ...EMPTY_CHANGE }],
+    comment: draft?.comment || "",
+    sourceText: draft?.source_text || "",
+    sourceImage: draft?.source_image || "",
+  };
+  const [saved0] = useState(() => (typeof window === "undefined" ? null : readDraft(dkey)));
+  const start = saved0 ? { ...base, ...saved0 } : base;
+
   const [step, setStep] = useState(1); // 1 = форма, 2 = превью
-  const [kind, setKind] = useState(draft?.kind || "date");
-  const [dateFrom, setDateFrom] = useState(draft?.date_from || minskDateISO(1));
-  const [dateTo, setDateTo] = useState(draft?.date_to || "");
+  const [kind, setKind] = useState(start.kind);
+  const [dateFrom, setDateFrom] = useState(start.dateFrom);
+  const [dateTo, setDateTo] = useState(start.dateTo);
   const [changes, setChanges] = useState(
-    draft?.changes?.length ? draft.changes.map((c) => ({ ...EMPTY_CHANGE, ...c })) : [{ ...EMPTY_CHANGE }]
+    Array.isArray(start.changes) && start.changes.length ? start.changes.map((c) => ({ ...EMPTY_CHANGE, ...c })) : [{ ...EMPTY_CHANGE }]
   );
-  const [comment, setComment] = useState(draft?.comment || "");
-  const [sourceText, setSourceText] = useState(draft?.source_text || "");
-  const [sourceImage, setSourceImage] = useState(draft?.source_image || "");
+  const [comment, setComment] = useState(start.comment);
+  const [sourceText, setSourceText] = useState(start.sourceText);
+  const [sourceImage, setSourceImage] = useState(start.sourceImage);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [restored] = useState(!!saved0);
+
+  // Пока конструктор открыт — фоновое обновление данных на паузе
+  useRefreshPause(open);
+
+  const formValues = { kind, dateFrom, dateTo, changes, comment, sourceText, sourceImage };
+  const formDirty = JSON.stringify(formValues) !== JSON.stringify(base);
+  useDraftAutosave(open, dkey, formValues, formDirty);
+
+  const close = () => {
+    if (!confirmDiscard(formDirty, "Закрыть изменение расписания? Всё, что вы набрали, пропадёт.")) return;
+    clearDraft(dkey);
+    onClose();
+  };
 
   const singleDay = kind === "date" ? isoToDay(dateFrom) : null;
   const singleDayOk = singleDay && singleDay <= 5;
@@ -136,6 +164,7 @@ export default function ScheduleUpdateModal({ open, draft, lessons, bells, overr
       } else {
         toast("Черновик сохранён — его видит второй член комитета, опубликовать можно позже");
       }
+      clearDraft(dkey);
       onSaved?.();
       onClose();
     } catch (e) {
@@ -148,11 +177,12 @@ export default function ScheduleUpdateModal({ open, draft, lessons, bells, overr
   const previewDays = [...new Set(normChanges.map((c) => c.day))].sort();
 
   return (
-    <div className="overlay">
+    <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && close()}>
       <div className="modal exp-modal" style={{ maxWidth: 640, maxHeight: "88vh", overflowY: "auto" }}>
         {step === 1 && (
           <>
             <h3><Ic id="i-edit" /> Изменение расписания</h3>
+            {restored && <div className="chip amber" style={{ marginBottom: 6 }}>Восстановлен незаконченный черновик</div>}
             <div className="muted">Основное расписание не трогаем: замена действует только в свой период, потом всё вернётся само.</div>
 
             <div className="exp-form">
@@ -259,7 +289,7 @@ export default function ScheduleUpdateModal({ open, draft, lessons, bells, overr
             </div>
 
             <div className="actions">
-              <button className="btn small white" onClick={onClose} disabled={saving}>Отмена</button>
+              <button className="btn small white" onClick={close} disabled={saving}>Отмена</button>
               <button className="btn small teal" onClick={toPreview}>Дальше: проверить →</button>
             </div>
           </>

@@ -5,6 +5,7 @@ import NavIcon from "./NavIcons";
 import { FAMILIES_COUNT, fmt } from "./data";
 import { isLive, savePoll, deletePoll, castVote } from "@/lib/supabase";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
+import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
 const TYPE_NAMES = {
   yesno: "Да / Нет",
@@ -36,13 +37,40 @@ export function fmtDeadline(d) {
 // ===== Редактор голосования =====
 function PollEditor({ open, initial, author, onClose, onSaved, toast }) {
   const hasVotes = (initial?.votes || []).length > 0;
-  const [question, setQuestion] = useState(initial?.question || "");
-  const [description, setDescription] = useState(initial?.description || "");
-  const [type, setType] = useState(initial?.type || "yesno");
-  const [optionsText, setOptionsText] = useState((initial?.options || []).map((o) => o.title).join("\n"));
-  const [amount, setAmount] = useState(initial?.amount ?? "");
-  const [deadline, setDeadline] = useState(initial?.deadline || "");
+  const dkey = "poll:" + (initial?.id || "new");
+  const base = {
+    question: initial?.question || "",
+    description: initial?.description || "",
+    type: initial?.type || "yesno",
+    optionsText: (initial?.options || []).map((o) => o.title).join("\n"),
+    amount: initial?.amount ?? "",
+    deadline: initial?.deadline || "",
+  };
+  const [saved] = useState(() => (typeof window === "undefined" ? null : readDraft(dkey)));
+  const start = saved ? { ...base, ...saved } : base;
+
+  const [question, setQuestion] = useState(start.question);
+  const [description, setDescription] = useState(start.description);
+  const [type, setType] = useState(start.type);
+  const [optionsText, setOptionsText] = useState(start.optionsText);
+  const [amount, setAmount] = useState(start.amount);
+  const [deadline, setDeadline] = useState(start.deadline);
   const [saving, setSaving] = useState(false);
+  const [restored] = useState(!!saved);
+
+  // Пока редактор открыт — фоновое обновление данных на паузе
+  useRefreshPause(open);
+
+  const values = { question, description, type, optionsText, amount, deadline };
+  const dirty = isDirty(values, base);
+  useDraftAutosave(open, dkey, values, dirty);
+
+  const close = () => {
+    if (!confirmDiscard(dirty, "Закрыть голосование без сохранения? Набранный текст пропадёт.")) return;
+    clearDraft(dkey);
+    onClose();
+  };
+
   if (!open) return null;
 
   const needOptions = type === "single" || type === "multi";
@@ -66,6 +94,7 @@ function PollEditor({ open, initial, author, onClose, onSaved, toast }) {
       else { payload.author = author; payload.status = "open"; }
       // Варианты не трогаем, если уже есть голоса (защита честности итогов)
       await savePoll(payload, needOptions && !hasVotes ? opts : undefined);
+      clearDraft(dkey);
       toast(initial?.id ? "Голосование обновлено" : "Голосование создано");
       onSaved();
       onClose();
@@ -77,9 +106,14 @@ function PollEditor({ open, initial, author, onClose, onSaved, toast }) {
   };
 
   return (
-    <div className="overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="overlay" onClick={(e) => e.target === e.currentTarget && close()}>
       <div className="modal news-editor exp-modal" role="dialog" aria-modal="true">
         <h3>{initial?.id ? "Изменить голосование" : "Новое голосование"}</h3>
+        {restored && (
+          <div className="chip amber" style={{ marginBottom: 6 }}>
+            Восстановлен незаконченный черновик
+          </div>
+        )}
         <label className="fld-lbl">Вопрос</label>
         <input className="fld" type="text" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Например: Дарим учителю цветы на 8 Марта?" maxLength={160} />
         <label className="fld-lbl">Пояснение (не обязательно)</label>
@@ -107,7 +141,7 @@ function PollEditor({ open, initial, author, onClose, onSaved, toast }) {
         <label className="fld-lbl">Срок голосования (закроется автоматически в конце этого дня)</label>
         <input className="fld" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
         <div className="actions">
-          <button className="btn small white" onClick={onClose}>Отмена</button>
+          <button className="btn small white" onClick={close}>Отмена</button>
           <button className="btn small gold" onClick={save} disabled={saving}>{saving ? "Сохраняю…" : initial?.id ? "Сохранить" : "Создать"}</button>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { Ic, MascotPeek } from "./Art";
 import NavIcon from "./NavIcons";
 import { EXPENSE_GROUPS, fmt, groupTotal } from "./data";
 import { supabase, isLive } from "@/lib/supabase";
-import ExpenseModal, { hasExpenseDraft } from "./ExpenseModal";
+import ExpenseModal, { hasExpenseDraft, clearExpenseDraft, readExpenseDraft } from "./ExpenseModal";
 
 function fmtDate(d) {
   if (!d) return null;
@@ -19,15 +19,17 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload, fo
   const [editVal, setEditVal] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
   const [hlId, setHlId] = useState(null); // подсвеченная группа (переход «Расходы ГПД»)
+  const [draftAsk, setDraftAsk] = useState(null); // незаконченный черновик расхода
 
   const groups = liveGroups || EXPENSE_GROUPS;
 
   // Если PWA перезагрузилось посреди ввода расхода (например, после открытия камеры) —
-  // автоматически откроем форму с восстановленным черновиком
+  // спросим, продолжить или удалить черновик. Форму сами не открываем.
   useEffect(() => {
+    try { localStorage.removeItem("expenseDraft"); } catch {} // ключ старого формата
     if (committee && isLive && hasExpenseDraft()) {
-      setEditItem(null);
-      setModalOpen(true);
+      const d = readExpenseDraft();
+      setDraftAsk(d?.name?.trim() || d?.newGroupTitle?.trim() || "без названия");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -195,6 +197,31 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload, fo
       <div className="muted" style={{ marginTop: 10 }}>
         Итого потрачено: <b>{fmt(totalSpent)} BYN</b> · позиции «планируется» в итог не входят · все расходы видны каждому родителю
       </div>
+
+      {draftAsk && !modalOpen && (
+        <div className="overlay">
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <h3 style={{ marginTop: 0 }}>Есть незаконченный расход</h3>
+            <div className="muted">
+              Вы начали добавлять «{draftAsk}», но не сохранили. Продолжить с того же места?
+            </div>
+            <div className="actions">
+              <button
+                className="btn small white"
+                onClick={() => { clearExpenseDraft(); setDraftAsk(null); toast("Черновик удалён"); }}
+              >
+                Удалить
+              </button>
+              <button
+                className="btn small teal"
+                onClick={() => { setDraftAsk(null); setEditItem(null); setModalOpen(true); }}
+              >
+                Продолжить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ExpenseModal
         open={modalOpen}

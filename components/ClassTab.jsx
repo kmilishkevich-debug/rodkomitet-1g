@@ -5,6 +5,7 @@ import NavIcon from "./NavIcons";
 import { FAMILIES, STAFF, FAMILIES_COUNT, GPD_CHILDREN } from "./data";
 import { BIRTHDAYS_FALLBACK, fmtBd, bdName, bdInfo, BD_MONTHS } from "./birthdaysData";
 import { isLive, fetchChildNotes, saveChildNote } from "@/lib/supabase";
+import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard } from "@/lib/formGuard";
 
 // Учебный год: с сентября по август — так календарь идёт «по порядку года класса»
 const MONTH_ORDER = [8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7];
@@ -69,20 +70,43 @@ export default function ClassTab({ committee, toast, liveBirthdays }) {
   const noteFor = (child) =>
     notes ? notes[child] || { gpd: false, note: "" } : { gpd: GPD_CHILDREN.includes(child), note: "" };
 
+  // Пока открыт мини-редактор пометки — фоновое обновление на паузе,
+  // а набранное сохраняется черновиком (вкладка может перезагрузиться).
+  const [baseNote, setBaseNote] = useState(null);
+  const dkey = editChild ? "childnote:" + editChild : "";
+  useRefreshPause(!!editChild);
+  useDraftAutosave(
+    !!editChild,
+    dkey,
+    { gpd: editGpd, note: editNote },
+    !!editChild && baseNote && (editGpd !== baseNote.gpd || editNote !== baseNote.note)
+  );
+
   const startEditNote = (child) => {
     if (!isLive || !notes) {
       return toast("Редактирование пометок заработает после запуска файла gpd-notes-setup.sql в Supabase");
     }
     const cur = noteFor(child);
+    const base = { gpd: !!cur.gpd, note: cur.note || "" };
+    const d = readDraft("childnote:" + child);
     setEditChild(child);
-    setEditGpd(cur.gpd);
-    setEditNote(cur.note);
+    setEditGpd(d ? !!d.gpd : base.gpd);
+    setEditNote(d ? d.note || "" : base.note);
+    setBaseNote(base);
+  };
+
+  const cancelEditNote = () => {
+    const dirty = baseNote && (editGpd !== baseNote.gpd || editNote !== baseNote.note);
+    if (!confirmDiscard(dirty, "Закрыть пометку без сохранения? Набранный текст пропадёт.")) return;
+    clearDraft(dkey);
+    setEditChild(null);
   };
 
   const saveEditNote = async () => {
     setSaving(true);
     try {
       await saveChildNote(editChild, editGpd, editNote.trim());
+      clearDraft(dkey);
       setEditChild(null);
       toast("Пометка сохранена");
       reloadNotes();
@@ -145,14 +169,14 @@ export default function ClassTab({ committee, toast, liveBirthdays }) {
                       <input
                         value={editNote}
                         onChange={(e) => setEditNote(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") saveEditNote(); if (e.key === "Escape") setEditChild(null); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveEditNote(); if (e.key === "Escape") cancelEditNote(); }}
                         placeholder="Заметка по ребёнку (видна всем)"
                         autoFocus
                         style={{ fontSize: 13, padding: "6px 8px" }}
                       />
                       <div style={{ display: "flex", gap: 4 }}>
                         <button className="mini-btn" title="Сохранить" onClick={saveEditNote} disabled={saving}>✓</button>
-                        <button className="mini-btn danger" title="Отмена" onClick={() => setEditChild(null)}>✕</button>
+                        <button className="mini-btn danger" title="Отмена" onClick={cancelEditNote}>✕</button>
                       </div>
                     </div>
                   ) : (

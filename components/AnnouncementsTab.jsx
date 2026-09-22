@@ -5,16 +5,42 @@ import NavIcon from "./NavIcons";
 import { FAMILIES_COUNT } from "./data";
 import { isLive, saveAnnouncement, deleteAnnouncement, markRead, uploadNewsImage } from "@/lib/supabase";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
+import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
 // ===== Редактор объявления (создание и правка) =====
 function AnnouncementEditor({ open, initial, author, onClose, onSaved, toast }) {
-  const [title, setTitle] = useState(initial?.title || "");
-  const [body, setBody] = useState(initial?.body || "");
-  const [important, setImportant] = useState(!!initial?.important);
-  const [pinned, setPinned] = useState(!!initial?.pinned);
+  const dkey = "announcement:" + (initial?.id || "new");
+  const base = {
+    title: initial?.title || "",
+    body: initial?.body || "",
+    important: !!initial?.important,
+    pinned: !!initial?.pinned,
+  };
+  const [saved] = useState(() => (typeof window === "undefined" ? null : readDraft(dkey)));
+  const start = saved ? { ...base, ...saved } : base;
+
+  const [title, setTitle] = useState(start.title);
+  const [body, setBody] = useState(start.body);
+  const [important, setImportant] = useState(!!start.important);
+  const [pinned, setPinned] = useState(!!start.pinned);
   const [imageUrl, setImageUrl] = useState(initial?.image_url || null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [restored] = useState(!!saved);
+
+  // Пока редактор открыт — фоновое обновление данных на паузе
+  useRefreshPause(open);
+
+  const values = { title, body, important, pinned };
+  const dirty = isDirty(values, base);
+  useDraftAutosave(open, dkey, values, dirty);
+
+  const close = () => {
+    if (!confirmDiscard(dirty, "Закрыть объявление без сохранения? Набранный текст пропадёт.")) return;
+    clearDraft(dkey);
+    onClose();
+  };
+
   if (!open) return null;
 
   const pickPhoto = () => {
@@ -53,6 +79,7 @@ function AnnouncementEditor({ open, initial, author, onClose, onSaved, toast }) 
       if (initial?.id) payload.id = initial.id;
       else { payload.author = author; payload.status = "active"; }
       await saveAnnouncement(payload);
+      clearDraft(dkey);
       toast(initial?.id ? "Объявление обновлено" : "Объявление опубликовано");
       onSaved();
       onClose();
@@ -64,9 +91,14 @@ function AnnouncementEditor({ open, initial, author, onClose, onSaved, toast }) 
   };
 
   return (
-    <div className="overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="overlay" onClick={(e) => e.target === e.currentTarget && close()}>
       <div className="modal news-editor exp-modal" role="dialog" aria-modal="true">
         <h3>{initial?.id ? "Изменить объявление" : "Новое объявление"}</h3>
+        {restored && (
+          <div className="chip amber" style={{ marginBottom: 6 }}>
+            Восстановлен незаконченный черновик
+          </div>
+        )}
         <label className="fld-lbl">Заголовок</label>
         <input className="fld" type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Например: Собрание в пятницу" maxLength={120} />
         <label className="fld-lbl">Текст</label>
@@ -86,7 +118,7 @@ function AnnouncementEditor({ open, initial, author, onClose, onSaved, toast }) 
           </button>
         )}
         <div className="actions">
-          <button className="btn small white" onClick={onClose}>Отмена</button>
+          <button className="btn small white" onClick={close}>Отмена</button>
           <button className="btn small gold" onClick={save} disabled={saving}>{saving ? "Сохраняю…" : initial?.id ? "Сохранить" : "Опубликовать"}</button>
         </div>
       </div>

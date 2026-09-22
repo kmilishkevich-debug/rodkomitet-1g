@@ -2,35 +2,34 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase, uploadReceipt } from "@/lib/supabase";
 import { notifyTreasurer } from "./TreasurerMascot";
+import {
+  useRefreshPause,
+  useDraftAutosave,
+  readDraft,
+  clearDraft,
+  hasDraft,
+  confirmDiscard,
+  isDirty,
+} from "@/lib/formGuard";
 
 const NEW_GROUP = "__new__";
-const DRAFT_KEY = "expenseDraft";
+const DRAFT_NEW = "expense:new";
+const draftKeyFor = (id) => (id ? "expense:" + id : DRAFT_NEW);
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
 export function hasExpenseDraft() {
-  try {
-    return !!localStorage.getItem(DRAFT_KEY);
-  } catch {
-    return false;
-  }
+  return hasDraft(DRAFT_NEW);
 }
 
-function readDraft() {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+export function clearExpenseDraft() {
+  clearDraft(DRAFT_NEW);
 }
 
-function clearDraft() {
-  try {
-    localStorage.removeItem(DRAFT_KEY);
-  } catch {}
+export function readExpenseDraft() {
+  return readDraft(DRAFT_NEW);
 }
 
 // «2 уп (48 шт)» → 2 ; «3» → 3
@@ -38,6 +37,20 @@ function qtyNumber(qty) {
   const m = String(qty || "").replace(",", ".").match(/[\d.]+/);
   return m ? parseFloat(m[0]) : NaN;
 }
+
+// Снимок расхода — чтобы заметить, что его правит кто-то ещё
+function stamp(it) {
+  if (!it) return "";
+  return JSON.stringify([
+    it.group_id, it.name, it.price, it.qty, it.sum, it.place,
+    it.purchased_at, it.comment, !!it.free, !!it.planned, it.receipt_url || null,
+  ]);
+}
+
+const EMPTY = {
+  groupId: "", newGroupTitle: "", name: "", price: "", qty: "1", sum: "",
+  sumTouched: false, place: "", date: "", comment: "", free: false, planned: false,
+};
 
 export default function ExpenseModal({ open, groups, editItem, onClose, onSaved, toast }) {
   const [groupId, setGroupId] = useState("");
@@ -55,70 +68,98 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
   const [file, setFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [restored, setRestored] = useState(false); // показать подсказку «черновик восстановлен»
+  const [initial, setInitial] = useState(null);    // состояние полей на момент открытия
+  const [conflict, setConflict] = useState("");    // расход изменили/удалили, пока мы его правим
   const cameraRef = useRef(null);
   const galleryRef = useRef(null);
 
+  // Группы читаем через ref: их список обновляется в фоне, и раньше это
+  // перезапускало эффект ниже и стирало наполовину заполненную форму
+  const groupsRef = useRef(groups);
+  groupsRef.current = groups;
+
+  const editId = editItem?.id || null;
+  const baselineRef = useRef("");
+  const dkey = draftKeyFor(editId);
+
+  // Пока форма открыта — приложение не обновляет данные в фоне
+  useRefreshPause(open);
+
+  // Заполнение формы. Ключ эффекта — только «открылась» и «какой расход правим»,
+  // поэтому фоновое обновление списка больше не сбрасывает ввод.
   useEffect(() => {
     if (!open) return;
-    if (editItem) {
-      setGroupId(editItem.group_id);
-      setName(editItem.name || "");
-      setPrice(editItem.price ? String(editItem.price) : "");
-      setQty(editItem.qty || "1");
-      setSum(editItem.sum ? String(editItem.sum) : "");
-      setSumTouched(true);
-      setPlace(editItem.place || "");
-      setDate(editItem.purchased_at || todayISO());
-      setComment(editItem.comment || "");
-      setFree(!!editItem.free);
-      setPlanned(!!editItem.planned);
-      setRestored(false);
-    } else {
-      // Новый расход: если есть незаконченный черновик (например, PWA перезагрузилось
-      // после открытия камеры) — восстанавливаем его
-      const d = readDraft();
-      if (d) {
-        setGroupId(d.groupId || groups?.[0]?.id || "");
-        setNewGroupTitle(d.newGroupTitle || "");
-        setName(d.name || "");
-        setPrice(d.price || "");
-        setQty(d.qty || "1");
-        setSum(d.sum || "");
-        setSumTouched(!!d.sumTouched);
-        setPlace(d.place || "");
-        setDate(d.date || todayISO());
-        setComment(d.comment || "");
-        setFree(!!d.free);
-        setPlanned(!!d.planned);
-        setRestored(true);
-      } else {
-        setGroupId(groups?.[0]?.id || "");
-        setNewGroupTitle("");
-        setName(""); setPrice(""); setQty("1"); setSum(""); setSumTouched(false);
-        setPlace(""); setDate(todayISO()); setComment("");
-        setFree(false); setPlanned(false);
-        setRestored(false);
-      }
-    }
-    if (editItem) setNewGroupTitle("");
+    const gs = groupsRef.current || [];
+    const d = readDraft(draftKeyFor(editId));
+    const base = editItem
+      ? {
+          groupId: editItem.group_id || "",
+          newGroupTitle: "",
+          name: editItem.name || "",
+          price: editItem.price ? String(editItem.price) : "",
+          qty: editItem.qty || "1",
+          sum: editItem.sum ? String(editItem.sum) : "",
+          sumTouched: true,
+          place: editItem.place || "",
+          date: editItem.purchased_at || todayISO(),
+          comment: editItem.comment || "",
+          free: !!editItem.free,
+          planned: !!editItem.planned,
+        }
+      : { ...EMPTY, groupId: gs?.[0]?.id || "", date: todayISO() };
+
+    const v = d ? { ...base, ...d } : base;
+
+    setGroupId(v.groupId || "");
+    setNewGroupTitle(v.newGroupTitle || "");
+    setName(v.name || "");
+    setPrice(v.price || "");
+    setQty(v.qty || "1");
+    setSum(v.sum || "");
+    setSumTouched(!!v.sumTouched);
+    setPlace(v.place || "");
+    setDate(v.date || todayISO());
+    setComment(v.comment || "");
+    setFree(!!v.free);
+    setPlanned(!!v.planned);
+    setRestored(!!d);
+    setInitial(base);
+    setConflict("");
     setFile(null);
+    baselineRef.current = stamp(editItem);
     if (cameraRef.current) cameraRef.current.value = "";
     if (galleryRef.current) galleryRef.current.value = "";
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editItem, groups]);
+  }, [open, editId]);
 
-  // Автосохранение черновика (без файла) — чтобы форма пережила перезагрузку PWA
+  // Этот же расход в свежих данных — чтобы заметить правку от другого человека
+  const liveItem = useMemo(() => {
+    if (!editId) return null;
+    for (const g of groups || []) {
+      for (const it of g.items || []) if (it.id === editId) return it;
+    }
+    return null;
+  }, [groups, editId]);
+
   useEffect(() => {
-    if (!open || editItem) return;
-    const empty = !name.trim() && !price && !place.trim() && !comment.trim() && !newGroupTitle.trim();
-    try {
-      if (empty) return; // не плодим пустые черновики
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({
-        groupId, newGroupTitle, name, price, qty, sum, sumTouched,
-        place, date, comment, free, planned,
-      }));
-    } catch {}
-  }, [open, editItem, groupId, newGroupTitle, name, price, qty, sum, sumTouched, place, date, comment, free, planned]);
+    if (!open || !editId || !baselineRef.current) return;
+    if (!liveItem) {
+      if ((groups || []).length) setConflict("deleted");
+      return;
+    }
+    if (stamp(liveItem) !== baselineRef.current) setConflict("changed");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editId, liveItem]);
+
+  const values = useMemo(
+    () => ({ groupId, newGroupTitle, name, price, qty, sum, sumTouched, place, date, comment, free, planned }),
+    [groupId, newGroupTitle, name, price, qty, sum, sumTouched, place, date, comment, free, planned]
+  );
+
+  const dirty = useMemo(() => isDirty(values, initial) || !!file, [values, initial, file]);
+
+  // Черновик пишем и для нового расхода, и для правки существующего
+  useDraftAutosave(open, dkey, values, dirty);
 
   // Сумма считается сама: цена × количество (если сумму не правили вручную)
   const autoSum = useMemo(() => {
@@ -158,11 +199,17 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
   };
 
   const cancel = () => {
-    clearDraft();
+    if (!confirmDiscard(dirty, "Закрыть форму? Всё, что вы набрали, пропадёт.")) return;
+    clearDraft(dkey);
     onClose();
   };
 
+  const onBackdrop = (e) => {
+    if (e.target === e.currentTarget && !saving) cancel();
+  };
+
   const save = async () => {
+    const groupsNow = groupsRef.current || [];
     const finalName = name.trim();
     if (!finalName) return toast("Укажите наименование");
     let gid = groupId;
@@ -177,7 +224,7 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
     setSaving(true);
     try {
       if (gid === NEW_GROUP) {
-        const maxSort = Math.max(0, ...groups.map((g) => g.sort || 0));
+        const maxSort = Math.max(0, ...groupsNow.map((g) => g.sort || 0));
         const { data, error } = await supabase
           .from("expense_groups")
           .insert({ title: newGroupTitle.trim(), sort: maxSort + 1 })
@@ -210,11 +257,11 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
       const { error } = await q;
       if (error) throw error;
 
-      clearDraft();
+      clearDraft(dkey);
       toast(editItem ? "Расход обновлён" : "Расход добавлен — родители уже видят его");
       // Пушистый казначей штампует чек «Учтено!» (только новые реальные расходы)
       if (!editItem && !planned && !free && sumNum > 0) {
-        const groupTitle = (groups.find((g) => g.id === gid) || {}).title || newGroupTitle.trim();
+        const groupTitle = (groupsNow.find((g) => g.id === gid) || {}).title || newGroupTitle.trim();
         notifyTreasurer({
           type: "expense",
           id: "exp:" + Date.now(),
@@ -233,13 +280,23 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
   };
 
   return (
-    <div className="overlay">
+    <div className="overlay" onClick={onBackdrop}>
       <div className="modal exp-modal" onPaste={onPaste}>
         <h3>{editItem ? "Изменить расход" : "Новый расход"}</h3>
         <div className="muted">Расход сразу станет виден всем родителям</div>
         {restored && (
           <div className="chip amber" style={{ marginTop: 6 }}>
             Восстановлен незаконченный черновик — фото чека нужно прикрепить заново
+          </div>
+        )}
+        {conflict === "changed" && (
+          <div className="chip amber" style={{ marginTop: 6 }}>
+            Этот расход изменил кто-то ещё, пока вы его правили. Ваш текст сохранён — после «Сохранить» останется ваш вариант.
+          </div>
+        )}
+        {conflict === "deleted" && (
+          <div className="chip amber" style={{ marginTop: 6 }}>
+            Этот расход удалили, пока вы его правили. Сохранить его уже не получится — скопируйте текст, если он нужен.
           </div>
         )}
 

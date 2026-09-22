@@ -11,6 +11,7 @@ import {
   fetchOneOffIncomes, addOneOffIncome, fetchFeeEditsLog, addFeeEdit,
 } from "@/lib/supabase";
 import TreasurerMascot, { MASCOT_GOAL, notifyTreasurer } from "./TreasurerMascot";
+import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
 // Полная сумма взносов с семьи на 2026–2027 (50 + 150)
 const FEE_TARGET = 200;
@@ -69,14 +70,36 @@ function MethodPick({ value, onChange }) {
 
 // Окошко правки суммы в общей таблице взносов
 function CellModal({ cell, onClose, onSave, saving }) {
-  const [amount, setAmount] = useState(cell.amount ? String(cell.amount) : "");
-  const [method, setMethod] = useState(cell.method || "transfer");
-  const [note, setNote] = useState(cell.note || "");
+  const dkey = "fee:" + (cell.row.id || cell.row.child) + ":" + cell.column.id;
+  const base = {
+    amount: cell.amount ? String(cell.amount) : "",
+    method: cell.method || "transfer",
+    note: cell.note || "",
+  };
+  const [saved] = useState(() => (typeof window === "undefined" ? null : readDraft(dkey)));
+  const start = saved ? { ...base, ...saved } : base;
+  const [amount, setAmount] = useState(start.amount);
+  const [method, setMethod] = useState(start.method);
+  const [note, setNote] = useState(start.note);
+  const [restored] = useState(!!saved);
+
+  useRefreshPause(true);
+  const values = { amount, method, note };
+  const dirty = isDirty(values, base);
+  useDraftAutosave(true, dkey, values, dirty);
+
+  const close = () => {
+    if (!confirmDiscard(dirty, "Закрыть без сохранения? Введённая сумма не запишется.")) return;
+    clearDraft(dkey);
+    onClose();
+  };
+
   return (
-    <div className="overlay">
+    <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && close()}>
       <div className="modal">
         <h3>{cell.column.title}</h3>
         <div className="muted">{cell.row.child} · взносы 2026–2027 (всего {FEE_TARGET} руб с семьи)</div>
+        {restored && <div className="chip amber" style={{ marginTop: 6 }}>Восстановлен незаконченный черновик</div>}
         <label className="fee-lb">Сумма, BYN</label>
         <input
           className="fee-inp" type="number" step="0.01" inputMode="decimal"
@@ -91,10 +114,10 @@ function CellModal({ cell, onClose, onSave, saving }) {
         <label className="fee-lb">Заметка (необязательно)</label>
         <input className="fee-inp" value={note} onChange={(e) => setNote(e.target.value)} placeholder="например: сдали частями" />
         <div className="actions">
-          <button className="btn small white" onClick={onClose}>Отмена</button>
+          <button className="btn small white" onClick={close}>Отмена</button>
           <button
             className="btn small teal" disabled={saving}
-            onClick={() => onSave(parseFloat(String(amount).replace(",", ".")) || 0, cell.column.kind === "paid" ? method : null, note.trim())}
+            onClick={() => { clearDraft(dkey); onSave(parseFloat(String(amount).replace(",", ".")) || 0, cell.column.kind === "paid" ? method : null, note.trim()); }}
           >
             Сохранить
           </button>
@@ -106,19 +129,40 @@ function CellModal({ cell, onClose, onSave, saving }) {
 
 // Окошко разового поступления (например, другой ученик сдал 25 руб на ГПД)
 function OneOffModal({ childNames, onClose, onSave, saving }) {
-  const [from, setFrom] = useState("");
-  const [purpose, setPurpose] = useState("ГПД");
-  const [custom, setCustom] = useState("");
-  const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState("cash");
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [comment, setComment] = useState("");
+  const dkey = "oneoff:new";
+  const base = {
+    from: "", purpose: "ГПД", custom: "", amount: "", method: "cash",
+    date: new Date().toISOString().slice(0, 10), comment: "",
+  };
+  const [saved] = useState(() => (typeof window === "undefined" ? null : readDraft(dkey)));
+  const start = saved ? { ...base, ...saved } : base;
+  const [from, setFrom] = useState(start.from);
+  const [purpose, setPurpose] = useState(start.purpose);
+  const [custom, setCustom] = useState(start.custom);
+  const [amount, setAmount] = useState(start.amount);
+  const [method, setMethod] = useState(start.method);
+  const [date, setDate] = useState(start.date);
+  const [comment, setComment] = useState(start.comment);
+  const [restored] = useState(!!saved);
   const purposes = ["ГПД", "Подарки", "Хознужды", "Другое"];
+
+  useRefreshPause(true);
+  const values = { from, purpose, custom, amount, method, date, comment };
+  const dirty = isDirty(values, base);
+  useDraftAutosave(true, dkey, values, dirty);
+
+  const close = () => {
+    if (!confirmDiscard(dirty, "Закрыть поступление без сохранения? Всё, что вы набрали, пропадёт.")) return;
+    clearDraft(dkey);
+    onClose();
+  };
+
   return (
-    <div className="overlay">
+    <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && close()}>
       <div className="modal exp-modal">
         <h3>Разовое поступление</h3>
         <div className="muted">Например: другой ученик сдал 25 руб на ГПД</div>
+        {restored && <div className="chip amber" style={{ marginTop: 6 }}>Восстановлен незаконченный черновик</div>}
         <label className="fee-lb">От кого</label>
         <input
           className="fee-inp" list="oneoff-children" value={from}
@@ -145,12 +189,13 @@ function OneOffModal({ childNames, onClose, onSave, saving }) {
         <label className="fee-lb">Комментарий (необязательно)</label>
         <input className="fee-inp" value={comment} onChange={(e) => setComment(e.target.value)} />
         <div className="actions">
-          <button className="btn small white" onClick={onClose}>Отмена</button>
+          <button className="btn small white" onClick={close}>Отмена</button>
           <button
             className="btn small teal" disabled={saving}
             onClick={() => {
               const a = parseFloat(String(amount).replace(",", "."));
               const p = purpose === "Другое" ? custom.trim() : purpose;
+              clearDraft(dkey);
               onSave(from.trim(), p, a || 0, method, date, comment.trim());
             }}
           >
