@@ -32,10 +32,11 @@ export default function Page() {
   // Подвкладка раздела «Деньги»: fees | expenses | history
   const [moneySub, setMoneySub] = useState("fees");
 
-  const toast = useCallback((msg) => {
-    setToastMsg(msg);
+  // Тост: обычный текст или кликабельный (второй аргумент — действие по нажатию)
+  const toast = useCallback((msg, action) => {
+    setToastMsg({ text: msg, action: action || null });
     clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToastMsg(null), 3800);
+    toastTimer.current = setTimeout(() => setToastMsg(null), action ? 6000 : 3800);
   }, []);
 
   const committee = role === "committee";
@@ -44,6 +45,12 @@ export default function Page() {
 
   // Кто вносит изменения расписания — для истории и подписи замен
   const author = authorName || (teacher ? "Учитель" : committee ? "Комитет" : "");
+
+  // Кто сейчас за экраном и как перейти на вкладку — через ref, чтобы
+  // колбэки обновления данных не пересоздавались на каждый рендер
+  const authorRef = useRef("");
+  authorRef.current = author;
+  const showTabRef = useRef(() => {});
 
   // Живые расходы из базы (null = база не подключена, работаем на демо-данных)
   const [liveGroups, setLiveGroups] = useState(null);
@@ -65,12 +72,25 @@ export default function Page() {
     reloadSchedule();
   }, [reloadSchedule]);
 
-  // Замены расписания (изменения поверх основного; null = таблица ещё не создана)
+  // Замены расписания (изменения поверх основного; null = таблица ещё не создана).
+  // Про новые опубликованные чужие замены показываем тост.
   const [liveOverrides, setLiveOverrides] = useState(null);
+  const knownOvIds = useRef(null);
   const reloadOverrides = useCallback(async () => {
     const data = await fetchScheduleOverrides();
-    if (data) setLiveOverrides(data);
-  }, []);
+    if (!data) return;
+    setLiveOverrides(data);
+    const pubIds = new Set(data.filter((o) => o.status === "published").map((o) => o.id));
+    if (knownOvIds.current) {
+      const fresh = data.find(
+        (o) => o.status === "published" && !knownOvIds.current.has(o.id) && (o.author || "") !== authorRef.current
+      );
+      if (fresh) {
+        toast("В расписании появились изменения — нажмите, чтобы посмотреть", () => showTabRef.current("schedule"));
+      }
+    }
+    knownOvIds.current = pubIds;
+  }, [toast]);
   useEffect(() => {
     reloadOverrides();
   }, [reloadOverrides]);
@@ -90,11 +110,28 @@ export default function Page() {
   // Семья на этом устройстве (для голосов и отметок «прочитано»)
   const [family, setFamily] = useFamily();
 
-  // Объявления (null = таблицы ещё не созданы)
+  // Объявления (null = таблицы ещё не созданы).
+  // При каждом обновлении сравниваем со «знакомыми» — про новые чужие показываем тост.
   const [liveAnnouncements, setLiveAnnouncements] = useState(null);
+  const knownAnnIds = useRef(null);
   const reloadAnnouncements = useCallback(async () => {
-    setLiveAnnouncements(await fetchAnnouncements());
-  }, []);
+    const data = await fetchAnnouncements();
+    setLiveAnnouncements(data);
+    if (!data) return;
+    const activeIds = new Set(data.filter((a) => a.status === "active").map((a) => a.id));
+    if (knownAnnIds.current) {
+      const fresh = data.find(
+        (a) => a.status === "active" && !knownAnnIds.current.has(a.id) && (a.author || "") !== authorRef.current
+      );
+      if (fresh) {
+        toast(`Новое объявление: «${fresh.title}» — нажмите, чтобы открыть`, () => {
+          showTabRef.current("announcements");
+          setTimeout(() => document.getElementById("ann-" + fresh.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 450);
+        });
+      }
+    }
+    knownAnnIds.current = activeIds;
+  }, [toast]);
   useEffect(() => {
     reloadAnnouncements();
   }, [reloadAnnouncements]);
@@ -109,11 +146,24 @@ export default function Page() {
     reloadReads();
   }, [reloadReads]);
 
-  // Голосования
+  // Голосования — тоже с тостом про новые чужие
   const [livePolls, setLivePolls] = useState(null);
+  const knownPollIds = useRef(null);
   const reloadPolls = useCallback(async () => {
-    setLivePolls(await fetchPolls());
-  }, []);
+    const data = await fetchPolls();
+    setLivePolls(data);
+    if (!data) return;
+    const ids = new Set(data.map((p) => p.id));
+    if (knownPollIds.current) {
+      const fresh = data.find(
+        (p) => !knownPollIds.current.has(p.id) && pollState(p) === "open" && (p.author || "") !== authorRef.current
+      );
+      if (fresh) {
+        toast(`Новое голосование: «${fresh.question}» — нажмите, чтобы ответить`, () => showTabRef.current("votes"));
+      }
+    }
+    knownPollIds.current = ids;
+  }, [toast]);
   useEffect(() => {
     reloadPolls();
   }, [reloadPolls]);
@@ -150,11 +200,69 @@ export default function Page() {
 
   // Живые дни рождения из базы (null = встроенный список из birthdaysData.js)
   const [liveBirthdays, setLiveBirthdays] = useState(null);
-  useEffect(() => {
-    fetchBirthdays().then((data) => {
-      if (data) setLiveBirthdays(data);
-    });
+  const reloadBirthdays = useCallback(async () => {
+    const data = await fetchBirthdays();
+    if (data) setLiveBirthdays(data);
   }, []);
+  useEffect(() => {
+    reloadBirthdays();
+  }, [reloadBirthdays]);
+
+  // ===== Авто-обновление данных =====
+  // Обновить всё сразу (объявления, прочитано, голосования, расходы, расписание, замены, дни рождения)
+  const reloadAll = useCallback(() => {
+    reloadAnnouncements();
+    reloadReads();
+    reloadPolls();
+    reloadExpenses();
+    reloadSchedule();
+    reloadOverrides();
+    reloadBirthdays();
+  }, [reloadAnnouncements, reloadReads, reloadPolls, reloadExpenses, reloadSchedule, reloadOverrides, reloadBirthdays]);
+
+  // При возврате в приложение (переключение окна/вкладки браузера) и раз в минуту — свежие данные
+  useEffect(() => {
+    if (!role) return;
+    const onWake = () => {
+      if (document.visibilityState === "visible") reloadAll();
+    };
+    window.addEventListener("focus", onWake);
+    document.addEventListener("visibilitychange", onWake);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") reloadAll();
+    }, 60000);
+    return () => {
+      window.removeEventListener("focus", onWake);
+      document.removeEventListener("visibilitychange", onWake);
+      clearInterval(timer);
+    };
+  }, [role, reloadAll]);
+
+  // Мгновенные обновления (realtime): база сама сообщает об изменениях в таблицах.
+  // Работает после запуска realtime-setup.sql в Supabase; без него данные всё равно
+  // обновляются по таймеру и при возврате в приложение.
+  useEffect(() => {
+    if (!supabase || !role) return;
+    const listen = (ch, table, handler) =>
+      ch.on("postgres_changes", { event: "*", schema: "public", table }, handler);
+    let ch = supabase.channel("rk1g-live");
+    ch = listen(ch, "announcements", reloadAnnouncements);
+    ch = listen(ch, "news_reads", reloadReads);
+    ch = listen(ch, "polls", reloadPolls);
+    ch = listen(ch, "poll_options", reloadPolls);
+    ch = listen(ch, "poll_votes", reloadPolls);
+    ch = listen(ch, "schedule_overrides", reloadOverrides);
+    ch = listen(ch, "schedule_lessons", reloadSchedule);
+    ch = listen(ch, "schedule_bells", reloadSchedule);
+    ch = listen(ch, "expense_groups", reloadExpenses);
+    ch = listen(ch, "expenses", reloadExpenses);
+    ch = listen(ch, "receipts", reloadExpenses);
+    ch = listen(ch, "birthdays", reloadBirthdays);
+    ch.subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [role, reloadAnnouncements, reloadReads, reloadPolls, reloadOverrides, reloadSchedule, reloadExpenses, reloadBirthdays]);
 
   // Разбор адреса раздела: /?tab=... → вкладка (старые адреса денег ведут в «Деньги»)
   const applyRoute = useCallback((t) => {
@@ -248,7 +356,22 @@ export default function Page() {
     pushTab(t);
     setNotifOpen(false);
     window.scrollTo({ top: 0 });
+    // Переключение вкладки — заодно подтягиваем свежие данные этого раздела
+    if (t === "announcements") {
+      reloadAnnouncements();
+      reloadReads();
+    } else if (t === "votes") {
+      reloadPolls();
+    } else if (t === "schedule") {
+      reloadSchedule();
+      reloadOverrides();
+    } else if (t === "money") {
+      reloadExpenses();
+    } else if (t === "dashboard") {
+      reloadAll();
+    }
   };
+  showTabRef.current = showTab;
 
   const showMoneySub = (s) => {
     setMoneySub(s);
@@ -305,7 +428,19 @@ export default function Page() {
         }}
         onLeave={logout}
       />
-      {toastMsg && <div className="toast">{toastMsg}</div>}
+      {toastMsg && (
+        <div
+          className={"toast" + (toastMsg.action ? " toast-click" : "")}
+          onClick={() => {
+            if (toastMsg.action) {
+              toastMsg.action();
+              setToastMsg(null);
+            }
+          }}
+        >
+          {toastMsg.text}
+        </div>
+      )}
     </>
   );
 }

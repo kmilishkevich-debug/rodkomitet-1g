@@ -212,7 +212,10 @@ export default function AnnouncementsTab({ committee, canEdit, author, toast, an
   }, []);
 
   const all = announcements || [];
-  const active = all.filter((a) => a.status === "active");
+  // Порядок: закреплённые → важные → остальные (внутри групп — свежие выше, как из базы)
+  const active = all
+    .filter((a) => a.status === "active")
+    .sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || (Number(!!b.important) - Number(!!a.important)));
   const archived = all.filter((a) => a.status === "archived");
 
   const openEditor = (a) => {
