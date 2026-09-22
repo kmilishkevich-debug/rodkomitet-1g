@@ -491,7 +491,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   });
   if (focusNotes.length) cues.push({
     top: schedFocus.label === "сегодня" ? "Я рядом!" : "Готовимся к завтра!",
-    text: `${schedFocus.label === "сегодня" ? "Сегодня" : "Завтра"} пригодится: ${focusNotes.join(", ").toLowerCase()}. Не забудьте!`,
+    text: `${schedFocus.label === "сегодня" ? "Сегодня" : "Завтра"} пригодятся: ${focusNotes.join(", ").toLowerCase()}`,
     action: () => scrollHome("home-schedule"),
   });
   if (bdayEv.today.length) cues.push({
