@@ -207,8 +207,9 @@ export default function Page() {
     return () => window.removeEventListener("popstate", onPop);
   }, [applyRoute]);
 
-  const login = (r) => {
+  const login = (r, fam) => {
     setRole(r);
+    if (r === "parent" && fam) setFamily(fam); // семья привязана входом по коду
     setGreetToken((t) => t + 1); // новое приветствие после ручного входа
     try {
       localStorage.setItem("rk1g-role", r);
@@ -234,8 +235,10 @@ export default function Page() {
     setLogoutOpen(false);
     setRole(null);
     setNotifOpen(false);
+    setFamily(null); // отвязываем семью — при новом входе снова спросим код
     try {
       localStorage.removeItem("rk1g-role");
+      localStorage.removeItem("rk1g-family");
     } catch {}
     if (supabase) supabase.auth.signOut();
   };
