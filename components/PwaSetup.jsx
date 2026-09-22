@@ -2,27 +2,38 @@
 import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 
-/* Регистрация сервис-воркера + ненавязчивая плашка «Установите приложение».
+/* Регистрация сервис-воркера + модалка «Установите приложение».
+   Показываем всем (в том числе на экране входа) при каждом заходе,
+   пока приложение не установлено. Закрыл — до конца сессии не мешаем.
    Android/Chrome: кнопка «Установить» (beforeinstallprompt).
-   iPhone/Safari: короткая инструкция «Поделиться → На экран "Домой"». */
+   iPhone/Safari: пошаговая инструкция «Поделиться → На экран "Домой"». */
 
-const DISMISS_KEY = "rk1g-install-dismissed";
+const SESSION_KEY = "rk1g-install-hidden";
+const SHOW_DELAY = 1200;
 
 function isStandalone() {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    window.navigator.standalone === true
-  );
+  try {
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.matchMedia("(display-mode: minimal-ui)").matches ||
+      window.navigator.standalone === true
+    );
+  } catch {
+    return false;
+  }
 }
 
 function isIOS() {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const ua = navigator.userAgent || "";
+  const iDevice = /iphone|ipad|ipod/i.test(ua);
+  // iPadOS 13+ притворяется macOS, но остаётся тач-устройством
+  const iPadOS = /macintosh/i.test(ua) && navigator.maxTouchPoints > 1;
+  return iDevice || iPadOS;
 }
 
-// Баннер установки показываем только тем, кто уже вошёл в приложение
-function hasRole() {
+function hiddenThisSession() {
   try {
-    return !!localStorage.getItem("rk1g-role");
+    return sessionStorage.getItem(SESSION_KEY) === "1";
   } catch {
     return false;
   }
@@ -37,28 +48,34 @@ export default function PwaSetup() {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
 
-    if (isStandalone()) return; // уже установлено
-    let dismissed = false;
-    try {
-      dismissed = localStorage.getItem(DISMISS_KEY) === "1";
-    } catch {}
-    if (dismissed) return;
+    if (isStandalone()) return; // уже установлено — не трогаем
+    if (hiddenThisSession()) return; // закрыли в этот заход
 
     const onPrompt = (e) => {
       e.preventDefault();
       setInstallEvt(e);
-      if (hasRole()) setShow("android");
+      setShow("android");
     };
+    const onInstalled = () => {
+      setShow(false);
+      try {
+        sessionStorage.setItem(SESSION_KEY, "1");
+      } catch {}
+    };
+
     window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
 
     let t;
     if (isIOS()) {
       t = setTimeout(() => {
-        if (hasRole()) setShow("ios");
-      }, 2500);
+        if (!isStandalone() && !hiddenThisSession()) setShow("ios");
+      }, SHOW_DELAY);
     }
+
     return () => {
       window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
       clearTimeout(t);
     };
   }, []);
@@ -66,7 +83,7 @@ export default function PwaSetup() {
   const dismiss = () => {
     setShow(false);
     try {
-      localStorage.setItem(DISMISS_KEY, "1");
+      sessionStorage.setItem(SESSION_KEY, "1");
     } catch {}
   };
 
@@ -76,33 +93,84 @@ export default function PwaSetup() {
     try {
       await installEvt.userChoice;
     } catch {}
-    setShow(false);
+    setInstallEvt(null);
+    dismiss();
   };
 
   if (!show) return null;
 
   return (
-    <div className="pwa-banner" role="dialog" aria-label="Установка приложения">
-      <img src="/icon-192.png" alt="" className="pwa-banner-icon" />
-      <div className="pwa-banner-text">
-        <b>Наш 1 «Г» — как приложение</b>
+    <div
+      className="pwa-install-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Установка приложения"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) dismiss();
+      }}
+    >
+      <div className="pwa-install-card">
+        <button className="pwa-install-close" onClick={dismiss} aria-label="Закрыть">
+          <Ic id="i-x" />
+        </button>
+
+        <div className="pwa-install-art">
+          <img src="/mascot/pose-notice.png" alt="" className="pwa-install-mascot" />
+          <img src="/icon-192.png" alt="" className="pwa-install-badge" />
+        </div>
+
+        <h3 className="pwa-install-title">Поставьте на главный экран</h3>
+        <p className="pwa-install-sub">
+          Наш 1 «Г» будет открываться в одно касание — как обычное приложение, без браузера
+          и поиска нужной вкладки.
+        </p>
+
         {show === "android" ? (
-          <span>Добавьте на главный экран, чтобы открывать в одно касание</span>
+          <>
+            <button className="btn pwa-install-btn" onClick={install}>
+              <Ic id="i-download" /> Установить
+            </button>
+            <button className="pwa-install-later" onClick={dismiss}>
+              Не сейчас
+            </button>
+          </>
         ) : (
-          <span>
-            Нажмите «Поделиться» <span aria-hidden="true"><Ic id="i-share-ios" /></span> и выберите
-            «На экран “Домой”»
-          </span>
+          <>
+            <ol className="pwa-steps">
+              <li className="pwa-step">
+                <span className="pwa-step-num">1</span>
+                <span className="pwa-step-text">
+                  Нажмите <b>«Поделиться»</b> внизу экрана
+                </span>
+                <span className="pwa-step-ic" aria-hidden="true">
+                  <Ic id="i-share-ios" />
+                </span>
+              </li>
+              <li className="pwa-step">
+                <span className="pwa-step-num">2</span>
+                <span className="pwa-step-text">
+                  Пролистайте и выберите <b>«На экран “Домой”»</b>
+                </span>
+                <span className="pwa-step-ic" aria-hidden="true">
+                  <Ic id="i-plus" />
+                </span>
+              </li>
+              <li className="pwa-step">
+                <span className="pwa-step-num">3</span>
+                <span className="pwa-step-text">
+                  Нажмите <b>«Добавить»</b> — готово
+                </span>
+                <span className="pwa-step-ic" aria-hidden="true">
+                  <Ic id="i-check" />
+                </span>
+              </li>
+            </ol>
+            <button className="btn pwa-install-btn" onClick={dismiss}>
+              Понятно
+            </button>
+          </>
         )}
       </div>
-      {show === "android" && (
-        <button className="pwa-banner-install" onClick={install}>
-          Установить
-        </button>
-      )}
-      <button className="pwa-banner-close" onClick={dismiss} aria-label="Закрыть">
-        <Ic id="i-x" />
-      </button>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { Ic, MascotPeek } from "./Art";
 import NavIcon from "./NavIcons";
 import { EXPENSE_GROUPS, fmt, groupTotal } from "./data";
 import { supabase, isLive } from "@/lib/supabase";
-import ExpenseModal from "./ExpenseModal";
+import ExpenseModal, { hasExpenseDraft } from "./ExpenseModal";
 
 function fmtDate(d) {
   if (!d) return null;
@@ -21,6 +21,16 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload, fo
   const [hlId, setHlId] = useState(null); // подсвеченная группа (переход «Расходы ГПД»)
 
   const groups = liveGroups || EXPENSE_GROUPS;
+
+  // Если PWA перезагрузилось посреди ввода расхода (например, после открытия камеры) —
+  // автоматически откроем форму с восстановленным черновиком
+  useEffect(() => {
+    if (committee && isLive && hasExpenseDraft()) {
+      setEditItem(null);
+      setModalOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Переход со страницы «Сборы» по кнопке «Расходы ГПД»: подсветить и показать группу ГПД
   useEffect(() => {

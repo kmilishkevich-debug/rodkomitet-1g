@@ -4,9 +4,33 @@ import { supabase, uploadReceipt } from "@/lib/supabase";
 import { notifyTreasurer } from "./TreasurerMascot";
 
 const NEW_GROUP = "__new__";
+const DRAFT_KEY = "expenseDraft";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
+}
+
+export function hasExpenseDraft() {
+  try {
+    return !!localStorage.getItem(DRAFT_KEY);
+  } catch {
+    return false;
+  }
+}
+
+function readDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {}
 }
 
 // «2 уп (48 шт)» → 2 ; «3» → 3
@@ -30,7 +54,9 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
   const [planned, setPlanned] = useState(false);
   const [file, setFile] = useState(null);
   const [saving, setSaving] = useState(false);
-  const fileRef = useRef(null);
+  const [restored, setRestored] = useState(false); // показать подсказку «черновик восстановлен»
+  const cameraRef = useRef(null);
+  const galleryRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
@@ -46,16 +72,53 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
       setComment(editItem.comment || "");
       setFree(!!editItem.free);
       setPlanned(!!editItem.planned);
+      setRestored(false);
     } else {
-      setGroupId(groups?.[0]?.id || "");
-      setName(""); setPrice(""); setQty("1"); setSum(""); setSumTouched(false);
-      setPlace(""); setDate(todayISO()); setComment("");
-      setFree(false); setPlanned(false);
+      // Новый расход: если есть незаконченный черновик (например, PWA перезагрузилось
+      // после открытия камеры) — восстанавливаем его
+      const d = readDraft();
+      if (d) {
+        setGroupId(d.groupId || groups?.[0]?.id || "");
+        setNewGroupTitle(d.newGroupTitle || "");
+        setName(d.name || "");
+        setPrice(d.price || "");
+        setQty(d.qty || "1");
+        setSum(d.sum || "");
+        setSumTouched(!!d.sumTouched);
+        setPlace(d.place || "");
+        setDate(d.date || todayISO());
+        setComment(d.comment || "");
+        setFree(!!d.free);
+        setPlanned(!!d.planned);
+        setRestored(true);
+      } else {
+        setGroupId(groups?.[0]?.id || "");
+        setNewGroupTitle("");
+        setName(""); setPrice(""); setQty("1"); setSum(""); setSumTouched(false);
+        setPlace(""); setDate(todayISO()); setComment("");
+        setFree(false); setPlanned(false);
+        setRestored(false);
+      }
     }
-    setNewGroupTitle("");
+    if (editItem) setNewGroupTitle("");
     setFile(null);
-    if (fileRef.current) fileRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
+    if (galleryRef.current) galleryRef.current.value = "";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editItem, groups]);
+
+  // Автосохранение черновика (без файла) — чтобы форма пережила перезагрузку PWA
+  useEffect(() => {
+    if (!open || editItem) return;
+    const empty = !name.trim() && !price && !place.trim() && !comment.trim() && !newGroupTitle.trim();
+    try {
+      if (empty) return; // не плодим пустые черновики
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        groupId, newGroupTitle, name, price, qty, sum, sumTouched,
+        place, date, comment, free, planned,
+      }));
+    } catch {}
+  }, [open, editItem, groupId, newGroupTitle, name, price, qty, sum, sumTouched, place, date, comment, free, planned]);
 
   // Сумма считается сама: цена × количество (если сумму не правили вручную)
   const autoSum = useMemo(() => {
@@ -67,6 +130,37 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
   const shownSum = sumTouched ? sum : autoSum;
 
   if (!open) return null;
+
+  // Изменение цены/количества снова включает автопересчёт суммы
+  const changePrice = (v) => { setPrice(v); setSumTouched(false); };
+  const changeQty = (v) => { setQty(v); setSumTouched(false); };
+
+  const takeFile = (f) => {
+    if (!f) return;
+    if (!f.type?.startsWith("image/")) return toast("Это не изображение — нужен файл с фото чека");
+    setFile(f);
+  };
+
+  // Вставка фото чека из буфера обмена (Ctrl+V / «Вставить» на телефоне)
+  const onPaste = (e) => {
+    const items = e.clipboardData?.items || [];
+    for (const it of items) {
+      if (it.type?.startsWith("image/")) {
+        const f = it.getAsFile();
+        if (f) {
+          takeFile(f);
+          toast("Фото чека вставлено из буфера обмена");
+          e.preventDefault();
+          return;
+        }
+      }
+    }
+  };
+
+  const cancel = () => {
+    clearDraft();
+    onClose();
+  };
 
   const save = async () => {
     const finalName = name.trim();
@@ -116,6 +210,7 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
       const { error } = await q;
       if (error) throw error;
 
+      clearDraft();
       toast(editItem ? "Расход обновлён" : "Расход добавлен — родители уже видят его");
       // Пушистый казначей штампует чек «Учтено!» (только новые реальные расходы)
       if (!editItem && !planned && !free && sumNum > 0) {
@@ -139,9 +234,14 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
 
   return (
     <div className="overlay">
-      <div className="modal exp-modal">
+      <div className="modal exp-modal" onPaste={onPaste}>
         <h3>{editItem ? "Изменить расход" : "Новый расход"}</h3>
         <div className="muted">Расход сразу станет виден всем родителям</div>
+        {restored && (
+          <div className="chip amber" style={{ marginTop: 6 }}>
+            Восстановлен незаконченный черновик — фото чека нужно прикрепить заново
+          </div>
+        )}
 
         <div className="exp-form">
           <label>Группа</label>
@@ -178,11 +278,11 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
                 <div className="exp-row3">
                   <div>
                     <label>Цена, BYN</label>
-                    <input inputMode="decimal" placeholder="3,75" value={price} onChange={(e) => setPrice(e.target.value)} />
+                    <input inputMode="decimal" placeholder="3,75" value={price} onChange={(e) => changePrice(e.target.value)} />
                   </div>
                   <div>
                     <label>Кол-во</label>
-                    <input placeholder="2 уп (48 шт)" value={qty} onChange={(e) => setQty(e.target.value)} />
+                    <input placeholder="2 уп (48 шт)" value={qty} onChange={(e) => changeQty(e.target.value)} />
                   </div>
                   <div>
                     <label>Сумма, BYN</label>
@@ -205,23 +305,40 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
               {!free && (
                 <>
                   <label>Фото чека {editItem?.receipt_url && !file ? "(уже прикреплён — можно заменить)" : "(обязательно)"}</label>
-                  <div
-                    className={"upload-zone" + (file || editItem?.receipt_url ? " done" : "")}
-                    onClick={() => fileRef.current?.click()}
-                  >
-                    {file
-                      ? `✓ ${file.name} — прикреплён`
-                      : editItem?.receipt_url
-                        ? "✓ Чек прикреплён · нажмите, чтобы заменить"
-                        : "Нажмите, чтобы сфотографировать или выбрать чек"}
+                  <div className={"upload-zone" + (file || editItem?.receipt_url ? " done" : "")}>
+                    <div style={{ marginBottom: 8 }}>
+                      {file
+                        ? `✓ ${file.name || "фото"} — прикреплён`
+                        : editItem?.receipt_url
+                          ? "✓ Чек прикреплён · можно заменить"
+                          : "Прикрепите фото чека:"}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+                      <button type="button" className="btn small white" onClick={() => cameraRef.current?.click()}>
+                        📷 Сфотографировать
+                      </button>
+                      <button type="button" className="btn small white" onClick={() => galleryRef.current?.click()}>
+                        🖼 Из галереи
+                      </button>
+                    </div>
+                    <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
+                      Можно и вставить скриншот из буфера обмена (Ctrl+V)
+                    </div>
                   </div>
                   <input
-                    ref={fileRef}
+                    ref={cameraRef}
                     type="file"
                     accept="image/*"
                     capture="environment"
                     style={{ display: "none" }}
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    onChange={(e) => takeFile(e.target.files?.[0])}
+                  />
+                  <input
+                    ref={galleryRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => takeFile(e.target.files?.[0])}
                   />
                 </>
               )}
@@ -233,7 +350,7 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
         </div>
 
         <div className="actions">
-          <button className="btn small white" onClick={onClose} disabled={saving}>Отмена</button>
+          <button className="btn small white" onClick={cancel} disabled={saving}>Отмена</button>
           <button className="btn small teal" onClick={save} disabled={saving}>
             {saving ? "Сохраняю…" : editItem ? "Сохранить" : "Добавить расход"}
           </button>
