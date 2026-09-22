@@ -184,7 +184,7 @@ function ImportantNews({ announcements, reads, family, onTab }) {
         const read = isReadBy(a, reads, family);
         return (
           <div className="imp-card reveal d1" key={a.id} id={"home-imp-" + a.id}>
-            <div className="imp-ico" aria-hidden="true">📣</div>
+            <img className="imp-ico" src="/icon-announcement.png" alt="" aria-hidden="true" />
             <div className="imp-body">
               <div className="imp-tags">
                 <span className="imp-label">Важное объявление</span>

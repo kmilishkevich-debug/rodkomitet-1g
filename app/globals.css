@@ -1028,17 +1028,22 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .vote-who-missing{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
 
 /* ===== Главная: важные объявления (ТЗ §7) — светло-жёлтая подложка, золотистая обводка ===== */
-.imp-card{display:flex;align-items:center;gap:18px;width:100%;background:#FFF7DC;border:2px solid #E8C55A;border-radius:26px;padding:20px 24px;margin-bottom:18px}
-.imp-ico{flex:none;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:30px;background:#FBE9AE;border-radius:18px}
-.imp-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
-.imp-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.imp-label{font-size:12px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:#8a6a12;background:#FBE9AE;border-radius:999px;padding:3px 10px}
-.imp-read{font-size:12px;font-weight:800;color:#a34a1f;background:#FFE3D0;border-radius:999px;padding:3px 10px}
+.imp-card{display:flex;align-items:center;gap:28px;width:100%;background:linear-gradient(180deg,#FFF9D9 0%,#FFF3BA 100%);border:2.5px solid #FFD329;border-radius:30px;padding:26px 30px;margin-bottom:18px;box-shadow:0 12px 28px rgba(255,178,36,.22)}
+.imp-ico{flex:none;width:128px;height:auto;filter:drop-shadow(0 10px 14px rgba(176,118,18,.30));animation:imp-wiggle 1s ease .25s 1 both}
+@keyframes imp-wiggle{0%{transform:rotate(0)}20%{transform:rotate(-7deg)}45%{transform:rotate(6deg)}70%{transform:rotate(-3deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){.imp-ico{animation:none}}
+.imp-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.imp-tags{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-bottom:3px}
+.imp-label{display:inline-flex;align-items:center;font-size:14px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#fff;background:#FFA600;border-radius:999px;padding:7px 15px;box-shadow:0 4px 10px rgba(255,166,0,.35)}
+.imp-read{display:inline-flex;align-items:center;font-size:13.5px;font-weight:700;color:#9A5B12;background:#FFEC9E;border-radius:999px;padding:7px 15px}
 .imp-read.done{color:#1d7a4a;background:#D9F3E3}
-.imp-title{font-size:17px;font-weight:800;color:var(--ink);line-height:1.3}
-.imp-sub{font-size:14px;font-weight:600;color:#6b5d3a;line-height:1.45}
-.imp-meta{font-size:12.5px;font-weight:600;color:var(--muted)}
-.imp-btn{flex:none;min-height:44px}
+.imp-title{font-size:28px;font-weight:700;color:#17234D;line-height:1.15}
+.imp-sub{font-size:17px;font-weight:600;color:#5c5030;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.imp-meta{font-size:13.5px;font-weight:600;color:#98874f;margin-top:2px}
+.imp-btn.pill-btn{flex:none;width:240px;min-height:58px;border-radius:19px;background:linear-gradient(180deg,#2876FF 0%,#0757EF 100%);color:#fff;font-size:19px;font-weight:700;white-space:nowrap;box-shadow:0 10px 22px rgba(20,84,220,.38);transition:box-shadow .18s ease,transform .12s ease}
+.imp-btn.pill-btn:hover{transform:none;box-shadow:0 14px 30px rgba(20,84,220,.5)}
+.imp-btn.pill-btn:active{transform:translateY(2px);box-shadow:0 6px 14px rgba(20,84,220,.35)}
+.imp-btn.pill-btn:focus-visible{outline:3px solid #17234D;outline-offset:3px}
 
 /* ===== Главная: активные голосования (ТЗ §8) — светло-сиреневая подложка, фиолетовая обводка ===== */
 .pollhome-card{display:flex;align-items:center;gap:18px;width:100%;background:#F1EDFB;border:2px solid #A78BDF;border-radius:26px;padding:20px 24px;margin-bottom:18px}
@@ -1068,8 +1073,12 @@ nav.bottomnav .nav-badge{top:0;right:8px}
   .vote-who-row{flex-direction:column;gap:0}
   .vote-who-val{text-align:left}
   .imp-card,.pollhome-card{flex-direction:column;align-items:stretch;gap:12px;padding:16px 18px}
-  .imp-ico,.pollhome-ico{width:46px;height:46px;font-size:24px}
-  .imp-btn,.pollhome-btn{width:100%;justify-content:center;text-align:center}
+  .pollhome-ico{width:46px;height:46px;font-size:24px}
+  .imp-ico{width:76px;align-self:flex-start}
+  .imp-title{font-size:21px}
+  .imp-sub{font-size:15.5px}
+  .imp-btn.pill-btn,.pollhome-btn{width:100%;justify-content:center;text-align:center;min-height:54px}
+  .imp-btn.pill-btn{font-size:17px}
   .homenews-card{flex-direction:column;align-items:stretch;gap:10px;padding:16px 18px}
   .homenews-card .pill-btn{width:100%;text-align:center}
 }
