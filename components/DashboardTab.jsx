@@ -61,15 +61,6 @@ function ScheduleChangeBanner({ activeOvs, focusIso, focusLabel, endTime, toast,
   );
 }
 
-// 3D-иконки предметов (как на референсе): штаны, смайлик, книга
-function subject3d(subject) {
-  const s = (subject || "").toLowerCase();
-  if (s.includes("введение")) return "/icons/icon-trousers.webp";
-  if (s.includes("физ")) return "/icons/icon-smiley.webp";
-  if (s.includes("логик")) return "/icons/icon-book.webp";
-  return null;
-}
-
 // Мини-расписание на главной: до 13:00 — уроки сегодня, после — на завтра
 function ScheduleWidget({ liveSchedule, overrides, onTab }) {
   const focus = scheduleFocus();
@@ -107,7 +98,6 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
         {lessons.map((l) => {
           const bell = bellByPos[l.pos];
           const si = subjectIcon(l.subject);
-          const si3 = subject3d(l.subject);
           const ch = changed[l.pos];
           const disp = lessonDisplay(l.subject);
           return (
@@ -115,7 +105,7 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
               <div className="dash-sched-row" style={ch ? { background: "var(--blue-soft)", borderRadius: 10 } : undefined}>
                 <span className="dash-sched-time">{bell ? `${bell.start_time}–${bell.end_time}` : `${l.pos}-й`}</span>
                 <span className="dash-sched-subj">
-                  {si3 ? <img src={si3} className="les-3d" alt="" /> : <CIc id={si.id} tone={si.tone} size="sm" />} {disp.name}
+                  <CIc id={si.id} tone={si.tone} size="sm" /> {disp.name}
                   {disp.tag && <span className="muted" style={{ fontStyle: "italic", fontSize: 12 }}> · {disp.tag}</span>}
                   {ch && ch.old && ch.old.subject !== l.subject && <span className="muted" style={{ fontSize: 12 }}> (вместо: {ch.old.subject})</span>}
                   {ch && ch.added && <span className="muted" style={{ fontSize: 12 }}> (добавлен)</span>}

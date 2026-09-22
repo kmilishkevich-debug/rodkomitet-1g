@@ -94,7 +94,10 @@ function LessonModal({ lesson, onClose, onSaved, toast }) {
   return (
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && close()}>
       <div className="modal exp-modal">
-        <h3>{DAY_NAMES[lesson.day]} · {lesson.pos}-й урок</h3>
+        <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <CIc id={subjectIcon(subject).id} tone={subjectIcon(subject).tone} size="sm" />
+          {DAY_NAMES[lesson.day]} · {lesson.pos}-й урок
+        </h3>
         <div className="muted">Это правка основного расписания. Для временной замены нажмите «Внести изменения».</div>
         {restored && <div className="chip amber" style={{ marginTop: 6 }}>Восстановлен незаконченный черновик</div>}
         <div className="exp-form">
