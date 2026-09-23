@@ -2,16 +2,17 @@
 import TeacherMascotScene from "./TeacherMascotScene";
 
 // ===== Приветственная карточка кабинета учителя =====
-// Слева — обращение по имени и две главные кнопки.
-// Справа — маскот с облаком; он вылезает за верхний край карточки,
-// поэтому карточка ничего не обрезает (overflow: visible).
+// Две самостоятельные части: слева — текст и две главные кнопки,
+// справа — отдельная сцена маскота в своей колонке фиксированной ширины.
+// Колонка зарезервирована в сетке, поэтому длинное имя переносится
+// на новую строку, а не заезжает на персонажа.
 
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня",
   "июля", "августа", "сентября", "октября", "ноября", "декабря"];
 const DAYS = ["воскресенье", "понедельник", "вторник", "среда",
   "четверг", "пятница", "суббота"];
 
-// «СРЕДА · 23 СЕНТЯБРЯ»
+// «среда · 23 сентября»
 function fmtToday(iso) {
   const d = new Date(iso + "T12:00:00");
   return `${DAYS[d.getDay()]} · ${d.getDate()} ${MONTHS[d.getMonth()]}`;
@@ -33,9 +34,10 @@ export default function TeacherWelcomeCard({ name, todayIso, onAnnounce, onHomew
 
       <div className="tc-welcome">
         <div className="tc-welcome-text">
+          {/* Осмысленный перенос: обращение — первой строкой, имя — второй */}
           <h1 className="greeting tc-greeting">
-            {greetWord()}
-            {name ? `, ${name}` : ""}!
+            <span className="tc-greet-line">{greetWord()}{name ? "," : "!"}</span>
+            {name && <span className="tc-greet-line tc-greet-name">{name}!</span>}
           </h1>
           <p className="tc-sub">Что передадим родителям сегодня?</p>
 
@@ -44,12 +46,13 @@ export default function TeacherWelcomeCard({ name, todayIso, onAnnounce, onHomew
               Создать объявление
             </button>
             <button className="tc-btn tc-btn-lav" onClick={onHomework}>
+              <img src="/icons/icon-book.webp" className="tc-btn-icon" alt="" />
               Записать задание
             </button>
           </div>
         </div>
 
-        <TeacherMascotScene phrase="Всё важное под рукой!" />
+        <TeacherMascotScene phrase={["Всё важное", "под рукой!"]} />
       </div>
     </div>
   );

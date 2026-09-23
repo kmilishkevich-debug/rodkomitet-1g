@@ -270,8 +270,17 @@ function WorkCard({ icon, title, sub, action, onAction, children, delay }) {
   );
 }
 
-function Empty({ children }) {
-  return <div className="tc-empty">{children}</div>;
+// ===== Пустое состояние карточки =====
+// Тематическая картинка, короткая главная строка и пояснение обычного веса.
+// Кнопку добавления здесь не дублируем — она уже есть в шапке карточки.
+function Empty({ icon, title, hint }) {
+  return (
+    <div className="tc-empty">
+      <img src={icon} className="tc-empty-icon" alt="" />
+      <div className="tc-empty-title">{title}</div>
+      {hint && <div className="tc-empty-hint">{hint}</div>}
+    </div>
+  );
 }
 
 export default function TeacherTab({
@@ -362,9 +371,11 @@ export default function TeacherTab({
                 onClick={() => setHwDay("tomorrow")}>На завтра</button>
             </div>
             {!hw.length && (
-              <Empty>
-                {hwDay === "today" ? "На сегодня ничего не записано." : "На завтра ничего не записано."}
-              </Empty>
+              <Empty
+                icon="/icons/icon-backpack.webp"
+                title={hwDay === "today" ? "На сегодня заданий пока нет" : "На завтра заданий пока нет"}
+                hint="Добавьте задание или напоминание, что взять с собой"
+              />
             )}
             {hw.map((h) => (
               <div className="tb-row" key={h.id}>
@@ -385,7 +396,13 @@ export default function TeacherTab({
             onAction={() => setForm("ann")}
             delay="d3"
           >
-            {!myAnn.length && <Empty>Вы пока ничего не объявляли.</Empty>}
+            {!myAnn.length && (
+              <Empty
+                icon="/icons/nav-announcements.webp"
+                title="Здесь появятся ваши публикации"
+                hint="Объявление увидят все родители класса"
+              />
+            )}
             {myAnn.map((a) => (
               <button className="tc-line" key={a.id} onClick={() => onTab("announcements")}>
                 <span className="tc-line-title">{a.important && <b className="tc-hot">Важно · </b>}{a.title}</span>
@@ -404,7 +421,13 @@ export default function TeacherTab({
             onAction={() => setForm("event")}
             delay="d2"
           >
-            {!ev.length && <Empty>Впереди пока ничего не запланировано.</Empty>}
+            {!ev.length && (
+              <Empty
+                icon="/icons/icon-calendar.webp"
+                title="Ближайших событий пока нет"
+                hint="Поездка, праздник или собрание — добавьте, и родители увидят дату"
+              />
+            )}
             {ev.map((e) => (
               <div className="tb-row" key={e.id}>
                 <span className="tb-day">{fmtDayWord(e.on_date, todayIso)}</span>
@@ -427,7 +450,13 @@ export default function TeacherTab({
             onAction={() => setPickOpen(true)}
             delay="d3"
           >
-            {!threads.length && <Empty>Переписок пока нет. Напишите первой семье — родитель увидит сообщение на главной и сможет ответить.</Empty>}
+            {!threads.length && (
+              <Empty
+                icon="/icons/icon-people.webp"
+                title="Выберите семью, чтобы написать сообщение"
+                hint="Родитель увидит его на главной и сможет ответить"
+              />
+            )}
             {threads.map((t) => (
               <button className="tc-line" key={t.n}
                 onClick={() => setChatFamily({ n: t.n, child: familyName(t.n) })}>
