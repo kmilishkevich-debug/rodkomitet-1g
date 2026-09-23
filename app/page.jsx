@@ -13,13 +13,14 @@ import TeacherTab from "@/components/TeacherTab";
 import UploadModal from "@/components/UploadModal";
 import LogoutModal from "@/components/LogoutModal";
 import { useFamily, loadSeen, saveSeen } from "@/components/FamilyPicker";
-import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes, fetchHomework, fetchClassEvents, fetchTeacherNotes } from "@/lib/supabase";
+import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes, fetchHomework, fetchClassEvents, fetchTeacherNotes, fetchFamilyMessages } from "@/lib/supabase";
 import { enablePush, syncPushRole } from "@/lib/push";
 import { isFormOpen, onFormsChange } from "@/lib/formGuard";
 
 export default function Page() {
   const [role, setRole] = useState(null); // null | 'parent' | 'committee' | 'teacher'
   const [authorName, setAuthorName] = useState(null); // имя для истории изменений расписания
+  const [greetingName, setGreetingName] = useState(null); // как здороваемся в кабинете учителя
   const [tab, setTab] = useState("dashboard");
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifSeen, setNotifSeen] = useState(false);
@@ -119,13 +120,16 @@ export default function Page() {
   }, []);
 
   // Имя вошедшего (для подписи изменений расписания)
+  // и отдельно — тёплое имя для приветствия в кабинете («Виктория Петровна»)
   useEffect(() => {
     if (role === "committee" || role === "teacher") {
       fetchUserRole().then((data) => {
         if (data?.display_name) setAuthorName(data.display_name);
+        if (data?.greeting_name) setGreetingName(data.greeting_name);
       });
     } else {
       setAuthorName(null);
+      setGreetingName(null);
     }
   }, [role]);
 
@@ -331,6 +335,17 @@ export default function Page() {
     reloadTeacherNotes();
   }, [reloadTeacherNotes]);
 
+  // Переписка учителя с семьями. Грузим всем: учителю нужен список веток,
+  // родителю — своя ветка на главной. Кто что видит, решает интерфейс.
+  const [familyMessages, setFamilyMessages] = useState(null);
+  const reloadFamilyMessages = useCallback(async () => {
+    const data = await fetchFamilyMessages();
+    if (data) setFamilyMessages(data);
+  }, []);
+  useEffect(() => {
+    reloadFamilyMessages();
+  }, [reloadFamilyMessages]);
+
   // ===== Авто-обновление данных =====
   // Обновить всё сразу (объявления, прочитано, голосования, расходы, расписание, замены, дни рождения)
   const reloadAll = useCallback(() => {
@@ -345,7 +360,8 @@ export default function Page() {
     reloadHomework();
     reloadEvents();
     reloadTeacherNotes();
-  }, [reloadAnnouncements, reloadReads, reloadPolls, reloadExpenses, reloadSchedule, reloadOverrides, reloadBirthdays, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes]);
+    reloadFamilyMessages();
+  }, [reloadAnnouncements, reloadReads, reloadPolls, reloadExpenses, reloadSchedule, reloadOverrides, reloadBirthdays, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes, reloadFamilyMessages]);
 
   // При возврате в приложение (переключение окна/вкладки браузера) и раз в минуту — свежие данные.
   // Пока открыта любая форма — обновление на паузе (иначе оно стирает набранное),
@@ -399,11 +415,12 @@ export default function Page() {
     ch = listen(ch, "family_notes", reloadTeacherNotes);
     ch = listen(ch, "homework", reloadHomework);
     ch = listen(ch, "class_events", reloadEvents);
+    ch = listen(ch, "family_messages", reloadFamilyMessages);
     ch.subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [role, reloadAnnouncements, reloadReads, reloadPolls, reloadOverrides, reloadSchedule, reloadExpenses, reloadBirthdays, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes]);
+  }, [role, reloadAnnouncements, reloadReads, reloadPolls, reloadOverrides, reloadSchedule, reloadExpenses, reloadBirthdays, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes, reloadFamilyMessages]);
 
   // Разбор адреса раздела: /?tab=... → вкладка (старые адреса денег ведут в «Деньги»)
   const applyRoute = useCallback((t) => {
@@ -570,7 +587,20 @@ export default function Page() {
           />
           <main>
             {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={shownAnnouncements} polls={shownPolls} reads={liveReads} family={family} setFamily={setFamily} notes={liveNotes} onReloadNotes={reloadNotes} homework={liveHomework} events={liveEvents} />}
-            {tab === "teacher" && <TeacherTab authorName={authorName} toast={toast} onTab={showTab} homework={liveHomework} events={liveEvents} teacherNotes={teacherNotes} onReload={() => { reloadHomework(); reloadEvents(); reloadTeacherNotes(); }} />}
+            {tab === "teacher" && (
+              <TeacherTab
+                authorName={authorName}
+                greetingName={greetingName}
+                toast={toast}
+                onTab={showTab}
+                homework={liveHomework}
+                events={liveEvents}
+                announcements={shownAnnouncements}
+                familyMessages={familyMessages}
+                onReload={() => { reloadHomework(); reloadEvents(); reloadTeacherNotes(); }}
+                onReloadMessages={reloadFamilyMessages}
+              />
+            )}
             {tab === "schedule" && <ScheduleTab committee={committee} canEditSchedule={canEditSchedule} author={author} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} overrides={liveOverrides} onReloadOverrides={reloadOverrides} />}
             {tab === "announcements" && <AnnouncementsTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} announcements={shownAnnouncements} reads={liveReads} onReload={reloadAnnouncements} onReloadReads={reloadReads} family={family} setFamily={setFamily} />}
             {tab === "votes" && <VotesTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} polls={shownPolls} onReload={reloadPolls} family={family} setFamily={setFamily} />}
