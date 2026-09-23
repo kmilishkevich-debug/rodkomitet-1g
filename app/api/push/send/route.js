@@ -26,7 +26,8 @@ export async function POST(request) {
   if (!title || !text) {
     return NextResponse.json({ ok: false, error: "Нужны заголовок и текст" }, { status: 400 });
   }
-  const audience = body?.audience === "committee" ? "committee" : "all";
+  const audiences = ["committee", "parents", "all"];
+  const audience = audiences.includes(body?.audience) ? body.audience : "all";
   const url = typeof body?.url === "string" && body.url.startsWith("/") ? body.url : "/";
   const result = await sendPushToAll({ title, body: text, url }, audience);
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });

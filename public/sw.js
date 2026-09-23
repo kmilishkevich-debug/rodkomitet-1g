@@ -2,7 +2,7 @@
    Стратегия: network-first — всегда пробуем свежую версию из сети,
    кэш используется только как запасной вариант без интернета. */
 
-const CACHE = "rk1g-v3-teacher";
+const CACHE = "rk1g-v4-teacher-hide";
 const OFFLINE_URLS = ["/", "/manifest.json", "/mascot.jpg", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (e) => {

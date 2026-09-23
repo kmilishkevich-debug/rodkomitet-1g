@@ -35,7 +35,7 @@ export function fmtDeadline(d) {
 }
 
 // ===== Редактор голосования =====
-function PollEditor({ open, initial, author, onClose, onSaved, toast }) {
+function PollEditor({ open, initial, author, teacher, onClose, onSaved, toast }) {
   const hasVotes = (initial?.votes || []).length > 0;
   const dkey = "poll:" + (initial?.id || "new");
   const base = {
@@ -45,6 +45,7 @@ function PollEditor({ open, initial, author, onClose, onSaved, toast }) {
     optionsText: (initial?.options || []).map((o) => o.title).join("\n"),
     amount: initial?.amount ?? "",
     deadline: initial?.deadline || "",
+    teacherVisible: !!initial?.teacher_visible,
   };
   const [saved] = useState(() => (typeof window === "undefined" ? null : readDraft(dkey)));
   const start = saved ? { ...base, ...saved } : base;
@@ -55,13 +56,14 @@ function PollEditor({ open, initial, author, onClose, onSaved, toast }) {
   const [optionsText, setOptionsText] = useState(start.optionsText);
   const [amount, setAmount] = useState(start.amount);
   const [deadline, setDeadline] = useState(start.deadline);
+  const [teacherVisible, setTeacherVisible] = useState(!!start.teacherVisible);
   const [saving, setSaving] = useState(false);
   const [restored] = useState(!!saved);
 
   // Пока редактор открыт — фоновое обновление данных на паузе
   useRefreshPause(open);
 
-  const values = { question, description, type, optionsText, amount, deadline };
+  const values = { question, description, type, optionsText, amount, deadline, teacherVisible };
   const dirty = isDirty(values, base);
   useDraftAutosave(open, dkey, values, dirty);
 
@@ -89,6 +91,8 @@ function PollEditor({ open, initial, author, onClose, onSaved, toast }) {
         type,
         amount: type === "money" ? Number(amount) : null,
         deadline: deadline || null,
+        // Голосования учителя она видит всегда; у комитета — по галочке
+        teacher_visible: teacher ? true : teacherVisible,
       };
       if (initial?.id) payload.id = initial.id;
       else { payload.author = author; payload.status = "open"; }
@@ -140,6 +144,11 @@ function PollEditor({ open, initial, author, onClose, onSaved, toast }) {
         )}
         <label className="fld-lbl">Срок голосования (закроется автоматически в конце этого дня)</label>
         <input className="fld" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+        {!teacher && (
+          <div className="news-editor-flags">
+            <label className="chk-row"><input type="checkbox" checked={teacherVisible} onChange={(e) => setTeacherVisible(e.target.checked)} /> Видно классному руководителю</label>
+          </div>
+        )}
         <div className="actions">
           <button className="btn small white" onClick={close}>Отмена</button>
           <button className="btn small gold" onClick={save} disabled={saving}>{saving ? "Сохраняю…" : initial?.id ? "Сохранить" : "Создать"}</button>
@@ -366,7 +375,7 @@ function PollCard({ p, committee, canEdit, family, author, toast, onEdit, onRelo
 }
 
 // ===== Вкладка «Голосования» =====
-export default function VotesTab({ committee, canEdit, author, toast, polls, onReload, family, setFamily }) {
+export default function VotesTab({ committee, canEdit, teacher, author, toast, polls, onReload, family, setFamily }) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showArchive, setShowArchive] = useState(false);
@@ -434,8 +443,12 @@ export default function VotesTab({ committee, canEdit, author, toast, polls, onR
 
       {polls !== null && open.length === 0 && closed.length === 0 && (
         <div className="card news-empty reveal d1">
-          <p><b>Пока нет активных голосований.</b></p>
-          <p className="muted">Когда комитет создаст голосование — вы получите возможность отдать голос своей семьи прямо здесь.</p>
+          <p><b>{teacher ? "Пока нет ваших голосований." : "Пока нет активных голосований."}</b></p>
+          <p className="muted">
+            {teacher
+              ? "Здесь появятся голосования, которые вы создадите для класса."
+              : "Когда комитет создаст голосование — вы получите возможность отдать голос своей семьи прямо здесь."}
+          </p>
         </div>
       )}
 
@@ -459,7 +472,7 @@ export default function VotesTab({ committee, canEdit, author, toast, polls, onR
 
       {editorOpen && (
         <PollEditor
-          open={editorOpen} initial={editing} author={author} toast={toast}
+          open={editorOpen} initial={editing} author={author} teacher={teacher} toast={toast}
           onClose={() => setEditorOpen(false)} onSaved={onReload}
         />
       )}

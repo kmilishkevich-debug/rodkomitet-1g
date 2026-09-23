@@ -40,7 +40,8 @@ function IosSteps() {
 function ManualPush({ toast }) {
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
-  const [audience, setAudience] = useState("all");
+  // «parents» — все, кроме классного руководителя (наши рассылки её не касаются)
+  const [audience, setAudience] = useState("parents");
   const [target, setTarget] = useState("dashboard");
   const [sending, setSending] = useState(false);
 
@@ -79,8 +80,9 @@ function ManualPush({ toast }) {
         <input placeholder="Например: Встречаемся в 18:00 в кабинете 166" value={text} onChange={(e) => setText(e.target.value)} maxLength={180} />
         <label>Кому</label>
         <div className="push-aud">
-          <button className={"chip-btn" + (audience === "all" ? " active" : "")} onClick={() => setAudience("all")}>Всем родителям</button>
+          <button className={"chip-btn" + (audience === "parents" ? " active" : "")} onClick={() => setAudience("parents")}>Всем родителям</button>
           <button className={"chip-btn" + (audience === "committee" ? " active" : "")} onClick={() => setAudience("committee")}>Только комитету</button>
+          <button className={"chip-btn" + (audience === "all" ? " active" : "")} onClick={() => setAudience("all")}>Всем, включая учителя</button>
         </div>
         <label>Что откроется по нажатию</label>
         <div className="push-aud">

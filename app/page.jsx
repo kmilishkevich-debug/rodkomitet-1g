@@ -191,33 +191,44 @@ export default function Page() {
     reloadPolls();
   }, [reloadPolls]);
 
+  // Классный руководитель не видит объявления и голосования комитета:
+  // только помеченные галочкой «видно учителю» и свои собственные.
+  // Фильтруем один раз здесь, чтобы лента, главная и счётчики совпадали.
+  const visibleTo = (list) => {
+    if (!list || !teacher) return list;
+    return list.filter((r) => r.teacher_visible || (authorName && r.author === authorName));
+  };
+  const shownAnnouncements = visibleTo(liveAnnouncements);
+  const shownPolls = visibleTo(livePolls);
+
   // Бейджи в меню: сколько активных объявлений / открытых голосований ещё не видели на этом устройстве
   const [seenTick, setSeenTick] = useState(0); // перерисовка после отметки «видел»
   const newsBadge = (() => {
-    if (!liveAnnouncements) return 0;
+    if (!shownAnnouncements) return 0;
     const seen = loadSeen("rk1g-news-seen");
-    return liveAnnouncements.filter((a) => a.status === "active" && !seen.has(a.id)).length;
+    return shownAnnouncements.filter((a) => a.status === "active" && !seen.has(a.id)).length;
   })();
   const pollsBadge = (() => {
-    if (!livePolls) return 0;
+    if (!shownPolls) return 0;
     const seen = loadSeen("rk1g-polls-seen");
-    return livePolls.filter((p) => pollState(p) === "open" && !seen.has(p.id)).length;
+    return shownPolls.filter((p) => pollState(p) === "open" && !seen.has(p.id)).length;
   })();
 
   // Открыл вкладку — всё в ней считается просмотренным (бейдж гаснет)
   useEffect(() => {
-    if (tab === "announcements" && liveAnnouncements?.length) {
+    if (tab === "announcements" && shownAnnouncements?.length) {
       const seen = loadSeen("rk1g-news-seen");
-      liveAnnouncements.forEach((a) => seen.add(a.id));
+      shownAnnouncements.forEach((a) => seen.add(a.id));
       saveSeen("rk1g-news-seen", seen);
       setSeenTick((t) => t + 1);
     }
-    if (tab === "votes" && livePolls?.length) {
+    if (tab === "votes" && shownPolls?.length) {
       const seen = loadSeen("rk1g-polls-seen");
-      livePolls.forEach((p) => seen.add(p.id));
+      shownPolls.forEach((p) => seen.add(p.id));
       saveSeen("rk1g-polls-seen", seen);
       setSeenTick((t) => t + 1);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, liveAnnouncements, livePolls]);
   void seenTick;
 
@@ -558,11 +569,11 @@ export default function Page() {
             }}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={liveAnnouncements} polls={livePolls} reads={liveReads} family={family} setFamily={setFamily} notes={liveNotes} onReloadNotes={reloadNotes} homework={liveHomework} events={liveEvents} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={shownAnnouncements} polls={shownPolls} reads={liveReads} family={family} setFamily={setFamily} notes={liveNotes} onReloadNotes={reloadNotes} homework={liveHomework} events={liveEvents} />}
             {tab === "teacher" && <TeacherTab authorName={authorName} toast={toast} onTab={showTab} homework={liveHomework} events={liveEvents} teacherNotes={teacherNotes} onReload={() => { reloadHomework(); reloadEvents(); reloadTeacherNotes(); }} />}
             {tab === "schedule" && <ScheduleTab committee={committee} canEditSchedule={canEditSchedule} author={author} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} overrides={liveOverrides} onReloadOverrides={reloadOverrides} />}
-            {tab === "announcements" && <AnnouncementsTab committee={committee} canEdit={committee || teacher} author={author} toast={toast} announcements={liveAnnouncements} reads={liveReads} onReload={reloadAnnouncements} onReloadReads={reloadReads} family={family} setFamily={setFamily} />}
-            {tab === "votes" && <VotesTab committee={committee} canEdit={committee || teacher} author={author} toast={toast} polls={livePolls} onReload={reloadPolls} family={family} setFamily={setFamily} />}
+            {tab === "announcements" && <AnnouncementsTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} announcements={shownAnnouncements} reads={liveReads} onReload={reloadAnnouncements} onReloadReads={reloadReads} family={family} setFamily={setFamily} />}
+            {tab === "votes" && <VotesTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} polls={shownPolls} onReload={reloadPolls} family={family} setFamily={setFamily} />}
             {tab === "class" && <ClassTab committee={committee} toast={toast} liveBirthdays={liveBirthdays} />}
             {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} author={author} family={family} />}
           </main>

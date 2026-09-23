@@ -8,13 +8,14 @@ import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker"
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
 // ===== Редактор объявления (создание и правка) =====
-function AnnouncementEditor({ open, initial, author, onClose, onSaved, toast }) {
+function AnnouncementEditor({ open, initial, author, teacher, onClose, onSaved, toast }) {
   const dkey = "announcement:" + (initial?.id || "new");
   const base = {
     title: initial?.title || "",
     body: initial?.body || "",
     important: !!initial?.important,
     pinned: !!initial?.pinned,
+    teacherVisible: !!initial?.teacher_visible,
   };
   const [saved] = useState(() => (typeof window === "undefined" ? null : readDraft(dkey)));
   const start = saved ? { ...base, ...saved } : base;
@@ -23,6 +24,7 @@ function AnnouncementEditor({ open, initial, author, onClose, onSaved, toast }) 
   const [body, setBody] = useState(start.body);
   const [important, setImportant] = useState(!!start.important);
   const [pinned, setPinned] = useState(!!start.pinned);
+  const [teacherVisible, setTeacherVisible] = useState(!!start.teacherVisible);
   const [imageUrl, setImageUrl] = useState(initial?.image_url || null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -31,7 +33,7 @@ function AnnouncementEditor({ open, initial, author, onClose, onSaved, toast }) 
   // Пока редактор открыт — фоновое обновление данных на паузе
   useRefreshPause(open);
 
-  const values = { title, body, important, pinned };
+  const values = { title, body, important, pinned, teacherVisible };
   const dirty = isDirty(values, base);
   useDraftAutosave(open, dkey, values, dirty);
 
@@ -75,6 +77,8 @@ function AnnouncementEditor({ open, initial, author, onClose, onSaved, toast }) 
         important,
         pinned,
         image_url: imageUrl,
+        // Учительские объявления она видит всегда; у комитета — по галочке
+        teacher_visible: teacher ? true : teacherVisible,
       };
       if (initial?.id) payload.id = initial.id;
       else { payload.author = author; payload.status = "active"; }
@@ -106,6 +110,9 @@ function AnnouncementEditor({ open, initial, author, onClose, onSaved, toast }) 
         <div className="news-editor-flags">
           <label className="chk-row"><input type="checkbox" checked={important} onChange={(e) => setImportant(e.target.checked)} /> Важное (заметная метка)</label>
           <label className="chk-row"><input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} /> Закрепить сверху ленты</label>
+          {!teacher && (
+            <label className="chk-row"><input type="checkbox" checked={teacherVisible} onChange={(e) => setTeacherVisible(e.target.checked)} /> Видно классному руководителю</label>
+          )}
         </div>
         {imageUrl ? (
           <div className="news-editor-photo">
@@ -222,7 +229,7 @@ function AnnouncementCard({ a, committee, canEdit, family, reads, toast, onEdit,
 }
 
 // ===== Вкладка «Объявления» =====
-export default function AnnouncementsTab({ committee, canEdit, author, toast, announcements, reads, onReload, onReloadReads, family, setFamily }) {
+export default function AnnouncementsTab({ committee, canEdit, teacher, author, toast, announcements, reads, onReload, onReloadReads, family, setFamily }) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showArchive, setShowArchive] = useState(false);
@@ -294,8 +301,12 @@ export default function AnnouncementsTab({ committee, canEdit, author, toast, an
 
       {announcements !== null && active.length === 0 && (
         <div className="card news-empty reveal d1">
-          <p><b>Пока нет объявлений.</b></p>
-          <p className="muted">Когда комитет или учитель опубликует новость — она появится здесь, а на вкладке загорится бейдж.</p>
+          <p><b>{teacher ? "Пока нет ваших объявлений." : "Пока нет объявлений."}</b></p>
+          <p className="muted">
+            {teacher
+              ? "Здесь появятся объявления, которые вы опубликуете для класса."
+              : "Когда комитет или учитель опубликует новость — она появится здесь, а на вкладке загорится бейдж."}
+          </p>
         </div>
       )}
 
@@ -324,7 +335,7 @@ export default function AnnouncementsTab({ committee, canEdit, author, toast, an
 
       {editorOpen && (
         <AnnouncementEditor
-          open={editorOpen} initial={editing} author={author} toast={toast}
+          open={editorOpen} initial={editing} author={author} teacher={teacher} toast={toast}
           onClose={() => setEditorOpen(false)} onSaved={onReload}
         />
       )}
