@@ -12,6 +12,7 @@ import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDate
 import { BIRTHDAYS_FALLBACK, BD_MONTHS_PREP, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, bdInfo, inDaysWord } from "./birthdaysData";
 import FamilyPicker from "./FamilyPicker";
 import PushSettings from "./PushSettings";
+import TeacherBoard from "./TeacherBoard";
 import ClassMascot from "./ClassMascot";
 import { pollState, fmtDeadline } from "./VotesTab";
 import { fmtNewsDate } from "./FamilyPicker";
@@ -577,7 +578,8 @@ function NotesWidget({ family, notes, onReload, toast }) {
   const [date, setDate] = useState("");
   const [saving, setSaving] = useState(false);
   const todayIso = minskIso();
-  const list = sortNotes(notes || [], todayIso);
+  // Заметки от учителя живут в отдельной карточке «От учителя» — здесь их не дублируем
+  const list = sortNotes((notes || []).filter((n) => !n.from_teacher), todayIso);
   const add = async () => {
     const t = text.trim();
     if (!t) { toast("Напишите текст заметки"); return; }
@@ -732,7 +734,7 @@ function CommitteeRemind({ authorName, toast }) {
   );
 }
 
-export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls, reads, family, setFamily, notes, onReloadNotes }) {
+export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls, reads, family, setFamily, notes, onReloadNotes, homework, events }) {
   // Персональное приветствие: у комитета/учителя — имя из базы; у семьи — по ребёнку («семья Тимофея»)
   const greetName = authorName
     ? `, ${authorName}`
@@ -852,6 +854,15 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       <ActivePolls polls={polls} family={family} onTab={onTab} />
 
       {/* Персонализация: привязка семьи (для комитета/учителя), сводка семьи, заметки, напоминания семьям */}
+      <TeacherBoard
+        homework={homework}
+        events={events}
+        notes={notes}
+        onReloadNotes={onReloadNotes}
+        toast={toast}
+        onTab={onTab}
+      />
+
       {!family && (committee || role === "teacher") && <BindFamilyCard setFamily={setFamily} toast={toast} />}
       {family && <FamilyWidget family={family} polls={polls} bdays={bdays} onTab={onTab} />}
       {family && <NotesWidget family={family} notes={notes} onReload={onReloadNotes} toast={toast} />}

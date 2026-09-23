@@ -35,6 +35,32 @@ const MORE_ITEMS = [
 // вкладка «Деньги» с соответствующей подвкладкой
 const MONEY_SUBS = ["fees", "expenses", "history"];
 
+// ===== Меню классного руководителя =====
+// У учителя нет доступа к деньгам: сборы, расходы и история из меню убраны.
+// Вместо них первым пунктом стоит его кабинет.
+const TEACHER_TOP_TABS = [
+  { id: "teacher", icon: "i-edit", label: "Кабинет" },
+  { id: "dashboard", icon: "i-home", label: "Главная" },
+  { id: "announcements", icon: "i-bell", label: "Объявления" },
+  { id: "schedule", icon: "i-clock", label: "Расписание" },
+  { id: "votes", icon: "i-vote", label: "Голосования" },
+  { id: "class", icon: "i-users", label: "Класс" },
+];
+
+const TEACHER_BOTTOM_TABS = [
+  { id: "teacher", icon: "i-edit", label: "Кабинет" },
+  { id: "dashboard", icon: "i-home", label: "Главная" },
+  { id: "schedule", icon: "i-clock", label: "Уроки" },
+  { id: "class", icon: "i-users", label: "Класс" },
+];
+
+const TEACHER_MORE_ITEMS = [
+  { id: "announcements", label: "Объявления" },
+  { id: "votes", label: "Голосования" },
+];
+
+const isTeacher = (role) => role === "teacher";
+
 // Однократное проигрывание анимации иконки при нажатии (демо-механика play)
 function playOnce(e) {
   const b = e.currentTarget;
@@ -55,20 +81,36 @@ function NavBadge({ n }) {
   return <span className="nav-badge">{n > 9 ? "9+" : n}</span>;
 }
 
-export default function Header({ committee, tab, moneySub, onTab, onLogout, newsBadge = 0, pollsBadge = 0, notesBadge = 0 }) {
+// Инициалы для кружка-аватара: «Головко В. П.» → «ГВ»
+function initials(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "У";
+  const a = parts[0][0] || "";
+  const b = parts[1] ? parts[1][0] : "";
+  return (a + b).toUpperCase();
+}
+
+export default function Header({ committee, role, teacherName, tab, moneySub, onTab, onLogout, newsBadge = 0, pollsBadge = 0, notesBadge = 0 }) {
+  const teacher = isTeacher(role);
+  const tabs = teacher ? TEACHER_TOP_TABS : TOP_TABS;
   const isActive = (t) =>
     t.id === tab || (tab === "money" && MONEY_SUBS.includes(t.id) && moneySub === t.id);
   const badgeFor = (id) => (id === "announcements" ? newsBadge : id === "votes" ? pollsBadge : id === "dashboard" ? notesBadge : 0);
+
+  const avatar = teacher ? initials(teacherName) : committee ? "КМ" : "Р";
+  const nameText = teacher ? (teacherName || "Учитель") : committee ? "Кристина М." : "Родитель";
+  const roleText = teacher ? "классный руководитель" : committee ? "член комитета" : "родитель";
+
   return (
     <header>
       <div className="header-inner">
         <div className="logo"><span className="logo-badge">1«Г»</span>Наш 1 «Г»</div>
         <div className="spacer"></div>
-        <div className="user-chip">
-          <div className="avatar" id="userAvatar">{committee ? "КМ" : "Р"}</div>
+        <div className={"user-chip" + (teacher ? " is-teacher" : "")}>
+          <div className="avatar" id="userAvatar">{avatar}</div>
           <div className="name-block">
-            <div id="userName">{committee ? "Кристина М." : "Родитель"}</div>
-            <div className="role-tag" id="userRole">{committee ? "член комитета" : "родитель"}</div>
+            <div id="userName">{nameText}</div>
+            <div className="role-tag" id="userRole">{roleText}</div>
           </div>
           <button className="exit-btn" onClick={onLogout} title="Выйти">
             <Ic id="i-door" /><span className="exit-label">Выход</span>
@@ -76,7 +118,7 @@ export default function Header({ committee, tab, moneySub, onTab, onLogout, news
         </div>
       </div>
       <nav className="topnav" id="mainNav">
-        {TOP_TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             data-tab={t.id}
@@ -104,13 +146,16 @@ function BurgerIcon({ open }) {
   );
 }
 
-export function BottomNav({ tab, moneySub, onTab, newsBadge = 0, pollsBadge = 0, notesBadge = 0 }) {
+export function BottomNav({ tab, role, moneySub, onTab, newsBadge = 0, pollsBadge = 0, notesBadge = 0 }) {
   const [moreOpen, setMoreOpen] = useState(false);
-  const moreActive = tab === "money" || tab === "announcements";
+  const teacher = isTeacher(role);
+  const tabs = teacher ? TEACHER_BOTTOM_TABS : BOTTOM_TABS;
+  const more = teacher ? TEACHER_MORE_ITEMS : MORE_ITEMS;
+  const moreActive = more.some((m) => m.id === tab) || (!teacher && tab === "money");
   const pick = (id) => { setMoreOpen(false); onTab(id); };
   return (
     <nav className="bottomnav" id="bottomNav">
-      {BOTTOM_TABS.map((t) => (
+      {tabs.map((t) => (
         <button
           key={t.id}
           data-tab={t.id}
@@ -137,7 +182,7 @@ export function BottomNav({ tab, moneySub, onTab, newsBadge = 0, pollsBadge = 0,
         </button>
         {moreOpen && (
           <div className="bnav-more-menu" role="menu">
-            {MORE_ITEMS.map((m) => (
+            {more.map((m) => (
               <button
                 key={m.id}
                 role="menuitem"
@@ -146,6 +191,7 @@ export function BottomNav({ tab, moneySub, onTab, newsBadge = 0, pollsBadge = 0,
               >
                 <NavIcon name={m.id} uid={"more-" + m.id} size={26} />{m.label}
                 {m.id === "announcements" && newsBadge > 0 && <span className="nav-badge">{newsBadge > 9 ? "9+" : newsBadge}</span>}
+                {m.id === "votes" && pollsBadge > 0 && <span className="nav-badge">{pollsBadge > 9 ? "9+" : pollsBadge}</span>}
               </button>
             ))}
           </div>
