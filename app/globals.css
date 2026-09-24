@@ -295,6 +295,9 @@ tr:last-child td{border-bottom:none}
 .welcome-copy{flex:1;min-width:0}
 .welcome-h1{font-family:'Comfortaa','Trebuchet MS','Arial Rounded MT Bold',sans-serif;font-weight:700;font-size:clamp(29px,4.4vw,52px);line-height:1.12;letter-spacing:-.015em;margin-bottom:14px}
 .welcome-h1 .blue{color:var(--blue)}
+/* Приветствие и главная мысль дня — отдельными абзацами, с воздухом между ними */
+.welcome-h1 .welcome-greet,.welcome-h1 .welcome-headline{display:block}
+.welcome-h1 .welcome-headline{margin-top:.42em}
 .welcome-sub{color:var(--muted);font-size:16px;line-height:1.5;max-width:600px;margin-bottom:20px}
 .welcome-chips{display:flex;flex-wrap:wrap;gap:10px}
 .w-chip{border:none;cursor:pointer;border-radius:999px;padding:11px 16px;font-size:13.3px;font-weight:700;font-family:'Onest';color:var(--ink);transition:.15s}
@@ -1262,7 +1265,11 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .tc-welcome-wrap{
   --tc-mascot-h:clamp(248px,25.5vw,320px);  /* видимая высота персонажа */
   --tc-pad:clamp(26px,2.6vw,36px);          /* внутренние поля карточки */
-  --tc-rise:calc(var(--tc-mascot-h) * .206);/* вынос сцены над карточкой */
+  /* Вынос сцены над карточкой = высота сцены (1.30 × рост) + 6 px отрыва
+     ступней − минимальная высота карточки (300 px). Столько места честно
+     занято в потоке страницы, поэтому облачко не срезается и не уезжает
+     под шапку меню. */
+  --tc-rise:calc(var(--tc-mascot-h) * 1.30 + 6px - 300px);
   margin-bottom:18px}
 .tc-date{margin:2px 0 12px}
 
@@ -1281,7 +1288,7 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .tc-greeting{margin-bottom:10px;font-size:clamp(25px,3.3vw,38px);line-height:1.2;
   font-weight:400;letter-spacing:-.01em}
 .tc-greet-line{display:block}
-.tc-sub{font-size:clamp(15px,1.3vw,17px);font-weight:500;color:var(--muted);
+.tc-sub{font-size:clamp(16px,1.4vw,18px);font-weight:500;color:var(--muted);
   line-height:1.45;margin-bottom:22px}
 
 .tc-main-btns{display:flex;gap:10px;flex-wrap:wrap}
@@ -1305,10 +1312,13 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 /* Колонка сцены — обычный элемент сетки: она честно занимает ширину,
    поэтому длинный заголовок переносится, а не заезжает на персонажа. */
 .tc-scene{position:relative;min-height:calc(var(--tc-mascot-h) * .72)}
+/* Высота сцены = рост маскота + воздух над головой под облачко.
+   Коэффициент 1.30 и --tc-rise связаны формулой (см. .tc-welcome-wrap):
+   меняя один, пересчитайте второй, иначе облачко срежет верхним краем. */
 .tc-stage{position:absolute;right:calc(var(--tc-mascot-h) * -.094);
   bottom:calc(6px - var(--tc-pad));
   width:calc(var(--tc-mascot-h) * 1.47);
-  height:calc(var(--tc-mascot-h) * 1.125);
+  height:calc(var(--tc-mascot-h) * 1.30);
   pointer-events:none}
 
 /* 1. тень — отдельным элементом под ступнями */
@@ -1324,18 +1334,39 @@ nav.bottomnav .nav-badge{top:0;right:8px}
   opacity:0;transform:translateY(10px) scale(.97);
   transition:opacity .5s var(--ease-out-soft),transform .6s var(--ease-spring)}
 .tc-stage.is-in .tc-mascot-img{opacity:1;transform:none}
+/* Когда на месте картинки окажется ролик — те же размеры и прозрачный фон,
+   поэтому белого прямоугольника на кремовом не будет. */
+video.tc-mascot-img{background:transparent;object-fit:contain}
 
-/* 3. облачко — вправо и вверх от головы, зазор до контура ~20 px.
-   Пропорции строго как у ассета (506 × 254 после обрезки прозрачных
+/* Кнопка паузы — появляется только вместе с анимацией. Сама сцена
+   не ловит клики, поэтому кнопке возвращаем pointer-events. */
+.tc-mascot-pause{position:absolute;z-index:4;pointer-events:auto;
+  left:2%;bottom:6%;width:34px;height:34px;display:grid;place-items:center;
+  border:1.5px solid var(--soft-line);border-radius:50%;
+  background:var(--card);color:var(--muted);cursor:pointer;
+  box-shadow:0 3px 10px rgba(23,23,23,.10);
+  opacity:0;transition:opacity .3s var(--ease-out-soft) .4s,
+    color var(--t-micro),border-color var(--t-micro)}
+.tc-stage.is-in .tc-mascot-pause{opacity:.85}
+.tc-mascot-pause:hover{opacity:1;color:var(--ink);border-color:var(--blue-soft)}
+.tc-mascot-pause:focus-visible{opacity:1;outline:3px solid var(--blue);outline-offset:2px}
+.tc-mascot-pause svg{width:15px;height:15px}
+
+/* 3. облачко — вправо и вверх от головы, хвостик смотрит вниз-влево.
+   Пропорции строго как у ассета (1320 × 895 после обрезки прозрачных
    полей), поэтому ничего не растягивается: ни width/height по
-   отдельности, ни background-size:100% 100%. */
+   отдельности, ни background-size:100% 100%.
+   Ширина .70 от роста маскота даёт ≈224 × 151 px на десктопе и зазор
+   ≈17 px до силуэта — очки, глаза, блокнот и карандаш открыты.
+   Поля подобраны по вписанному прямоугольнику облака: текст стоит
+   в его круглом теле и не наезжает ни на края, ни на хвостик. */
 .tc-cloud{position:absolute;z-index:3;right:0;top:0;
-  width:calc(var(--tc-mascot-h) * .656);aspect-ratio:506/254;
-  background:url(/bubble-right-tight.webp) center/contain no-repeat;
+  width:calc(var(--tc-mascot-h) * .70);aspect-ratio:1320/895;
+  background:url(/bubble-cloud.webp) center/contain no-repeat;
   display:flex;align-items:center;justify-content:center;
-  padding:0 11% 17%;                     /* поля от краёв и от хвостика */
+  padding:14% 17% 0;                     /* поля от краёв и от хвостика */
   filter:drop-shadow(0 6px 12px rgba(92,76,40,.16));
-  opacity:0;transform:translateY(8px) scale(.94);transform-origin:14% 100%;
+  opacity:0;transform:translateY(8px) scale(.94);transform-origin:10% 72%;
   transition:opacity .45s var(--ease-out-soft) .25s,
     transform .55s var(--ease-spring) .25s;
   pointer-events:none}
@@ -1452,8 +1483,9 @@ nav.bottomnav .nav-badge{top:0;right:8px}
   .tc-scene{order:1;min-height:0;margin-bottom:6px}
   .tc-stage{position:relative;right:auto;bottom:auto;margin:0 auto;
     width:calc(var(--tc-mascot-h) * 1.47);
-    height:calc(var(--tc-mascot-h) * 1.125)}
-  .tc-cloud{width:calc(var(--tc-mascot-h) * .72)}
+    height:calc(var(--tc-mascot-h) * 1.30)}
+  /* Пропорции облачка те же, что на десктопе, — композиция не меняется */
+  .tc-cloud{width:calc(var(--tc-mascot-h) * .70)}
   .tc-greeting{font-size:clamp(24px,7vw,30px)}
 
   .tc-main-btns{flex-direction:column}
