@@ -1265,11 +1265,13 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .tc-welcome-wrap{
   --tc-mascot-h:clamp(248px,25.5vw,320px);  /* видимая высота персонажа */
   --tc-pad:clamp(26px,2.6vw,36px);          /* внутренние поля карточки */
-  /* Вынос сцены над карточкой = высота сцены (1.30 × рост) + 6 px отрыва
+  /* Вынос сцены над карточкой = высота сцены (k × рост) + 6 px отрыва
      ступней − минимальная высота карточки (300 px). Столько места честно
      занято в потоке страницы, поэтому облачко не срезается и не уезжает
-     под шапку меню. */
-  --tc-rise:calc(var(--tc-mascot-h) * 1.30 + 6px - 300px);
+     под шапку меню. При 320 px роста это 80 px — ровно столько, сколько
+     нужно выступающей макушке и облачку, без пустой полосы. */
+  --tc-scene-k:1.16875;
+  --tc-rise:calc(var(--tc-mascot-h) * var(--tc-scene-k) + 6px - 300px);
   margin-bottom:18px}
 .tc-date{margin:2px 0 12px}
 
@@ -1285,16 +1287,19 @@ nav.bottomnav .nav-badge{top:0;right:8px}
   border:1.5px solid var(--blue-soft)}
 .tc-welcome-text{min-width:0;overflow-wrap:anywhere}
 
-.tc-greeting{margin-bottom:10px;font-size:clamp(25px,3.3vw,38px);line-height:1.2;
-  font-weight:400;letter-spacing:-.01em}
+/* Тот же округлый фирменный шрифт, что и в заголовках карточек внизу.
+   Comfortaa подключена только в весах 500/600/700 — запрос 400 заставлял
+   браузер подставлять системный, из-за чего приветствие выбивалось. */
+.tc-greeting{margin-bottom:10px;font-size:clamp(25px,3.3vw,38px);line-height:1.15;
+  font-family:var(--font-display);font-weight:700;letter-spacing:-.01em}
 .tc-greet-line{display:block}
-.tc-sub{font-size:clamp(16px,1.4vw,18px);font-weight:500;color:var(--muted);
+.tc-sub{font-size:clamp(16px,1.45vw,18px);font-weight:500;color:var(--muted);
   line-height:1.45;margin-bottom:22px}
 
 .tc-main-btns{display:flex;gap:10px;flex-wrap:wrap}
 .tc-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;
   cursor:pointer;border:none;border-radius:16px;padding:14px 22px;
-  font-family:var(--font-ui);font-size:15px;font-weight:700;color:#fff;
+  font-family:var(--font-ui);font-size:16px;font-weight:700;color:#fff;
   transition:transform var(--t-micro) var(--ease-out-soft),
     box-shadow var(--t-micro),background var(--t-micro)}
 .tc-btn:hover{transform:translateY(-2px)}
@@ -1311,14 +1316,19 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 /* — сцена маскота ---------------------------------------------- */
 /* Колонка сцены — обычный элемент сетки: она честно занимает ширину,
    поэтому длинный заголовок переносится, а не заезжает на персонажа. */
-.tc-scene{position:relative;min-height:calc(var(--tc-mascot-h) * .72)}
+/* align-self:stretch обязателен: колонка сцены не должна центрироваться
+   по вертикали, иначе при любом изменении высоты карточки ступни маскота
+   отрываются от её нижней границы. */
+.tc-scene{position:relative;align-self:stretch;
+  min-height:calc(var(--tc-mascot-h) * .72)}
 /* Высота сцены = рост маскота + воздух над головой под облачко.
-   Коэффициент 1.30 и --tc-rise связаны формулой (см. .tc-welcome-wrap):
-   меняя один, пересчитайте второй, иначе облачко срежет верхним краем. */
+   Коэффициент --tc-scene-k и --tc-rise связаны одной формулой
+   (см. .tc-welcome-wrap) — поэтому он задан переменной и меняется
+   в одном месте, иначе облачко срежет верхним краем. */
 .tc-stage{position:absolute;right:calc(var(--tc-mascot-h) * -.094);
   bottom:calc(6px - var(--tc-pad));
   width:calc(var(--tc-mascot-h) * 1.47);
-  height:calc(var(--tc-mascot-h) * 1.30);
+  height:calc(var(--tc-mascot-h) * var(--tc-scene-k));
   pointer-events:none}
 
 /* 1. тень — отдельным элементом под ступнями */
@@ -1373,9 +1383,14 @@ svg.tc-mascot-img{height:calc(var(--tc-mascot-h) * 663 / 623);width:auto;
 }
 
 /* Кнопка паузы — появляется только вместе с анимацией. Сама сцена
-   не ловит клики, поэтому кнопке возвращаем pointer-events. */
+   не ловит клики, поэтому кнопке возвращаем pointer-events.
+   Стоит в нижнем правом углу зоны маскота (ширина персонажа —
+   1.0915 × рост, кнопка прижата к её правому краю у линии ступней):
+   так она читается как часть сцены, а не как отдельный элемент
+   карточки. 44 × 44 — минимальная комфортная область нажатия. */
 .tc-mascot-pause{position:absolute;z-index:4;pointer-events:auto;
-  left:2%;bottom:6%;width:34px;height:34px;display:grid;place-items:center;
+  left:calc(var(--tc-mascot-h) * .94);bottom:0;
+  width:44px;height:44px;display:grid;place-items:center;
   border:1.5px solid var(--soft-line);border-radius:50%;
   background:var(--card);color:var(--muted);cursor:pointer;
   box-shadow:0 3px 10px rgba(23,23,23,.10);
@@ -1384,28 +1399,36 @@ svg.tc-mascot-img{height:calc(var(--tc-mascot-h) * 663 / 623);width:auto;
 .tc-stage.is-in .tc-mascot-pause{opacity:.85}
 .tc-mascot-pause:hover{opacity:1;color:var(--ink);border-color:var(--blue-soft)}
 .tc-mascot-pause:focus-visible{opacity:1;outline:3px solid var(--blue);outline-offset:2px}
-.tc-mascot-pause svg{width:15px;height:15px}
+.tc-mascot-pause svg{width:16px;height:16px}
 
-/* 3. облачко — вправо и вверх от головы, хвостик смотрит вниз-влево.
-   Пропорции строго как у ассета (1320 × 895 после обрезки прозрачных
-   полей), поэтому ничего не растягивается: ни width/height по
-   отдельности, ни background-size:100% 100%.
-   Ширина .70 от роста маскота даёт ≈224 × 151 px на десктопе и зазор
-   ≈17 px до силуэта — очки, глаза, блокнот и карандаш открыты.
-   Поля подобраны по вписанному прямоугольнику облака: текст стоит
-   в его круглом теле и не наезжает ни на края, ни на хвостик. */
-.tc-cloud{position:absolute;z-index:3;right:0;top:0;
-  width:calc(var(--tc-mascot-h) * .70);aspect-ratio:1320/895;
+/* 3. облачко — рядом с головой, хвостик смотрит вниз-влево, на маскота.
+   Пропорции строго как у ассета, поэтому ничего не растягивается: ни
+   width/height по отдельности, ни background-size:100% 100%.
+   Ширина .52 от роста маскота даёт ≈166 × 113 px на десктопе; при таком
+   размере облачко встаёт вплотную к голове (зазор ≈23 px до силуэта и
+   ≈20 px до карандаша — с запасом на всю амплитуду анимации), а очки,
+   глаза и карандаш остаются открытыми в любом кадре. Прежние .70 рядом
+   с головой физически не помещались и уезжали к правому краю.
+   right/top заданы в долях роста, поэтому композиция масштабируется
+   целиком вместе с персонажем. */
+.tc-cloud{position:absolute;z-index:3;
+  right:calc(var(--tc-mascot-h) * .1513);top:0;
+  width:calc(var(--tc-mascot-h) * .52);aspect-ratio:1320/895;
   background:url(/bubble-cloud.webp) center/contain no-repeat;
   display:flex;align-items:center;justify-content:center;
-  padding:14% 17% 0;                     /* поля от краёв и от хвостика */
+  /* Проценты в padding считаются от ШИРИНЫ, а не от высоты: прежние
+     14% сверху давали 20.7% высоты и роняли надпись вниз. Разница
+     верх−низ = 1.9% ширины ставит текст точно в центр круглого тела
+     облака (51.4% высоты), не считая хвостик. */
+  padding:3.5% 13% 1.6%;
   filter:drop-shadow(0 6px 12px rgba(92,76,40,.16));
-  opacity:0;transform:translateY(8px) scale(.94);transform-origin:10% 72%;
+  opacity:0;transform:translateY(8px) scale(.94);
+  transform-origin:42% 99%;              /* измеренный кончик хвостика */
   transition:opacity .45s var(--ease-out-soft) .25s,
     transform .55s var(--ease-spring) .25s;
   pointer-events:none}
 .tc-cloud-text{display:block;text-align:center;color:#203A73;
-  font-family:var(--font-display);font-size:clamp(16px,1.75vw,21px);
+  font-family:var(--font-display);font-size:clamp(13px,1.25vw,15px);
   font-weight:700;line-height:1.16;letter-spacing:-.01em}
 .tc-cloud-text span{display:block;white-space:nowrap}
 .tc-stage.is-in .tc-cloud{opacity:1;transform:none}
@@ -1414,8 +1437,12 @@ svg.tc-mascot-img{height:calc(var(--tc-mascot-h) * 663 / 623);width:auto;
 /* Горизонтальная композиция: крупная иконка → название и подпись →
    стрелка. Заливки светлее, обводки почти не видны. */
 .tc-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+/* align-items:start — ключ к выравниванию: заголовки всех трёх карточек
+   стоят на одной верхней линии, а иконка и стрелка не «плавают» по
+   вертикали. Поэтому «Изменить расписание» может занять две строки — она
+   растёт вниз и ничего в композиции не сдвигает. */
 .tc-quick-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;
-  align-items:center;gap:16px;min-height:116px;
+  align-items:start;gap:16px;min-height:116px;
   cursor:pointer;text-align:left;border:1.5px solid transparent;border-radius:22px;
   padding:20px 22px;font-family:var(--font-ui);color:var(--ink);
   transition:transform var(--t-micro) var(--ease-out-soft),box-shadow var(--t-micro)}
@@ -1425,11 +1452,17 @@ svg.tc-mascot-img{height:calc(var(--tc-mascot-h) * 663 / 623);width:auto;
 .tc-quick-card.tone-pink{background:#FCE9F1;border-color:#F7D9E6}
 .tc-quick-card.tone-green{background:#EDF4E1;border-color:#DEEBCB}
 .tc-quick-card.tone-lav{background:#EFE8FC;border-color:#E2D8F8}
-.tc-quick-icon{width:54px;height:54px;object-fit:contain;flex:none}
-.tc-quick-body{display:flex;flex-direction:column;gap:4px;min-width:0}
+/* Одинаковый бокс под иконку у всех трёх карточек — при object-fit:contain
+   рисунки приводятся к одному визуальному размеру независимо от того,
+   сколько прозрачных полей у конкретного файла. */
+.tc-quick-icon{width:54px;height:54px;object-fit:contain;flex:none;align-self:start}
+.tc-quick-body{display:flex;flex-direction:column;gap:4px;min-width:0;
+  padding-top:1px}
 .tc-quick-title{font-size:17.5px;font-weight:700;line-height:1.25}
 .tc-quick-sub{font-size:14.5px;font-weight:400;color:var(--muted);line-height:1.35}
+/* Стрелка выровнена по первой строке заголовка — одинаково во всех трёх. */
 .tc-quick-arrow{width:20px;height:20px;flex:none;color:var(--muted);opacity:.55;
+  align-self:start;margin-top:2px;
   transition:transform var(--t-micro) var(--ease-out-soft),opacity var(--t-micro)}
 
 /* — рабочая сетка ---------------------------------------------- */
@@ -1447,9 +1480,11 @@ svg.tc-mascot-img{height:calc(var(--tc-mascot-h) * 663 / 623);width:auto;
 /* Пустое состояние: маленькая иллюстрация, спокойный заголовок и подсказка.
    Не «ошибка», а нормальное положение дел — поэтому без рамок и заливок. */
 .tc-empty{display:flex;flex-direction:column;align-items:center;text-align:center;
-  gap:8px;padding:26px 8px 24px}
-.tc-empty-icon{width:clamp(44px,9vw,56px);height:clamp(44px,9vw,56px);
-  object-fit:contain;opacity:.85;margin-bottom:2px}
+  gap:6px;padding:16px 8px 14px}
+/* Иллюстрация в пустом состоянии повторяет иконку заголовка карточки,
+   поэтому она нарочно мелкая: подсказка, а не второй акцент. */
+.tc-empty-icon{width:clamp(48px,5vw,56px);height:clamp(48px,5vw,56px);
+  object-fit:contain;opacity:.75;margin-bottom:0}
 .tc-empty-title{font-size:15.5px;font-weight:600;color:var(--ink);line-height:1.35}
 .tc-empty-hint{font-size:13.5px;font-weight:400;color:var(--muted);line-height:1.5;
   max-width:30ch}
@@ -1514,12 +1549,15 @@ svg.tc-mascot-img{height:calc(var(--tc-mascot-h) * 663 / 623);width:auto;
   .tc-welcome{grid-template-columns:1fr;gap:0;
     padding:18px 20px 22px;min-height:0;margin-top:0}
   .tc-welcome-text{order:2}
-  .tc-scene{order:1;min-height:0;margin-bottom:6px}
+  .tc-scene{order:1;align-self:auto;min-height:0;margin-bottom:6px}
   .tc-stage{position:relative;right:auto;bottom:auto;margin:0 auto;
     width:calc(var(--tc-mascot-h) * 1.47);
-    height:calc(var(--tc-mascot-h) * 1.30)}
+    height:calc(var(--tc-mascot-h) * var(--tc-scene-k))}
   /* Пропорции облачка те же, что на десктопе, — композиция не меняется */
-  .tc-cloud{width:calc(var(--tc-mascot-h) * .70)}
+  .tc-cloud{width:calc(var(--tc-mascot-h) * .52);
+    right:calc(var(--tc-mascot-h) * .1513)}
+  /* Размер области нажатия на телефоне не уменьшаем — только положение */
+  .tc-mascot-pause{left:calc(var(--tc-mascot-h) * .96)}
   .tc-greeting{font-size:clamp(24px,7vw,30px)}
 
   .tc-main-btns{flex-direction:column}

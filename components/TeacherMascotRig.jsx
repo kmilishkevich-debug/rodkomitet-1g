@@ -339,8 +339,8 @@ export default function TeacherMascotRig({ phrase }) {
             type="button"
             className="tc-mascot-pause"
             onClick={() => setPaused((p) => !p)}
-            aria-label={paused ? "Включить анимацию" : "Остановить анимацию"}
-            title={paused ? "Включить анимацию" : "Остановить анимацию"}
+            aria-label={paused ? "Возобновить анимацию" : "Приостановить анимацию"}
+            title={paused ? "Возобновить анимацию" : "Приостановить анимацию"}
           >
             {paused ? (
               <svg viewBox="0 0 24 24" aria-hidden="true">
