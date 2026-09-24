@@ -1,5 +1,5 @@
 "use client";
-import TeacherMascotScene from "./TeacherMascotScene";
+import TeacherMascotRig from "./TeacherMascotRig";
 
 // ===== Приветственная карточка кабинета учителя =====
 // Две самостоятельные части: слева — текст и две главные кнопки,
@@ -52,7 +52,7 @@ export default function TeacherWelcomeCard({ name, todayIso, onAnnounce, onHomew
           </div>
         </div>
 
-        <TeacherMascotScene phrase={["Всё важное", "под рукой!"]} />
+        <TeacherMascotRig phrase={["Всё важное", "под рукой!"]} />
       </div>
     </div>
   );
