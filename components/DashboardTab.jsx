@@ -874,7 +874,9 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         onTab={onTab}
       />
 
-      {!family && (committee || role === "teacher") && <BindFamilyCard setFamily={setFamily} toast={toast} />}
+      {/* Привязка семьи — только для комитета: у учителя «Главной» больше нет,
+          да и своей семьи в списке класса у него не бывает */}
+      {!family && committee && <BindFamilyCard setFamily={setFamily} toast={toast} />}
       {family && <FamilyWidget family={family} polls={polls} bdays={bdays} onTab={onTab} />}
       {family && <NotesWidget family={family} notes={notes} onReload={onReloadNotes} toast={toast} />}
       {committee && <CommitteeRemind authorName={authorName} toast={toast} />}

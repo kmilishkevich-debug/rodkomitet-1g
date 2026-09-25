@@ -37,10 +37,9 @@ const MONEY_SUBS = ["fees", "expenses", "history"];
 
 // ===== Меню классного руководителя =====
 // У учителя нет доступа к деньгам: сборы, расходы и история из меню убраны.
-// Вместо них первым пунктом стоит его кабинет.
+// «Главной» у него тоже нет — там сводка с деньгами класса; его дом — Кабинет.
 const TEACHER_TOP_TABS = [
   { id: "teacher", icon: "i-edit", label: "Кабинет" },
-  { id: "dashboard", icon: "i-home", label: "Главная" },
   { id: "announcements", icon: "i-bell", label: "Объявления" },
   { id: "schedule", icon: "i-clock", label: "Расписание" },
   { id: "votes", icon: "i-vote", label: "Голосования" },
@@ -49,13 +48,12 @@ const TEACHER_TOP_TABS = [
 
 const TEACHER_BOTTOM_TABS = [
   { id: "teacher", icon: "i-edit", label: "Кабинет" },
-  { id: "dashboard", icon: "i-home", label: "Главная" },
+  { id: "announcements", icon: "i-bell", label: "Объявления" },
   { id: "schedule", icon: "i-clock", label: "Уроки" },
   { id: "class", icon: "i-users", label: "Класс" },
 ];
 
 const TEACHER_MORE_ITEMS = [
-  { id: "announcements", label: "Объявления" },
   { id: "votes", label: "Голосования" },
 ];
 
@@ -104,7 +102,8 @@ export default function Header({ committee, role, teacherName, userFullName, tab
   const tabs = teacher ? TEACHER_TOP_TABS : TOP_TABS;
   const isActive = (t) =>
     t.id === tab || (tab === "money" && MONEY_SUBS.includes(t.id) && moneySub === t.id);
-  const badgeFor = (id) => (id === "announcements" ? newsBadge : id === "votes" ? pollsBadge : id === "dashboard" ? notesBadge : 0);
+  // Бейдж заметок: у родителей живёт на «Главной», у учителя — на «Кабинете»
+  const badgeFor = (id) => (id === "announcements" ? newsBadge : id === "votes" ? pollsBadge : id === "dashboard" || id === "teacher" ? notesBadge : 0);
 
   // Имя и инициалы берём у того, кто реально вошёл: у комитета их было
   // зашито «КМ» / «Кристина М.», из-за чего Наталья видела чужие инициалы.
@@ -179,7 +178,8 @@ export function BottomNav({ tab, role, moneySub, onTab, newsBadge = 0, pollsBadg
         >
           <NavIcon name={t.id} uid={"bot-" + t.id} size={36} />{t.label}
           {t.id === "votes" && pollsBadge > 0 && <span className="nav-badge">{pollsBadge > 9 ? "9+" : pollsBadge}</span>}
-          {t.id === "dashboard" && notesBadge > 0 && <span className="nav-badge">{notesBadge > 9 ? "9+" : notesBadge}</span>}
+          {(t.id === "dashboard" || t.id === "teacher") && notesBadge > 0 && <span className="nav-badge">{notesBadge > 9 ? "9+" : notesBadge}</span>}
+          {t.id === "announcements" && newsBadge > 0 && <span className="nav-badge">{newsBadge > 9 ? "9+" : newsBadge}</span>}
         </button>
       ))}
       <div className="bnav-more-wrap">
@@ -192,7 +192,10 @@ export function BottomNav({ tab, role, moneySub, onTab, newsBadge = 0, pollsBadg
           onClick={() => setMoreOpen((v) => !v)}
         >
           <BurgerIcon open={moreOpen} />Ещё
-          {newsBadge > 0 && <span className="nav-badge">{newsBadge > 9 ? "9+" : newsBadge}</span>}
+          {/* На кнопке «Ещё» — бейдж того, что спрятано внутри: у родителей это
+              объявления, у учителя объявления вынесены в панель, внутри — голосования */}
+          {!teacher && newsBadge > 0 && <span className="nav-badge">{newsBadge > 9 ? "9+" : newsBadge}</span>}
+          {teacher && pollsBadge > 0 && <span className="nav-badge">{pollsBadge > 9 ? "9+" : pollsBadge}</span>}
         </button>
         {moreOpen && (
           <div className="bnav-more-menu" role="menu">

@@ -438,6 +438,8 @@ export default function Page() {
       else setMoneySub(t === "shopping" ? "expenses" : t);
     } else if (["dashboard", "schedule", "announcements", "votes", "class", "teacher"].includes(t)) {
       if (t === "teacher" && !noMoney) { setTab("dashboard"); return; }
+      // У учителя нет «Главной» — старые ссылки и пуши молча ведут в кабинет
+      if (t === "dashboard" && noMoney) { setTab("teacher"); return; }
       setTab(t);
     }
   }, []);
