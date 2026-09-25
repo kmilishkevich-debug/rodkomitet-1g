@@ -1,11 +1,12 @@
 "use client";
 
 // ===== Приветственная карточка кабинета учителя =====
-// По решению Кристины (25.09.2026) маскот из кабинета убран: карточка
-// состоит из текста и двух главных кнопок на всю ширину. Компонент
-// TeacherMascotRig и картинки tm-*.webp оставлены в проекте — если
-// захочется вернуть персонажа, достаточно вернуть импорт, строку
-// <TeacherMascotRig .../> и убрать класс tc-welcome-solo.
+// Слева — приветствие и две главные кнопки, справа — пушистый помощник
+// с блокнотом (components/TeacherPlush.jsx): моргает, записывает в
+// блокнот, а по тапу радуется. Прежний заяц (TeacherMascotRig) удалён
+// из проекта 25.09.2026 по решению Кристины.
+
+import TeacherPlush from "./TeacherPlush";
 
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня",
   "июля", "августа", "сентября", "октября", "ноября", "декабря"];
@@ -44,7 +45,7 @@ export default function TeacherWelcomeCard({ name, todayIso, onAnnounce, onHomew
         <span>{fmtToday(todayIso)}</span>
       </div>
 
-      <div className="tc-welcome tc-welcome-solo">
+      <div className="tc-welcome">
         <div className="tc-welcome-text">
           {/* Осмысленный перенос: обращение — первой строкой, имя — второй */}
           <h1 className="greeting tc-greeting">
@@ -77,6 +78,11 @@ export default function TeacherWelcomeCard({ name, todayIso, onAnnounce, onHomew
             </button>
           </div>
         </div>
+
+        {/* Правая колонка — сцена с пушистым помощником. Композиция та же,
+            что была у прежнего персонажа: текст слева, маскот справа,
+            на планшете и телефоне сцена уходит под текст (см. globals.css). */}
+        <TeacherPlush />
       </div>
     </div>
   );
