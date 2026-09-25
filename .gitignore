@@ -6,3 +6,10 @@ out/
 npm-debug.log*
 .DS_Store
 git-log.txt
+
+# локальные превью и логи — не для репозитория
+preview-*
+install-log.txt
+1-install-log.bat
+mascot-download-log.txt
+Новая папка/

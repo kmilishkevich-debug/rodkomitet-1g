@@ -21,6 +21,7 @@ export default function Page() {
   const [role, setRole] = useState(null); // null | 'parent' | 'committee' | 'teacher'
   const [authorName, setAuthorName] = useState(null); // имя для истории изменений расписания
   const [greetingName, setGreetingName] = useState(null); // как здороваемся в кабинете учителя
+  const [fullName, setFullName] = useState(null); // полное имя — для инициалов в кружке шапки
   const [tab, setTab] = useState("dashboard");
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifSeen, setNotifSeen] = useState(false);
@@ -126,10 +127,12 @@ export default function Page() {
       fetchUserRole().then((data) => {
         if (data?.display_name) setAuthorName(data.display_name);
         if (data?.greeting_name) setGreetingName(data.greeting_name);
+        setFullName(data?.full_name || data?.display_name || null);
       });
     } else {
       setAuthorName(null);
       setGreetingName(null);
+      setFullName(null);
     }
   }, [role]);
 
@@ -571,6 +574,7 @@ export default function Page() {
             committee={committee}
             role={role}
             teacherName={authorName}
+            userFullName={fullName}
             tab={tab}
             moneySub={moneySub}
             onTab={showTab}

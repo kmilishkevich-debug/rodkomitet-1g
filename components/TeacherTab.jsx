@@ -119,8 +119,11 @@ function AnnounceForm({ author, onDone, toast }) {
 }
 
 // ===== Задание и что взять =====
-function HomeworkForm({ author, onDone, toast }) {
-  const [date, setDate] = useState(tomorrowIso());
+// ТЗ §12.1: форма открывается на дате активной вкладки тумблера. Если
+// учитель смотрит «На сегодня» и нажимает «Добавить задание», дата в форме
+// уже стоит сегодняшняя — иначе запись молча уходила бы на завтра.
+function HomeworkForm({ author, onDone, toast, defaultDate }) {
+  const [date, setDate] = useState(defaultDate || tomorrowIso());
   const [text, setText] = useState("");
   const [bring, setBring] = useState("");
   const [saving, setSaving] = useState(false);
@@ -253,17 +256,150 @@ function EventForm({ author, onDone, toast }) {
   );
 }
 
-// ===== Карточка рабочей колонки =====
-function WorkCard({ icon, title, sub, action, onAction, children, delay }) {
+// ===== Иконки шапок и пустых состояний =====
+// ТЗ §12 просит для каждой карточки свой плоский значок: синяя закрытая
+// книга, синий календарь, жёлтый колокольчик в бледно-жёлтом круге,
+// зелёный замок в светло-зелёном круге, а в пустых состояниях —
+// бледно-голубые листок, календарь, рупор и группа людей.
+// В /public/icons таких файлов нет — там объёмные цветные картинки,
+// которые нельзя перекрасить в бледно-голубой. Поэтому значки нарисованы
+// контуром прямо здесь: новых файлов в проект не добавляется, а системные
+// emoji, которые ТЗ запрещает, не используются. Список недостающих
+// ассетов вынесен в отчёт — если картинки появятся, замена будет точечной.
+
+// Значок шапки: 40 px (ТЗ §12.1 — 38–42 px)
+function HeadBook() {
   return (
-    <div className={"card tc-work" + (delay ? " reveal " + delay : " reveal")}>
-      <div className="dash-card-head">
-        <img src={icon} className="head-3d" alt="" />
+    <svg className="tc-head-ico tone-blue" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <path d="M9 7.5h17.5A4.5 4.5 0 0 1 31 12v20.5H13.5A4.5 4.5 0 0 1 9 28V7.5Z"
+        fill="currentColor" opacity=".16" />
+      <path d="M9 7.5h17.5A4.5 4.5 0 0 1 31 12v20.5H13.5A4.5 4.5 0 0 1 9 28V7.5Z"
+        stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+      <path d="M13.5 32.5H31" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M15 14h10M15 19.5h7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function HeadCalendar() {
+  return (
+    <svg className="tc-head-ico tone-blue" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <rect x="6.5" y="9.5" width="27" height="24" rx="5.5"
+        fill="currentColor" opacity=".16" />
+      <rect x="6.5" y="9.5" width="27" height="24" rx="5.5"
+        stroke="currentColor" strokeWidth="2.4" />
+      <path d="M6.5 17h27M14 6v6M26 6v6" stroke="currentColor"
+        strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="14" cy="24" r="2.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+// ТЗ §12.3: жёлтый колокольчик на бледно-жёлтом круге
+function HeadBell() {
+  return (
+    <svg className="tc-head-ico tone-yellow" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <circle cx="20" cy="20" r="20" fill="#FDF0CE" />
+      <path d="M20 9.5a7.6 7.6 0 0 1 7.6 7.6v4.4l1.7 3a1.2 1.2 0 0 1-1.05 1.8H11.75a1.2 1.2 0 0 1-1.05-1.8l1.7-3v-4.4A7.6 7.6 0 0 1 20 9.5Z"
+        fill="currentColor" />
+      <path d="M17 27.2a3.1 3.1 0 0 0 6 0" stroke="currentColor"
+        strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ТЗ §12.4: зелёный замок на светло-зелёном круге
+function HeadLock() {
+  return (
+    <svg className="tc-head-ico tone-green" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <circle cx="20" cy="20" r="20" fill="#E3F2D5" />
+      <rect x="11.5" y="19" width="17" height="12.5" rx="4" fill="currentColor" />
+      <path d="M15.4 19v-3.6a4.6 4.6 0 0 1 9.2 0V19" stroke="currentColor"
+        strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="20" cy="25.2" r="1.9" fill="#fff" />
+    </svg>
+  );
+}
+
+// Значки пустых состояний: 56 px (ТЗ §12 — 52–60 px), бледно-голубые.
+// ТЗ §12.1 отдельно оговаривает, что рюкзака здесь быть не должно.
+function EmptySheet() {
+  return (
+    <svg className="tc-empty-ico" viewBox="0 0 56 56" fill="none" aria-hidden="true">
+      <path d="M13 8.5h20L44 20v27.5H13V8.5Z" fill="currentColor" opacity=".22" />
+      <path d="M13 8.5h20L44 20v27.5H13V8.5Z" stroke="currentColor"
+        strokeWidth="2.8" strokeLinejoin="round" />
+      <path d="M32.5 8.5V20H44" stroke="currentColor" strokeWidth="2.8" strokeLinejoin="round" />
+      <path d="M20 29h17M20 37h11" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function EmptyCalendar() {
+  return (
+    <svg className="tc-empty-ico" viewBox="0 0 56 56" fill="none" aria-hidden="true">
+      <rect x="7" y="12" width="42" height="36" rx="7" fill="currentColor" opacity=".22" />
+      <rect x="7" y="12" width="42" height="36" rx="7" stroke="currentColor" strokeWidth="2.8" />
+      <path d="M7 23h42M18 7v9M38 7v9" stroke="currentColor"
+        strokeWidth="2.8" strokeLinecap="round" />
+      <circle cx="19" cy="33" r="2.8" fill="currentColor" />
+      <circle cx="28" cy="33" r="2.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+function EmptyMegaphone() {
+  return (
+    <svg className="tc-empty-ico" viewBox="0 0 56 56" fill="none" aria-hidden="true">
+      <path d="M40 11v34a1.9 1.9 0 0 1-3.07 1.5l-9.2-7.15A8 8 0 0 0 22.8 37.6H15a6 6 0 0 1-6-6v-7.2a6 6 0 0 1 6-6h7.8a8 8 0 0 0 4.93-1.7l9.2-7.16A1.9 1.9 0 0 1 40 11Z"
+        fill="currentColor" opacity=".3" />
+      <path d="M40 11v34a1.9 1.9 0 0 1-3.07 1.5l-9.2-7.15A8 8 0 0 0 22.8 37.6H15a6 6 0 0 1-6-6v-7.2a6 6 0 0 1 6-6h7.8a8 8 0 0 0 4.93-1.7l9.2-7.16A1.9 1.9 0 0 1 40 11Z"
+        stroke="currentColor" strokeWidth="2.8" strokeLinejoin="round" />
+      <path d="M46 22.5a7.5 7.5 0 0 1 0 11" stroke="currentColor"
+        strokeWidth="2.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function EmptyPeople() {
+  return (
+    <svg className="tc-empty-ico" viewBox="0 0 56 56" fill="none" aria-hidden="true">
+      <circle cx="23" cy="19" r="8" fill="currentColor" opacity=".3" />
+      <circle cx="23" cy="19" r="8" stroke="currentColor" strokeWidth="2.8" />
+      <path d="M9 44a14 14 0 0 1 28 0" fill="currentColor" opacity=".3" />
+      <path d="M9 44a14 14 0 0 1 28 0" stroke="currentColor"
+        strokeWidth="2.8" strokeLinecap="round" />
+      <path d="M38 13.6a7.4 7.4 0 0 1 0 14.3M42 42a12.6 12.6 0 0 0-5.4-10.4"
+        stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ===== Карточка рабочей колонки =====
+// ТЗ §12: в шапке остаются только значок и заголовок (плюс подпись там,
+// где она что-то добавляет). Кнопки «Записать», «Добавить», «Создать»,
+// «Написать» из шапок убраны — действие переехало под пустое состояние,
+// ближе к месту, где его ищут глазами. В объявлениях вместо кнопки —
+// текстовая ссылка на полный список.
+function WorkCard({ icon, title, sub, link, onLink, children, delay, tall }) {
+  return (
+    <div className={"card tc-work" + (tall ? " " + tall : "") +
+      (delay ? " reveal " + delay : " reveal")}>
+      <div className="dash-card-head tc-work-head">
+        {icon}
         <div className="dash-card-titles">
           <h2 className="sec-title">{title}</h2>
           {sub && <div className="dash-card-sub">{sub}</div>}
         </div>
-        {action && <button className="tc-work-add" onClick={onAction}>{action}</button>}
+        {link && (
+          <button className="tc-work-link" onClick={onLink}>
+            {link}
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" stroke="currentColor"
+                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
       </div>
       {children}
     </div>
@@ -271,14 +407,29 @@ function WorkCard({ icon, title, sub, action, onAction, children, delay }) {
 }
 
 // ===== Пустое состояние карточки =====
-// Тематическая картинка, короткая главная строка и пояснение обычного веса.
-// Кнопку добавления здесь не дублируем — она уже есть в шапке карточки.
-function Empty({ icon, title, hint }) {
+// Бледно-голубой значок, короткая главная строка, пояснение обычного веса
+// и кнопка действия (ТЗ §12). Кнопка здесь единственная — в шапке её нет,
+// поэтому дублирования не возникает.
+//
+// Вариант `plain`: у объявлений и сообщений ТЗ §12.3/§12.4 задают ровно
+// одну строку пояснения. Раньше эта строка шла как title — тёмная и
+// полужирная, хотя в референсе 2 она обычная серая. Поэтому при plain
+// текст отдаётся в .tc-empty-hint, а не в заголовок.
+function Empty({ icon, title, hint, plain, cta, ctaTone, onCta }) {
   return (
     <div className="tc-empty">
-      <img src={icon} className="tc-empty-icon" alt="" />
-      <div className="tc-empty-title">{title}</div>
-      {hint && <div className="tc-empty-hint">{hint}</div>}
+      {icon}
+      {plain ? (
+        <div className="tc-empty-hint only">{title}</div>
+      ) : (
+        <div className="tc-empty-title">{title}</div>
+      )}
+      {!plain && hint && <div className="tc-empty-hint">{hint}</div>}
+      {cta && (
+        <button className={"tc-empty-btn " + (ctaTone || "soft")} onClick={onCta}>
+          {cta}
+        </button>
+      )}
     </div>
   );
 }
@@ -344,7 +495,7 @@ export default function TeacherTab({
   };
 
   return (
-    <section className="tab active" id="tab-teacher">
+    <section className="tab active teacher-dashboard" id="tab-teacher">
       <TeacherWelcomeCard
         name={greetingName}
         todayIso={todayIso}
@@ -354,15 +505,18 @@ export default function TeacherTab({
 
       <TeacherQuickCards onPick={pickCard} />
 
+      {/* ТЗ §14: карточки лежат прямо в сетке, без колонок-обёрток.
+          Порядок в DOM — задания → события → объявления → сообщения,
+          ровно тот, что нужен на телефоне одной колонкой. На десктопе
+          двухколоночная сетка сама раскладывает их 1-2 / 3-4, поэтому
+          визуальный порядок нигде не расходится с порядком табуляции
+          и обходиться свойством order не приходится. */}
       <div className="tc-grid">
-        <div className="tc-col">
           <WorkCard
-            icon="/icons/icon-book.webp"
+            icon={<HeadBook />}
             title="Задания и что взять"
-            sub="Видят все родители класса"
-            action="Записать"
-            onAction={() => setForm("hw")}
             delay="d2"
+            tall={hw.length ? null : "tc-h-hw"}
           >
             <div className="tc-seg">
               <button className={"tc-seg-btn" + (hwDay === "today" ? " on" : "")}
@@ -372,9 +526,12 @@ export default function TeacherTab({
             </div>
             {!hw.length && (
               <Empty
-                icon="/icons/icon-backpack.webp"
+                icon={<EmptySheet />}
                 title={hwDay === "today" ? "На сегодня заданий пока нет" : "На завтра заданий пока нет"}
-                hint="Добавьте задание или напоминание, что взять с собой"
+                hint="Добавьте задание или напоминание, что взять с собой."
+                cta="+ Добавить задание"
+                ctaTone="blue"
+                onCta={() => setForm("hw")}
               />
             )}
             {hw.map((h) => (
@@ -388,44 +545,23 @@ export default function TeacherTab({
             ))}
           </WorkCard>
 
+          {/* ТЗ §12.2: подпись «Поездки, праздники, собрания» убрана —
+              она дословно повторяла подпись быстрого действия «Событие
+              класса», стоящего на том же экране двумя блоками выше. */}
           <WorkCard
-            icon="/icons/nav-announcements.webp"
-            title="Объявления класса"
-            sub="Последние ваши записи"
-            action="Создать"
-            onAction={() => setForm("ann")}
-            delay="d3"
-          >
-            {!myAnn.length && (
-              <Empty
-                icon="/icons/nav-announcements.webp"
-                title="Здесь появятся ваши публикации"
-                hint="Объявление увидят все родители класса"
-              />
-            )}
-            {myAnn.map((a) => (
-              <button className="tc-line" key={a.id} onClick={() => onTab("announcements")}>
-                <span className="tc-line-title">{a.important && <b className="tc-hot">Важно · </b>}{a.title}</span>
-                {a.body && <span className="tc-line-sub">{short(a.body, 70)}</span>}
-              </button>
-            ))}
-          </WorkCard>
-        </div>
-
-        <div className="tc-col">
-          <WorkCard
-            icon="/icons/icon-calendar.webp"
+            icon={<HeadCalendar />}
             title="Ближайшие события"
-            sub="Поездки, праздники, собрания"
-            action="Добавить"
-            onAction={() => setForm("event")}
             delay="d2"
+            tall={ev.length ? null : "tc-h-ev"}
           >
             {!ev.length && (
               <Empty
-                icon="/icons/icon-calendar.webp"
+                icon={<EmptyCalendar />}
                 title="Ближайших событий пока нет"
-                hint="Поездка, праздник или собрание — добавьте, и родители увидят дату"
+                hint="Здесь будут поездки, праздники и собрания."
+                cta="+ Создать событие"
+                ctaTone="soft"
+                onCta={() => setForm("event")}
               />
             )}
             {ev.map((e) => (
@@ -442,19 +578,47 @@ export default function TeacherTab({
             ))}
           </WorkCard>
 
+          {/* ТЗ §12.3: вместо кнопки — текстовая ссылка на полный список.
+              Кнопку создания здесь не дублируем: объявление создаётся
+              главной синей кнопкой в приветствии. */}
           <WorkCard
-            icon="/icons/icon-people.webp"
-            title="Личные сообщения семьям"
-            sub="Видно только вам и этой семье"
-            action="Написать"
-            onAction={() => setPickOpen(true)}
+            icon={<HeadBell />}
+            title="Объявления класса"
+            link="Все объявления"
+            onLink={() => onTab("announcements")}
             delay="d3"
+            tall={myAnn.length ? null : "tc-h-ann"}
+          >
+            {!myAnn.length && (
+              <Empty
+                icon={<EmptyMegaphone />}
+                title="Здесь появятся ваши публикации."
+                plain
+              />
+            )}
+            {myAnn.map((a) => (
+              <button className="tc-line" key={a.id} onClick={() => onTab("announcements")}>
+                <span className="tc-line-title">{a.important && <b className="tc-hot">Важно · </b>}{a.title}</span>
+                {a.body && <span className="tc-line-sub">{short(a.body, 70)}</span>}
+              </button>
+            ))}
+          </WorkCard>
+
+          <WorkCard
+            icon={<HeadLock />}
+            title="Личные сообщения семьям"
+            sub="Видно только вам и выбранной семье"
+            delay="d3"
+            tall={threads.length ? null : "tc-h-msg"}
           >
             {!threads.length && (
               <Empty
-                icon="/icons/icon-people.webp"
-                title="Выберите семью, чтобы написать сообщение"
-                hint="Родитель увидит его на главной и сможет ответить"
+                icon={<EmptyPeople />}
+                title="Выберите семью, чтобы написать сообщение."
+                plain
+                cta="Выбрать семью"
+                ctaTone="soft"
+                onCta={() => setPickOpen(true)}
               />
             )}
             {threads.map((t) => (
@@ -470,7 +634,6 @@ export default function TeacherTab({
               </button>
             ))}
           </WorkCard>
-        </div>
       </div>
 
       {form === "ann" && (
@@ -480,7 +643,7 @@ export default function TeacherTab({
       )}
       {form === "hw" && (
         <Modal title="Задание и что взять" sub="Появится на главной у родителей" onClose={close}>
-          <HomeworkForm author={author} onDone={close} toast={toast} />
+          <HomeworkForm author={author} onDone={close} toast={toast} defaultDate={pickedDay} />
         </Modal>
       )}
       {form === "event" && (

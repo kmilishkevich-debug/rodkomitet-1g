@@ -242,8 +242,18 @@ function ActivePolls({ polls, family, onTab }) {
 
 // ===== Обычные объявления внизу главной (ТЗ §11): без дублирования важных =====
 function RegularNews({ announcements, onTab }) {
-  const regular = (announcements || []).filter((a) => a.status === "active" && !a.important).slice(0, 3);
-  if (!regular.length) return null;
+  const active = (announcements || []).filter((a) => a.status === "active");
+  const regular = active.filter((a) => !a.important).slice(0, 3);
+  // Если все объявления важные — карточки уже показаны вверху,
+  // но путь в ленту оставляем: одна кнопка без заголовка и списка.
+  if (!regular.length) {
+    if (!active.length) return null;
+    return (
+      <button className="pill-btn news-all-link reveal d3" onClick={() => onTab("announcements")}>
+        Все объявления →
+      </button>
+    );
+  }
   return (
     <>
       <div className="sec-head reveal d3">
@@ -838,9 +848,10 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
 
       <div className="welcome compact reveal d1">
         <div className="welcome-copy">
+          {/* Приветствие и главная мысль дня — двумя абзацами, с воздухом между ними */}
           <h1 className="welcome-h1">
-            {greetWord()}{greetName}!<br />
-            <span className="blue">{headline}</span>
+            <span className="welcome-greet">{greetWord()}{greetName}!</span>
+            <span className="blue welcome-headline">{headline}</span>
           </h1>
           <p className="welcome-sub">{subline}</p>
         </div>

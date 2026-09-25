@@ -1258,53 +1258,151 @@ nav.bottomnav .nav-badge{top:0;right:8px}
    карточки → рабочая сетка из двух колонок.
    ============================================================ */
 
+/* — палитра кабинета (ТЗ §4) ----------------------------------
+   Все значения живут в одной области .teacher-dashboard и нигде
+   больше: родительские экраны продолжают работать на прежних
+   токенах. Часть общих имён (--ink, --blue, --card, --muted)
+   здесь переопределена намеренно — так вся уже написанная
+   разметка кабинета переходит на новую палитру без правки
+   каждого правила по отдельности. */
+.teacher-dashboard{
+  /* поверхности и фон */
+  --page-bg:#F5F1E8;
+  --surface:#FFFEFD;
+  --border:#E2E8FB;
+  --shadow-card:0 12px 32px rgba(55,45,25,.055);
+  --radius-card:22px;
+  --radius-button:17px;
+
+  /* текст: тёмно-синий для заголовков, серый для основного */
+  --ink:#111544;
+  --body:#666571;
+  --muted:#817F88;
+
+  /* акценты */
+  --blue:#285BF0;
+  --blue-deep:#204FDC;
+  --blue-soft:#E9EFFF;
+  --pink-soft:#FCE8F1;
+  --green-soft:#E7F5DB;
+  --purple-soft:#EEE6FF;
+
+  /* мост к общим токенам приложения, чтобы старые правила кабинета
+     подхватили новую палитру без переписывания */
+  --card:var(--surface);
+  --cream:var(--page-bg);
+  --soft-line:var(--border);
+  --teal-deep:var(--blue-deep);
+  --r:var(--radius-card);
+
+  color:var(--body);
+}
+
+/* — общий контейнер кабинета (ТЗ §3) ---------------------------
+   Шапка, меню, дата, hero и нижние карточки должны стоять в одном
+   столбце 1184–1200 px. В родительских экранах ширина остаётся
+   прежней (1080 px), поэтому расширение включается только когда
+   на странице открыт кабинет: вкладка учителя монтируется в DOM
+   только при tab === "teacher" (app/page.jsx), значит :has() —
+   достаточный и точный признак.
+   Поддержка :has(): Chrome 105+, Safari 15.4+, Firefox 121+.
+   В более старых браузерах кабинет просто останется на 1080 px —
+   вёрстка не ломается, меняется только ширина колонки. */
+body:has(.teacher-dashboard) .header-inner,
+body:has(.teacher-dashboard) nav.topnav,
+body:has(.teacher-dashboard) main{max-width:1232px}
+/* Боковые поля общие для всех трёх полос — иначе логотип, пункты меню
+   и левый край карточек встанут по разным вертикалям.
+   1232 − 24 − 24 = 1184 px чистой колонки — ровно как в референсе 2. */
+/* Шапка: 8 + 40 (логотип) + 8 = 56 px (ТЗ §3: 52–56 px). */
+body:has(.teacher-dashboard) .header-inner{padding:8px 24px}
+/* 14 px снизу у меню + 26 px сверху у main = 26 px от меню до даты
+   (ТЗ §3: 24–28 px); от шапки до меню — 14 px (ТЗ §3: 12–16 px). */
+body:has(.teacher-dashboard) nav.topnav{padding:14px 24px 0}
+body:has(.teacher-dashboard) main{padding:26px 24px 60px}
+
 /* — приветствие ------------------------------------------------ */
 /* Вся геометрия сцены считается от --tc-mascot-h: меняется одна
    переменная — согласованно меняются персонаж, облачко, тень и
    зарезервированное над карточкой место. */
 .tc-welcome-wrap{
-  --tc-mascot-h:clamp(248px,25.5vw,320px);  /* видимая высота персонажа */
-  --tc-pad:clamp(26px,2.6vw,36px);          /* внутренние поля карточки */
-  /* Вынос сцены над карточкой = высота сцены (k × рост) + 6 px отрыва
-     ступней − минимальная высота карточки (300 px). Столько места честно
-     занято в потоке страницы, поэтому облачко не срезается и не уезжает
-     под шапку меню. При 320 px роста это 80 px — ровно столько, сколько
-     нужно выступающей макушке и облачку, без пустой полосы. */
-  --tc-scene-k:1.16875;
-  --tc-rise:calc(var(--tc-mascot-h) * var(--tc-scene-k) + 6px - 300px);
+  /* ТЗ §8: видимый рост персонажа 300–315 px на десктопе. */
+  --tc-mascot-h:clamp(248px,22vw,310px);
+  --tc-pad:clamp(24px,2.4vw,34px);          /* внутренние поля карточки */
+  /* Ступни стоят внутри нижнего края карточки (ТЗ §8: 8–12 px). */
+  --tc-foot-inset:10px;
+  /* Высота сцены = рост + воздух над головой под облачко. Раньше этот
+     же коэффициент участвовал в формуле верхнего отступа, и карточку
+     приходилось опускать на 80 px вниз. Теперь отступа нет (ТЗ §3:
+     «не оставляй сверху запас ради облачка»), поэтому коэффициент
+     отвечает только за одно — сколько места над макушкой. */
+  --tc-scene-k:1.158;
   margin-bottom:18px}
-.tc-date{margin:2px 0 12px}
+/* ТЗ §3: 16–20 px от даты до верхней границы hero. Макушка и облачко
+   выходят за эту границу вверх — но справа, где строка даты пуста,
+   поэтому ничего не перекрывают и места в потоке не занимают. */
+.tc-date{margin:0 0 18px;display:flex;align-items:center;gap:8px;
+  font-size:12.5px;font-weight:700;letter-spacing:.02em;
+  text-transform:none;color:var(--muted)}
+/* 23 px — середина требуемого коридора 22–24 px. flex:none, иначе
+   в узкой колонке иконка сожмётся в овал. */
+.tc-date-ico{width:23px;height:23px;flex:none;opacity:.8}
+/* Первая буква дня недели заглавная, остальное — как в исходной строке.
+   Прежний text-transform:uppercase на всю строку здесь не нужен: дата
+   в кабинете читается как обычная подпись, а не как рубрика. */
+.tc-date span::first-letter{text-transform:uppercase}
 
-/* Верхний отступ — это настоящее место в потоке страницы под выступающую
-   сцену. Именно поэтому маскот и облачко ни на что не наезжают, и чинить
-   пересечения через z-index не приходится. */
-.tc-welcome{position:relative;margin-top:var(--tc-rise);
-  display:grid;grid-template-columns:minmax(0,1fr) clamp(300px,33vw,420px);
-  gap:24px;align-items:center;
+.tc-welcome{position:relative;
+  /* ТЗ §7: зона текста ~54 %, сцена ~46 %. minmax(0,…) — защита от
+     переполнения: длинное имя переносится, а не растягивает колонку. */
+  display:grid;grid-template-columns:minmax(0,54fr) minmax(0,46fr);
+  gap:20px;align-items:center;
   background:var(--card);border-radius:var(--r);
-  padding:var(--tc-pad);min-height:300px;
+  /* ТЗ §7: внутреннее поле слева 52–56 px, справа 24–32 px. */
+  padding:var(--tc-pad) var(--tc-pad) var(--tc-pad) clamp(24px,4vw,54px);
+  min-height:280px;                         /* ТЗ §7: 280–310 px */
   box-shadow:0 10px 30px rgba(23,23,23,.05);overflow:visible;
   border:1.5px solid var(--blue-soft)}
 .tc-welcome-text{min-width:0;overflow-wrap:anywhere}
+/* Вариант карточки без маскота (решение от 25.09.2026): колонка сцены
+   не резервируется, текст и кнопки занимают всю ширину. Правила сцены
+   (.tc-scene/.tc-stage) ниже оставлены на случай возврата персонажа. */
+.tc-welcome-solo{grid-template-columns:minmax(0,1fr);min-height:0}
 
-/* Тот же округлый фирменный шрифт, что и в заголовках карточек внизу.
-   Comfortaa подключена только в весах 500/600/700 — запрос 400 заставлял
-   браузер подставлять системный, из-за чего приветствие выбивалось. */
-.tc-greeting{margin-bottom:10px;font-size:clamp(25px,3.3vw,38px);line-height:1.15;
-  font-family:var(--font-display);font-weight:700;letter-spacing:-.01em}
+/* ТЗ §5: приветствие 46–48 px / 800 / интерлиньяж 1.06–1.12.
+   Начертание — Nunito (см. блок шрифтов в конце файла), поэтому здесь
+   font-family не задаём: иначе вернулась бы Comfortaa, у которой нет
+   веса 800 и браузер утолщал бы её искусственно.
+   Нижний отступ 9 px — ТЗ §7: 8–10 px до подзаголовка.
+   Цвет — тёмно-синий --ink (ТЗ §2 и §5: «плотный тёмно-синий»). Без явного
+   объявления приветствие наследовало серый --body от .teacher-dashboard. */
+.tc-greeting{margin-bottom:9px;font-size:clamp(28px,3.5vw,47px);line-height:1.09;
+  font-weight:800;letter-spacing:-.02em;color:var(--ink)}
 .tc-greet-line{display:block}
-.tc-sub{font-size:clamp(16px,1.45vw,18px);font-weight:500;color:var(--muted);
-  line-height:1.45;margin-bottom:22px}
+/* ТЗ §5: подзаголовок 23–25 px / 700 / 1.3; ТЗ §7: 23 px до кнопок. */
+.tc-sub{font-size:clamp(17px,1.9vw,24px);font-weight:700;color:var(--body);
+  line-height:1.3;margin-bottom:23px}
 
-.tc-main-btns{display:flex;gap:10px;flex-wrap:wrap}
-.tc-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;
-  cursor:pointer;border:none;border-radius:16px;padding:14px 22px;
-  font-family:var(--font-ui);font-size:16px;font-weight:700;color:#fff;
+/* ТЗ §7: зазор между главными кнопками 16–18 px. */
+.tc-main-btns{display:flex;gap:17px;flex-wrap:wrap}
+/* Высота 61 px (ТЗ §7: 60–62) задана явно, а не набрана паддингами:
+   у кнопок разные иконки, и при padding-вёрстке они разъезжались бы
+   по высоте на пару пикселей. */
+.tc-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  cursor:pointer;border:none;border-radius:var(--radius-button);
+  min-height:61px;padding:0 18px;
+  font-size:17.5px;font-weight:700;line-height:1.25;color:#fff;
   transition:transform var(--t-micro) var(--ease-out-soft),
     box-shadow var(--t-micro),background var(--t-micro)}
 .tc-btn:hover{transform:translateY(-2px)}
 .tc-btn:active{transform:translateY(0)}
 .tc-btn:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+/* Ширина около 270 px (ТЗ §7: 260–280) — но как минимум, а не жёстко:
+   если системный шрифт окажется шире, надпись не обрежется. */
+.tc-btn-blue,.tc-btn-lav{min-width:260px}
+/* ТЗ §7: рупор 32–36 px, книга 34–38 px. */
+.tc-btn-ico{width:34px;height:34px;flex:none}
+.tc-btn-lav .tc-btn-ico{width:36px;height:36px}
 .tc-btn-icon{width:20px;height:20px;object-fit:contain;flex:none}
 /* Основная кнопка — одна, насыщенная. Тени убавлены. */
 .tc-btn-blue{background:var(--blue);box-shadow:0 5px 14px rgba(72,101,214,.18)}
@@ -1322,11 +1420,10 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .tc-scene{position:relative;align-self:stretch;
   min-height:calc(var(--tc-mascot-h) * .72)}
 /* Высота сцены = рост маскота + воздух над головой под облачко.
-   Коэффициент --tc-scene-k и --tc-rise связаны одной формулой
-   (см. .tc-welcome-wrap) — поэтому он задан переменной и меняется
-   в одном месте, иначе облачко срежет верхним краем. */
+   Коэффициент живёт в переменной, потому что от него зависит, на
+   сколько облачко поднимается над карточкой (ТЗ §9: 65–80 px). */
 .tc-stage{position:absolute;right:calc(var(--tc-mascot-h) * -.094);
-  bottom:calc(6px - var(--tc-pad));
+  bottom:calc(var(--tc-foot-inset) - var(--tc-pad));
   width:calc(var(--tc-mascot-h) * 1.47);
   height:calc(var(--tc-mascot-h) * var(--tc-scene-k));
   pointer-events:none}
@@ -1367,7 +1464,22 @@ svg.tc-mascot-img{height:calc(var(--tc-mascot-h) * 663 / 623);width:auto;
 /* Строчка карандашом: короткие движения от плеча, в пределах ±2,4° —
    дальше ластик вышел бы за правый край холста. */
 .tm-arm.is-writing{animation:tm-write 1.9s ease-in-out}
+/* Приветствие: карандаш взлетает вверх (отрицательные углы — единственное
+   безопасное направление, до −25° лапа остаётся в холсте) и делает три
+   взмаха. Вниз дальше +6° нельзя — ластик выйдет за правый край. */
+.tm-arm.is-waving{animation:tm-wave 1.7s ease-in-out}
+/* Сцена держит pointer-events:none, чтобы не перекрывать карточку.
+   Живому маскоту клики возвращаем — тап по нему запускает приветствие. */
+.tm-svg.is-live{pointer-events:auto;touch-action:manipulation}
 @keyframes tm-breathe{50%{transform:scale(1.005,1.011)}}
+@keyframes tm-wave{
+  0%,100%{transform:rotate(0deg)}
+  15%{transform:rotate(-16deg)}
+  32%{transform:rotate(-3deg)}
+  48%{transform:rotate(-15deg)}
+  64%{transform:rotate(-2deg)}
+  80%{transform:rotate(-13deg)}
+}
 @keyframes tm-write{
   0%,100%{transform:rotate(0deg) translate(0,0)}
   12%{transform:rotate(-2.2deg) translate(-2px,1.5px)}
@@ -1404,48 +1516,63 @@ svg.tc-mascot-img{height:calc(var(--tc-mascot-h) * 663 / 623);width:auto;
 /* 3. облачко — рядом с головой, хвостик смотрит вниз-влево, на маскота.
    Пропорции строго как у ассета, поэтому ничего не растягивается: ни
    width/height по отдельности, ни background-size:100% 100%.
-   Ширина .52 от роста маскота даёт ≈166 × 113 px на десктопе; при таком
-   размере облачко встаёт вплотную к голове (зазор ≈23 px до силуэта и
-   ≈20 px до карандаша — с запасом на всю амплитуду анимации), а очки,
-   глаза и карандаш остаются открытыми в любом кадре. Прежние .70 рядом
-   с головой физически не помещались и уезжали к правому краю.
+   ТЗ §9: видимый размер ≈210–230 × 140–155 px. Ширина .71 от роста
+   маскота даёт 220 × 149 px при росте 310 — ровно середина коридора.
+   Прежние .52 (166 × 113) держали реплику 13–15 px; с текстом 22–24 px
+   она бы в них не поместилась. Чтобы облачко при этом не наехало на
+   голову, оно одновременно сдвинуто правее (right .07 вместо .1513):
+   растёт оно влево, и сдвиг возвращает зазор до карандаша.
    right/top заданы в долях роста, поэтому композиция масштабируется
    целиком вместе с персонажем. */
 .tc-cloud{position:absolute;z-index:3;
-  right:calc(var(--tc-mascot-h) * .1513);top:0;
-  width:calc(var(--tc-mascot-h) * .52);aspect-ratio:1320/895;
+  right:calc(var(--tc-mascot-h) * .07);top:0;
+  width:calc(var(--tc-mascot-h) * .71);aspect-ratio:1320/895;
   background:url(/bubble-cloud.webp) center/contain no-repeat;
   display:flex;align-items:center;justify-content:center;
-  /* Проценты в padding считаются от ШИРИНЫ, а не от высоты: прежние
-     14% сверху давали 20.7% высоты и роняли надпись вниз. Разница
-     верх−низ = 1.9% ширины ставит текст точно в центр круглого тела
-     облака (51.4% высоты), не считая хвостик. */
-  padding:3.5% 13% 1.6%;
-  filter:drop-shadow(0 6px 12px rgba(92,76,40,.16));
-  opacity:0;transform:translateY(8px) scale(.94);
+  /* ТЗ §9: текстовая область left/right 12 %, top 18 %, bottom ~15 %.
+     Проценты в padding считаются от ШИРИНЫ, поэтому вертикальные
+     доли пересчитаны через пропорцию холста (895/1320 = .678):
+     18 % высоты = 12.2 % ширины, 15 % высоты = 10.2 % ширины.
+     Низ меньше верха намеренно — так строки встают в оптический
+     центр круглого тела облака, не считая хвостик. */
+  padding:12.2% 12% 10.2%;
+  /* ТЗ §9 */
+  filter:drop-shadow(0 8px 12px rgba(98,76,26,.12));
+  opacity:0;transform:translateY(8px) scale(.94) rotate(-3deg);
   transform-origin:42% 99%;              /* измеренный кончик хвостика */
   transition:opacity .45s var(--ease-out-soft) .25s,
     transform .55s var(--ease-spring) .25s;
   pointer-events:none}
+/* ТЗ §5 и §9: реплика 22–24 px, вес 800, тёмно-синий. Начертание —
+   Nunito из общего блока шрифтов кабинета: у Comfortaa нет веса 800. */
 .tc-cloud-text{display:block;text-align:center;color:#203A73;
-  font-family:var(--font-display);font-size:clamp(13px,1.25vw,15px);
-  font-weight:700;line-height:1.16;letter-spacing:-.01em}
+  font-size:clamp(15px,1.7vw,23px);
+  font-weight:800;line-height:1.16;letter-spacing:-.01em}
 .tc-cloud-text span{display:block;white-space:nowrap}
-.tc-stage.is-in .tc-cloud{opacity:1;transform:none}
+/* ТЗ §9: допустим наклон до −3°. */
+.tc-stage.is-in .tc-cloud{opacity:1;transform:rotate(-3deg)}
 
 /* — три быстрых действия --------------------------------------- */
 /* Горизонтальная композиция: крупная иконка → название и подпись →
    стрелка. Заливки светлее, обводки почти не видны. */
-.tc-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
-/* align-items:start — ключ к выравниванию: заголовки всех трёх карточек
-   стоят на одной верхней линии, а иконка и стрелка не «плавают» по
-   вертикали. Поэтому «Изменить расписание» может занять две строки — она
-   растёт вниз и ничего в композиции не сдвигает. */
+/* ТЗ §3: зазор между карточками 16–18 px. */
+.tc-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+/* align-items:center — как в референсе 2: иконка, текстовый блок и стрелка
+   стоят по оптическому центру карточки. Раньше было start с ручными
+   сдвигами (padding-top у текста, margin-top у стрелки) — они держали
+   композицию только пока заголовок занимал одну строку.
+   ТЗ §11: внутреннее поле 20–24 px, зазор от иконки до текста 16–18 px;
+   ТЗ §3: высота карточки около 120 px. Столбец стрелки объявлен в сетке
+   (третья колонка auto), поэтому текст никогда не подлезает под стрелку.
+   При ширине колонки 1184 px карточка = 382 px, под текст остаётся
+   382 − 40 (поля) − 76 (иконка) − 32 (два зазора) − 19 (стрелка) = 215 px:
+   «Изменить расписание» помещается в одну строку (ТЗ §11). */
 .tc-quick-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;
-  align-items:start;gap:16px;min-height:116px;
+  align-items:center;gap:16px;min-height:120px;
   cursor:pointer;text-align:left;border:1.5px solid transparent;border-radius:22px;
-  padding:20px 22px;font-family:var(--font-ui);color:var(--ink);
-  transition:transform var(--t-micro) var(--ease-out-soft),box-shadow var(--t-micro)}
+  padding:20px;font-family:var(--font-ui);color:var(--ink);
+  transition:transform 180ms var(--ease-out-soft),box-shadow 180ms}
+/* ТЗ §11: подъём на 2 px за 160–200 мс. */
 .tc-quick-card:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(23,23,23,.08)}
 .tc-quick-card:hover .tc-quick-arrow{transform:translateX(3px);opacity:.9}
 .tc-quick-card:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
@@ -1455,47 +1582,124 @@ svg.tc-mascot-img{height:calc(var(--tc-mascot-h) * 663 / 623);width:auto;
 /* Одинаковый бокс под иконку у всех трёх карточек — при object-fit:contain
    рисунки приводятся к одному визуальному размеру независимо от того,
    сколько прозрачных полей у конкретного файла. */
-.tc-quick-icon{width:54px;height:54px;object-fit:contain;flex:none;align-self:start}
-.tc-quick-body{display:flex;flex-direction:column;gap:4px;min-width:0;
-  padding-top:1px}
-.tc-quick-title{font-size:17.5px;font-weight:700;line-height:1.25}
-.tc-quick-sub{font-size:14.5px;font-weight:400;color:var(--muted);line-height:1.35}
-/* Стрелка выровнена по первой строке заголовка — одинаково во всех трёх. */
-.tc-quick-arrow{width:20px;height:20px;flex:none;color:var(--muted);opacity:.55;
-  align-self:start;margin-top:2px;
+/* ТЗ §11: иконка 72–80 px. 76 px — середина коридора; при высоте карточки
+   120 px и полях 22 px иконка занимает её почти целиком по вертикали,
+   как в референсе. */
+/* ТЗ §11: иконка 72–80 px. Взят нижний край коридора: каждые 4 px иконки —
+   это 4 px ширины текстовой колонки, а «Изменить расписание» должно лечь
+   в одну строку (ТЗ §11). */
+.tc-quick-icon{width:72px;height:72px;object-fit:contain;flex:none}
+.tc-quick-body{display:flex;flex-direction:column;gap:5px;min-width:0}
+/* ТЗ §5: заголовки быстрых действий 18–19 px / 800 / 1.25; ТЗ §11: цвет —
+   тёмно-синий, он приходит от .tc-quick-card через color:var(--ink). */
+/* letter-spacing −0.025em. Без него «Изменить расписание» в Nunito 800
+   требует 219.6 px при доступных 220.0 — запас меньше пикселя, и на
+   другом рендере строка уходит вниз. С трекингом требуется 217.9 px.
+   Уменьшать кегль ТЗ §3 прямо запрещает, а трекинг §5 не фиксирует. */
+.tc-quick-title{font-size:18px;font-weight:800;line-height:1.25;letter-spacing:-.025em}
+/* ТЗ §11: подпись 14–15 px, не более двух строк. Ограничение жёсткое:
+   если в подпись когда-нибудь попадёт длинный текст, он обрежется
+   многоточием, а не растянет карточку и не сломает ряд по высоте. */
+.tc-quick-sub{font-size:14.5px;font-weight:400;color:var(--muted);line-height:1.35;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  line-clamp:2;overflow:hidden}
+/* ТЗ §11: стрелка 18–20 px, по вертикальному центру карточки. */
+.tc-quick-arrow{width:18px;height:18px;flex:none;color:var(--muted);opacity:.55;
   transition:transform var(--t-micro) var(--ease-out-soft),opacity var(--t-micro)}
 
 /* — рабочая сетка ---------------------------------------------- */
-.tc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
-.tc-col{display:flex;flex-direction:column;gap:16px;min-width:0}
-.tc-work{overflow:visible}
-.tc-work .dash-card-head{align-items:center}
+/* ТЗ §3: левая колонка 55 %, правая 45 %, зазор 16 px.
+   minmax(0,…) обязателен: без него длинное слово в карточке растянет
+   колонку и сетка «поедет» вправо. */
+/* Карточки — прямые дети сетки, обёрток-колонок нет. Поток заполняет
+   её построчно: задания | события, затем объявления | сообщения.
+   align-items:start оставляет каждой карточке свою высоту: строка не
+   растягивает более короткую до высоты соседки. */
+.tc-grid{display:grid;grid-template-columns:minmax(0,55fr) minmax(0,45fr);
+  gap:14px 16px;align-items:start}
+/* Поля карточки 16 px вместо общих 20: вместе с ужатой шапкой это и есть
+   те ~30 px, на которые пустые карточки не попадали в коридор ТЗ §3. */
+.tc-work{overflow:visible;display:flex;flex-direction:column;padding:16px}
+/* ТЗ §3: отступ от шапки до содержимого в референсе 2 заметно меньше
+   общего дашбордного (16 px) — там это 5–7 px. */
+.tc-work .dash-card-head{align-items:center;margin-bottom:6px}
 /* Подписи карточек в кабинете — спокойнее, чем на родительской панели */
 .tc-work .dash-card-sub{font-weight:500}
-.tc-work-add{margin-left:auto;flex:none;cursor:pointer;border:none;border-radius:999px;
-  padding:9px 16px;background:var(--blue-soft);color:var(--teal-deep);
-  font-family:var(--font-ui);font-size:12.5px;font-weight:800;
-  transition:background var(--t-micro),transform var(--t-micro) var(--ease-out-soft)}
-.tc-work-add:hover{background:var(--blue);color:#fff;transform:translateY(-1px)}
-/* Пустое состояние: маленькая иллюстрация, спокойный заголовок и подсказка.
-   Не «ошибка», а нормальное положение дел — поэтому без рамок и заливок. */
+/* ТЗ §5: заголовки нижних карточек — 19–21 px, начертание 500, Comfortaa.
+   В кабинете весь текст переведён на Nunito, поэтому здесь нужна явная
+   оговорка: это единственное место, где остаётся заголовочный шрифт.
+   Цвет — тот же тёмно-синий --ink, что и у приветствия: на референсе 2
+   названия карточек читаются как заголовки, а не как подписи. */
+.teacher-dashboard .tc-work .sec-title{font-family:var(--font-display);
+  font-size:20px;font-weight:500;line-height:1.3;letter-spacing:0;color:var(--ink)}
+
+/* ТЗ §12: значок в шапке карточки. Плоский, одноцветный — цвет приходит
+   от tone-класса через currentColor, поэтому одна и та же разметка даёт
+   синюю книгу, жёлтый колокольчик и зелёный замок. */
+.tc-head-ico{width:38px;height:38px;flex:none;display:block}
+.tc-head-ico.tone-blue{color:var(--blue)}
+.tc-head-ico.tone-yellow{color:#E8A317}
+.tc-head-ico.tone-green{color:#5EA22E}
+
+/* ТЗ §12.3: не кнопка, а текстовая ссылка «Все объявления →».
+   Заливки нет намеренно: создание объявления живёт в главной синей
+   кнопке приветствия, и второй акцент здесь спорил бы с ней. */
+.tc-work-link{margin-left:auto;flex:none;cursor:pointer;border:none;background:none;
+  display:inline-flex;align-items:center;gap:5px;padding:4px 2px;
+  font-family:var(--font-ui);font-size:13.5px;font-weight:700;color:var(--blue);
+  transition:color var(--t-micro),transform var(--t-micro) var(--ease-out-soft)}
+.tc-work-link svg{width:15px;height:15px;flex:none}
+.tc-work-link:hover{color:var(--blue-deep);transform:translateX(2px)}
+
+/* Пустое состояние: спокойная иллюстрация, заголовок, подсказка и действие.
+   Не «ошибка», а нормальное положение дел — поэтому без рамок и заливок.
+   margin-top:auto прижимает блок к вертикальному центру остатка карточки,
+   когда карточке задана фиксированная высота из §3. */
 .tc-empty{display:flex;flex-direction:column;align-items:center;text-align:center;
-  gap:6px;padding:16px 8px 14px}
-/* Иллюстрация в пустом состоянии повторяет иконку заголовка карточки,
-   поэтому она нарочно мелкая: подсказка, а не второй акцент. */
-.tc-empty-icon{width:clamp(48px,5vw,56px);height:clamp(48px,5vw,56px);
-  object-fit:contain;opacity:.75;margin-bottom:0}
+  gap:5px;padding:0 8px;margin:auto 0}
+/* ТЗ §12: иллюстрация пустого состояния — бледно-голубая, 52–60 px. */
+.tc-empty-ico{width:52px;height:52px;flex:none;display:block;color:#9FBCFA}
 .tc-empty-title{font-size:15.5px;font-weight:600;color:var(--ink);line-height:1.35}
+/* Подсказка в одну строку: в референсе 2 пояснение не переносится, и
+   вторая строка добавляла карточке лишние 20 px сверх коридора §3. */
 .tc-empty-hint{font-size:13.5px;font-weight:400;color:var(--muted);line-height:1.5;
-  max-width:30ch}
+  max-width:47ch}
+/* Вариант «только пояснение»: у объявлений и сообщений §12.3/§12.4 дают
+   одну строку обычным серым, без тёмного полужирного заголовка над ней. */
+.tc-empty-hint.only{font-size:14.5px}
+/* ТЗ §12.1: кнопка действия 38–40 px. Два тона: синяя заливка для заданий,
+   светло-голубая — для событий и сообщений, чтобы на одном экране был
+   ровно один главный синий призыв в каждой колонке. */
+.tc-empty-btn{margin-top:4px;cursor:pointer;border:none;border-radius:999px;
+  height:38px;padding:0 20px;font-family:var(--font-ui);font-size:14px;font-weight:700;
+  transition:background var(--t-micro),color var(--t-micro),
+    transform var(--t-micro) var(--ease-out-soft)}
+.tc-empty-btn.blue{background:var(--blue);color:#fff}
+.tc-empty-btn.blue:hover{background:var(--blue-deep);transform:translateY(-1px)}
+.tc-empty-btn.soft{background:var(--blue-soft);color:var(--blue-deep)}
+.tc-empty-btn.soft:hover{background:#DCE6FF;transform:translateY(-1px)}
+
+/* ТЗ §3: высота карточек в пустом состоянии — чтобы все четыре помещались
+   на первом экране 1440×1080 и колонки заканчивались примерно вровень.
+   Классы вешаются только на пустую карточку: с содержимым высота свободная. */
+.tc-h-hw{min-height:260px}
+.tc-h-ev{min-height:244px}
+.tc-h-ann{min-height:176px}
+.tc-h-msg{min-height:196px}
 
 /* переключатель «сегодня / завтра» */
-.tc-seg{display:inline-flex;gap:4px;padding:4px;border-radius:999px;
-  background:var(--cream);margin-bottom:12px}
-.tc-seg-btn{cursor:pointer;border:none;border-radius:999px;padding:7px 15px;background:transparent;
-  font-family:var(--font-ui);font-size:12.5px;font-weight:800;color:var(--muted);
-  transition:background var(--t-micro),color var(--t-micro)}
-.tc-seg-btn.on{background:var(--card);color:var(--ink);box-shadow:0 3px 10px rgba(23,23,23,.08)}
+/* ТЗ §12.1: ширина около 255–270 px, высота 34–36 px. Активная вкладка —
+   очень светлая голубая заливка, тонкая синяя рамка и синий текст.
+   Белой «таблетки» с серой тенью здесь быть не должно: тень читалась как
+   всплывающий элемент и спорила с тенью самой карточки. */
+.tc-seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:262px;max-width:100%;
+  margin-bottom:7px}
+.tc-seg-btn{cursor:pointer;border:1.5px solid transparent;border-radius:999px;
+  height:35px;padding:0 12px;background:var(--cream);
+  font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--muted);
+  transition:background var(--t-micro),color var(--t-micro),border-color var(--t-micro)}
+.tc-seg-btn:hover{color:var(--ink)}
+.tc-seg-btn.on{background:#EDF3FF;border-color:var(--blue);color:var(--blue)}
 
 /* строка-ссылка: объявление, событие, ветка переписки */
 .tc-line{display:flex;align-items:center;gap:10px;width:100%;cursor:pointer;text-align:left;
@@ -1540,36 +1744,109 @@ svg.tc-mascot-img{height:calc(var(--tc-mascot-h) * 663 / 623);width:auto;
   color:var(--ink);resize:vertical;margin-bottom:12px}
 .chat-input:focus{outline:2px solid var(--blue-soft)}
 
-@media (max-width:760px){
+/* ============================================================
+   АДАПТИВ КАБИНЕТА (ТЗ §14)
+   Три ступени: планшет 768–1199, узкий планшет ≤1023 и телефон ≤767.
+   Порядок блоков — от широкого к узкому, чтобы более узкое правило
+   всегда стояло ниже и выигрывало по порядку, а не по !important.
+   ============================================================ */
+
+/* — планшет 768–1199 ------------------------------------------- */
+@media (min-width:768px) and (max-width:1199px){
+  /* ТЗ §14: приветствие 34–40 px, подзаголовок 18–20 px. */
+  .tc-greeting{font-size:clamp(34px,3.2vw,40px)}
+  .tc-sub{font-size:clamp(18px,1.8vw,20px)}
+}
+
+/* — узкий планшет: две зоны перестают помещаться ---------------- */
+/* ТЗ §14: «если текст и маскот не помещаются, переводить hero в
+   последовательную раскладку, а не накладывать их друг на друга».
+   Порог 1023 px посчитан, а не выбран на глаз: при 1024 px колонка
+   сцены ещё шире фигуры (1.47 × рост маскота), при меньшей — уже нет.
+   Тем же порогом разводятся нижние карточки и быстрые действия:
+   ТЗ §14 требует «сохранять две колонки только при читабельной
+   ширине каждой» и «не делать одну случайно узкую карточку». */
+@media (max-width:1023px){
   .tc-grid{grid-template-columns:1fr}
 
-  /* На телефоне сцена встаёт над текстом и перестаёт выступать за карточку:
-     .tc-stage возвращается в поток, поэтому обрезать её нечему. */
-  .tc-welcome-wrap{--tc-mascot-h:min(58vw,250px);--tc-pad:20px;--tc-rise:0px}
-  .tc-welcome{grid-template-columns:1fr;gap:0;
-    padding:18px 20px 22px;min-height:0;margin-top:0}
-  .tc-welcome-text{order:2}
-  .tc-scene{order:1;align-self:auto;min-height:0;margin-bottom:6px}
+  .tc-welcome-wrap{--tc-mascot-h:clamp(230px,26vw,268px);--tc-foot-inset:0px}
+  .tc-welcome{grid-template-columns:1fr;gap:0;min-height:0;margin-top:0}
+  /* ТЗ §14: сначала текст и кнопки, потом сцена. Кнопки лежат внутри
+     .tc-welcome-text, поэтому нужного порядка достаточно добиться
+     двумя элементами — и порядок табуляции совпадает с визуальным. */
+  .tc-welcome-text{order:1}
+  .tc-scene{order:2;align-self:auto;min-height:0;margin-top:10px}
+  /* Сцена возвращается в поток: отрицательных смещений нет, обрезать
+     её нечему, облачко никуда не заезжает. */
   .tc-stage{position:relative;right:auto;bottom:auto;margin:0 auto;
     width:calc(var(--tc-mascot-h) * 1.47);
     height:calc(var(--tc-mascot-h) * var(--tc-scene-k))}
-  /* Пропорции облачка те же, что на десктопе, — композиция не меняется */
-  .tc-cloud{width:calc(var(--tc-mascot-h) * .52);
-    right:calc(var(--tc-mascot-h) * .1513)}
-  /* Размер области нажатия на телефоне не уменьшаем — только положение */
+
+  /* Быстрые действия — по одной в строке: три равные широкие карточки
+     вместо двух нормальных и одной обрезанной. */
+  .tc-quick{grid-template-columns:1fr;gap:12px}
+  .tc-quick-card{min-height:0;gap:16px;padding:18px 20px}
+  .tc-quick-icon{width:56px;height:56px}
+}
+
+/* — телефон 360–767 -------------------------------------------- */
+@media (max-width:767px){
+  /* ТЗ §14: поля страницы 16 px, внутренние поля карточек 20 px. */
+  body:has(.teacher-dashboard) .header-inner{padding:12px 16px}
+  body:has(.teacher-dashboard) nav.topnav{padding:12px 16px 0}
+  body:has(.teacher-dashboard) main{padding:20px 16px 56px}
+  .teacher-dashboard .card{padding:20px}
+
+  /* ТЗ §14: сцена 220–260 px по высоте. 210 × 1.158 ≈ 243 px —
+     середина коридора; ширина фигуры 210 × 1.47 = 309 px помещается
+     в 390 − 32 (поля страницы) − 40 (поля карточки) = 318 px. */
+  .tc-welcome-wrap{--tc-mascot-h:min(52vw,210px);--tc-pad:20px}
+  .tc-welcome{padding:20px}
+  /* ТЗ §14: приветствие 28–32 px, подзаголовок 17–18 px. */
+  .tc-greeting{font-size:clamp(28px,7.6vw,32px)}
+  .tc-sub{font-size:clamp(17px,4.6vw,18px);margin-bottom:18px}
+  /* ТЗ §14: текст облачка 16–18 px. */
+  .tc-cloud-text{font-size:clamp(16px,4.4vw,18px)}
+  /* Область нажатия паузы не уменьшаем — только положение. */
   .tc-mascot-pause{left:calc(var(--tc-mascot-h) * .96)}
-  .tc-greeting{font-size:clamp(24px,7vw,30px)}
 
-  .tc-main-btns{flex-direction:column}
-  .tc-btn{width:100%}
+  /* ТЗ §14: кнопки одна под другой, на всю ширину, минимум 48 px. */
+  .tc-main-btns{flex-direction:column;gap:12px}
+  .tc-btn{width:100%;min-width:0;min-height:54px;font-size:16.5px}
 
-  /* Карточки быстрых действий — по одной в строке, композиция та же */
-  .tc-quick{grid-template-columns:1fr;gap:10px}
-  .tc-quick-card{min-height:0;gap:13px;padding:15px 17px}
-  .tc-quick-icon{width:46px;height:46px}
-  .tc-quick-title{font-size:16px}
+  /* ТЗ §14: иконки быстрых действий 48–56 px. */
+  .tc-quick{gap:10px;margin-bottom:16px}
+  .tc-quick-card{gap:14px;padding:16px;border-radius:20px}
+  .tc-quick-icon{width:50px;height:50px}
+  .tc-quick-title{font-size:16.5px}
   .tc-quick-sub{font-size:13.5px}
+
+  /* Фиксированные высоты пустых карточек — десктопная мера ради
+     первого экрана 1440×1080. На телефоне экран всё равно листается,
+     и запас в 260 px превращался бы в пустоту под кнопкой. */
+  .tc-h-hw,.tc-h-ev,.tc-h-ann,.tc-h-msg{min-height:0}
+  .tc-seg{width:100%}
 
   .chat-thread{max-height:52vh}
   .chat-msg{max-width:90%}
 }
+
+/* ============================================================
+   ШРИФТЫ КАБИНЕТА (ТЗ §5)
+   Блок стоит в самом конце файла намеренно: глобальное правило
+   `*{font-family:'Onest'…}` в начале и точечные font-family
+   внутри блока кабинета имеют ту же или меньшую специфичность,
+   поэтому побеждает порядок, а не !important.
+   Два характера текста: Nunito — интерфейс и приветствие,
+   Comfortaa 500 — названия нижних карточек.
+   Оба начертания подключены реальными файлами с кириллицей
+   (app/layout.jsx, Google Fonts, display=swap), искусственного
+   утолщения нет.
+   ============================================================ */
+.teacher-dashboard,
+.teacher-dashboard *{font-family:'Nunito','Onest','Century Gothic',system-ui,sans-serif}
+
+/* Названия нижних карточек и модалок — лёгкая округлая Comfortaa 500 */
+.teacher-dashboard .sec-title,
+.teacher-dashboard .tchr-form-title,
+.teacher-dashboard .modal h3{font-family:var(--font-display);font-weight:500}

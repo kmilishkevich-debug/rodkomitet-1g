@@ -81,24 +81,38 @@ function NavBadge({ n }) {
   return <span className="nav-badge">{n > 9 ? "9+" : n}</span>;
 }
 
-// Инициалы для кружка-аватара: «Головко В. П.» → «ГВ»
-function initials(name) {
+// Инициалы для кружка-аватара: «Головко В. П.» → «ГВ», «Наталья Коваленкова» → «НК».
+// Если в базе только имя («Наталья») — показываем одну букву, чужие инициалы не подставляем.
+function initials(name, fallback = "У") {
   const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "У";
+  if (!parts.length) return fallback;
   const a = parts[0][0] || "";
   const b = parts[1] ? parts[1][0] : "";
   return (a + b).toUpperCase();
 }
 
-export default function Header({ committee, role, teacherName, tab, moneySub, onTab, onLogout, newsBadge = 0, pollsBadge = 0, notesBadge = 0 }) {
+// Подпись рядом с аватаром: «Наталья Коваленкова» → «Наталья К.»
+function shortName(name, fallback) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return fallback;
+  if (!parts[1]) return parts[0];
+  return `${parts[0]} ${parts[1][0].toUpperCase()}.`;
+}
+
+export default function Header({ committee, role, teacherName, userFullName, tab, moneySub, onTab, onLogout, newsBadge = 0, pollsBadge = 0, notesBadge = 0 }) {
   const teacher = isTeacher(role);
   const tabs = teacher ? TEACHER_TOP_TABS : TOP_TABS;
   const isActive = (t) =>
     t.id === tab || (tab === "money" && MONEY_SUBS.includes(t.id) && moneySub === t.id);
   const badgeFor = (id) => (id === "announcements" ? newsBadge : id === "votes" ? pollsBadge : id === "dashboard" ? notesBadge : 0);
 
-  const avatar = teacher ? initials(teacherName) : committee ? "КМ" : "Р";
-  const nameText = teacher ? (teacherName || "Учитель") : committee ? "Кристина М." : "Родитель";
+  // Имя и инициалы берём у того, кто реально вошёл: у комитета их было
+  // зашито «КМ» / «Кристина М.», из-за чего Наталья видела чужие инициалы.
+  const me = userFullName || teacherName || "";
+  const avatar = teacher || committee ? initials(me, committee ? "К" : "У") : "Р";
+  const nameText = teacher
+    ? (teacherName || "Учитель")
+    : committee ? shortName(me, "Комитет") : "Родитель";
   const roleText = teacher ? "классный руководитель" : committee ? "член комитета" : "родитель";
 
   return (

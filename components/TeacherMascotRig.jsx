@@ -59,16 +59,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // Тело продолжается на ~19 единиц вглубь под лапу: этот запас всегда
 // закрыт лапой, но именно он не даёт щели, когда лапа отъезжает на ±6°.
 //
-// Как устроено моргание. В линзе уже нарисовано приспущенное оранжевое
-// веко — верхняя половина просвета. Риг добавляет поверх ещё одно веко
-// той же заливки, обрезанное эллипсом линзы. В покое оно поднято выше
-// линзы и не видно вовсе: работает оригинальный рисунок. На моргании
-// веко съезжает вниз и закрывает просвет целиком. Поэтому шва между
-// растром и вектором не возникает ни в одном кадре — совпадать цветам
-// нужно только те 150 мс, пока глаз закрыт.
+// Как устроены глаза. В растре линзы нарисованы «спящими»: оранжевое
+// стекло и тёмная дуга закрытого века. А эталонный рендер маскота
+// (Новая папка/mascot-teacher-alpha.webp) смотрит открытыми глазами:
+// сверху линзы остаётся оранжевый полумесяц, ниже — белок и крупный
+// зрачок с двумя бликами. Поэтому риг рисует открытый глаз вектором
+// ПОВЕРХ растра: белок закрывает нарисованную дугу целиком, геометрия
+// снята с эталона. Моргание — оранжевое веко (той же заливки, что
+// стекло) съезжает сверху и на 150 мс закрывает просвет; в этот момент
+// глаз выглядит ровно как исходный растровый — швов нет ни в одном
+// кадре. Зрачки при этом изредка переводят взгляд (на блокнот, на
+// карандаш) — сдвиг маленький, ±4 единицы, чтобы не косить.
 //
-// Безопасный диапазон поворота лапы — ±6°: дальше ластик карандаша
-// выходит за правый край холста (проверено расчётом по углам).
+// Диапазоны поворота лапы вокруг плеча (проверено расчётом по углам
+// habитbox лапы x 482…643, y 166…399, r до ластика ≈ 241):
+//   вниз (по часовой)  — не дальше +6°, дальше ластик выходит за
+//                        правый край холста;
+//   вверх (против)     — безопасно как минимум до −25°, крайняя точка
+//                        уходит влево и вверх, оставаясь в холсте.
+// Поэтому «приветствие» машет карандашом вверх: качание −16°…−2°.
 
 const CANVAS = { w: 680, h: 663 };
 const BODY = "/tm-body.webp";
@@ -103,6 +112,44 @@ function lashPath({ cx, cy, rx, ry }) {
 }
 const LID_LIFT = -82; // на сколько веко поднято выше линзы в покое
 
+// Открытый глаз: пропорции сняты с эталонного рендера. Белок чуть
+// меньше линзы и опущен на 7 единиц — сверху остаётся оранжевый
+// полумесяц. Зрачок — 62 % малого радиуса линзы, стоит на 6 единиц
+// ниже центра, блики: крупный сверху-слева и точечный снизу-справа.
+function OpenEye({ eye, gaze }) {
+  const pr = Math.min(eye.rx, eye.ry) * 0.62;
+  return (
+    <>
+      <ellipse
+        cx={eye.cx}
+        cy={eye.cy + 7}
+        rx={eye.rx - 1.5}
+        ry={eye.ry - 3}
+        fill="#FDFBF7"
+      />
+      <ellipse
+        cx={eye.cx}
+        cy={eye.cy + 7}
+        rx={eye.rx - 1.5}
+        ry={eye.ry - 3}
+        fill="none"
+        stroke="rgba(150,70,20,.18)"
+        strokeWidth="2"
+      />
+      <g
+        style={{
+          transform: `translate(${eye.cx + gaze.x}px, ${eye.cy + 6 + gaze.y}px)`,
+          transition: "transform .45s cubic-bezier(.3,.8,.3,1)",
+        }}
+      >
+        <circle r={pr} fill="url(#tm-pupil-fill)" />
+        <circle cx={-pr * 0.34} cy={-pr * 0.36} r={pr * 0.3} fill="#fff" opacity=".95" />
+        <circle cx={pr * 0.38} cy={pr * 0.42} r={pr * 0.12} fill="#fff" opacity=".7" />
+      </g>
+    </>
+  );
+}
+
 export default function TeacherMascotRig({ phrase }) {
   const stageRef = useRef(null);
   const jobs = useRef(new Set());
@@ -117,6 +164,8 @@ export default function TeacherMascotRig({ phrase }) {
   const [blink, setBlink] = useState(false);
   const [tilt, setTilt] = useState(0);
   const [writing, setWriting] = useState(false);
+  const [waving, setWaving] = useState(false);
+  const [gaze, setGaze] = useState({ x: 0, y: 0 });
 
   const animated = !calm && !paused && onScreen && !failed;
 
@@ -176,6 +225,8 @@ export default function TeacherMascotRig({ phrase }) {
       setBlink(false);
       setTilt(0);
       setWriting(false);
+      setWaving(false);
+      setGaze({ x: 0, y: 0 });
       return;
     }
 
@@ -229,6 +280,22 @@ export default function TeacherMascotRig({ phrase }) {
     );
     // строчка карандашом — 1,9 с, столько же длятся ключевые кадры
     scheduleAction(9000, 16000, (on) => setWriting(on), 1900);
+    // приветственное махание — реже остальных, чтобы оставалось событием
+    scheduleAction(24000, 40000, (on) => setWaving(on), 1700);
+    // взгляд — вне busy-замка: он не мешает крупным действиям, глаза
+    // могут коситься и во время письма. Изредка смотрит на блокнот
+    // (влево-вниз) или на карандаш (вправо-вверх), пару секунд —
+    // и обратно в камеру.
+    const scheduleGaze = () => {
+      later(() => {
+        setGaze(Math.random() < 0.5 ? { x: -4, y: 2 } : { x: 4, y: -2 });
+        later(() => {
+          setGaze({ x: 0, y: 0 });
+          scheduleGaze();
+        }, 1600 + Math.random() * 1200);
+      }, 7000 + Math.random() * 8000);
+    };
+    scheduleGaze();
 
     return () => {
       jobs.current.forEach(clearTimeout);
@@ -236,6 +303,19 @@ export default function TeacherMascotRig({ phrase }) {
       busy.current = false;
     };
   }, [animated, later]);
+
+  // — отклик на тап/клик по маскоту: помашет карандашом и дважды
+  //   моргнёт. Busy-замок хореографии не трогаем нарочно: ответ на
+  //   прикосновение должен приходить сразу, а не «когда освобожусь».
+  const greet = useCallback(() => {
+    if (!animated || waving) return;
+    setWaving(true);
+    setBlink(true);
+    later(() => setBlink(false), 150);
+    later(() => setBlink(true), 330);
+    later(() => setBlink(false), 470);
+    later(() => setWaving(false), 1700);
+  }, [animated, waving, later]);
 
   const lines = Array.isArray(phrase) ? phrase : phrase ? [phrase] : [];
   const canPause = !calm && !failed;
@@ -262,6 +342,8 @@ export default function TeacherMascotRig({ phrase }) {
             height={CANVAS.h}
             role="img"
             aria-hidden="true"
+            onClick={greet}
+            style={animated ? { cursor: "pointer" } : undefined}
           >
             <defs>
               {/* Заливка века снята пипеткой с новой, неперетемнённой картинки:
@@ -289,6 +371,14 @@ export default function TeacherMascotRig({ phrase }) {
                 <stop offset=".82" stopColor="#E05937" />
                 <stop offset="1" stopColor="#CF4C33" />
               </linearGradient>
+              {/* Зрачок: не плоский чёрный круг, а сфера со смещённым к
+                  верхнему блику светом — так он выглядит на эталонном
+                  рендере (Новая папка/mascot-teacher-alpha.webp). */}
+              <radialGradient id="tm-pupil-fill" cx=".38" cy=".32" r=".85">
+                <stop offset="0" stopColor="#4A4A52" />
+                <stop offset=".45" stopColor="#23232A" />
+                <stop offset="1" stopColor="#0C0C12" />
+              </radialGradient>
               {EYES.map((e) => (
                 <clipPath key={e.id} id={`tm-lens-${e.id}`}>
                   <ellipse cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} />
@@ -313,28 +403,41 @@ export default function TeacherMascotRig({ phrase }) {
                   onError={() => setFailed(true)}
                 />
 
+                {/* Обрезка и движение — на РАЗНЫХ узлах, и это принципиально.
+                    В SVG трансформация элемента применяется и к его clip-path:
+                    если повесить clipPath и translateY на один <g>, эллипс
+                    линзы уезжает вместе с веком, веко остаётся «внутри» клипа
+                    и в покое видно двумя оранжевыми кругами над очками —
+                    ровно тот баг, что был на экране. Поэтому обрезает внешний
+                    <g> (он неподвижен, эллипс стоит на линзе), а двигается
+                    внутренний. */}
                 {EYES.map((e) => (
-                  <g
-                    key={e.id}
-                    clipPath={`url(#tm-lens-${e.id})`}
-                    style={{
-                      transform: `translateY(${blink ? 0 : LID_LIFT}px)`,
-                      transition: `transform ${blink ? 110 : 150}ms ease-out`,
-                    }}
-                  >
-                    <path d={lidPath(e)} fill="url(#tm-lid-fill)" />
-                    <path
-                      d={lashPath(e)}
-                      fill="none"
-                      stroke="rgba(120,52,20,.38)"
-                      strokeWidth="2.6"
-                      strokeLinecap="round"
-                    />
+                  <g key={e.id} clipPath={`url(#tm-lens-${e.id})`}>
+                    <OpenEye eye={e} gaze={gaze} />
+                    <g
+                      style={{
+                        transform: `translateY(${blink ? 0 : LID_LIFT}px)`,
+                        transition: `transform ${blink ? 110 : 150}ms ease-out`,
+                      }}
+                    >
+                      <path d={lidPath(e)} fill="url(#tm-lid-fill)" />
+                      <path
+                        d={lashPath(e)}
+                        fill="none"
+                        stroke="rgba(120,52,20,.38)"
+                        strokeWidth="2.6"
+                        strokeLinecap="round"
+                      />
+                    </g>
                   </g>
                 ))}
 
                 <g
-                  className={"tm-arm" + (writing ? " is-writing" : "")}
+                  className={
+                    "tm-arm" +
+                    (writing ? " is-writing" : "") +
+                    (waving ? " is-waving" : "")
+                  }
                   style={{ transformOrigin: SHOULDER }}
                 >
                   <image
