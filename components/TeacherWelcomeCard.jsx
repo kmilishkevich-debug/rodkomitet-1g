@@ -13,10 +13,14 @@ const MONTHS = ["января", "февраля", "марта", "апреля", 
 const DAYS = ["воскресенье", "понедельник", "вторник", "среда",
   "четверг", "пятница", "суббота"];
 
-// «среда · 23 сентября»
+// «Среда · 23 сентября» — день недели с заглавной (решение по ТЗ редизайна,
+// 28.09.2026): раньше заглавную давал CSS ::first-letter, теперь строка
+// приходит готовой и не зависит от поддержки псевдоэлемента.
 function fmtToday(iso) {
   const d = new Date(iso + "T12:00:00");
-  return `${DAYS[d.getDay()]} · ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  const day = DAYS[d.getDay()];
+  const cap = day.charAt(0).toUpperCase() + day.slice(1);
+  return `${cap} · ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
 // «Доброе утро» до 12, «Добрый день» до 18, дальше «Добрый вечер»
@@ -52,29 +56,26 @@ export default function TeacherWelcomeCard({ name, todayIso, onAnnounce, onHomew
             <span className="tc-greet-line">{greetWord()}{name ? "," : "!"}</span>
             {name && <span className="tc-greet-line tc-greet-name">{name}!</span>}
           </h1>
-          <p className="tc-sub">Что передадим родителям сегодня?</p>
+          <p className="tc-sub">Что нужно сообщить классу сегодня?</p>
 
-          {/* ТЗ §7: у обеих кнопок крупная иконка — белый рупор на синей
-              заливке и синяя раскрытая книга на сиреневой. В наборе
-              /public/icons таких вариантов нет (там объёмные цветные
-              картинки, которые не бывают белыми), поэтому обе иконки
-              нарисованы контуром прямо здесь и берут цвет от кнопки
-              через currentColor. Системные emoji не используются. */}
+          {/* Редизайн 28.09.2026 (ТЗ §7): короткие подписи «+ Объявление» /
+              «+ Задание» вместо «Создать объявление» / «Записать задание».
+              Прежние крупные иконки (рупор и книга) заменены знаком «плюс»,
+              как на референсе: плюс — тот же контурный SVG с currentColor,
+              а не текстовый символ, чтобы толщина штриха совпадала на
+              обеих кнопках. Системные emoji не используются. */}
           <div className="tc-main-btns">
             <button className="tc-btn tc-btn-blue" onClick={onAnnounce}>
-              <svg className="tc-btn-ico" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-                <path d="M24.4 5.6v20.8c0 1.05-1.21 1.65-2.05 1.01l-5.38-4.18a4.8 4.8 0 0 0-2.94-1.01H8.4A3.4 3.4 0 0 1 5 18.82v-5.64A3.4 3.4 0 0 1 8.4 9.78h5.63a4.8 4.8 0 0 0 2.94-1.01l5.38-4.18c.84-.64 2.05-.04 2.05 1.01Z" fill="currentColor" />
-                <path d="M11.2 22.4v3.1a2.9 2.9 0 0 0 5.8 0" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
-                <path d="M27.6 12.5a5.6 5.6 0 0 1 0 7" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
+              <svg className="tc-btn-ico tc-btn-plus" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <path d="M16 7.5v17M7.5 16h17" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
               </svg>
-              Создать объявление
+              Объявление
             </button>
             <button className="tc-btn tc-btn-lav" onClick={onHomework}>
-              <svg className="tc-btn-ico" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-                <path d="M16 9.4C13.6 7.3 10.6 6.3 6.7 6.2A1.6 1.6 0 0 0 5 7.8v14.5c0 .87.7 1.58 1.56 1.6 3.66.09 6.45 1 9.44 3.2 2.99-2.2 5.78-3.11 9.44-3.2A1.6 1.6 0 0 0 27 22.3V7.8a1.6 1.6 0 0 0-1.7-1.6C21.4 6.3 18.4 7.3 16 9.4Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
-                <path d="M16 9.4v17.7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              <svg className="tc-btn-ico tc-btn-plus" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <path d="M16 7.5v17M7.5 16h17" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
               </svg>
-              Записать задание
+              Задание
             </button>
           </div>
         </div>

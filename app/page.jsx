@@ -622,6 +622,8 @@ export default function Page() {
                 events={liveEvents}
                 announcements={shownAnnouncements}
                 familyMessages={familyMessages}
+                schedule={liveSchedule}
+                overrides={liveOverrides}
                 onReload={() => { reloadHomework(); reloadEvents(); reloadTeacherNotes(); }}
                 onReloadMessages={reloadFamilyMessages}
               />

@@ -9,6 +9,7 @@ import { sendManualPush } from "@/lib/push";
 import { useRefreshPause } from "@/lib/formGuard";
 import FamilyPicker, { familyName } from "./FamilyPicker";
 import TeacherWelcomeCard from "./TeacherWelcomeCard";
+import TeacherTodayStats from "./TeacherTodayStats";
 import TeacherQuickCards from "./TeacherQuickCards";
 import TeacherFamilyChat from "./TeacherFamilyChat";
 import { fmtDayWord } from "./TeacherBoard";
@@ -381,9 +382,13 @@ function EmptyPeople() {
 // «Написать» из шапок убраны — действие переехало под пустое состояние,
 // ближе к месту, где его ищут глазами. В объявлениях вместо кнопки —
 // текстовая ссылка на полный список.
-function WorkCard({ icon, title, sub, link, onLink, children, delay, tall }) {
+// `head` — дополнительный элемент справа в шапке (редизайн 28.09.2026,
+// ТЗ §22: переключатель «Сегодня | Завтра» живёт в хедере карточки
+// заданий, а не в её теле). `anchor` — id для прокрутки из полосы
+// статистики «Сегодня в цифрах».
+function WorkCard({ icon, title, sub, link, onLink, head, anchor, children, delay, tall }) {
   return (
-    <div className={"card tc-work" + (tall ? " " + tall : "") +
+    <div id={anchor} className={"card tc-work" + (tall ? " " + tall : "") +
       (delay ? " reveal " + delay : " reveal")}>
       <div className="dash-card-head tc-work-head">
         {icon}
@@ -391,6 +396,7 @@ function WorkCard({ icon, title, sub, link, onLink, children, delay, tall }) {
           <h2 className="sec-title">{title}</h2>
           {sub && <div className="dash-card-sub">{sub}</div>}
         </div>
+        {head}
         {link && (
           <button className="tc-work-link" onClick={onLink}>
             {link}
@@ -402,6 +408,24 @@ function WorkCard({ icon, title, sub, link, onLink, children, delay, tall }) {
         )}
       </div>
       {children}
+    </div>
+  );
+}
+
+// ===== Скелет загрузки карточки =====
+// Редизайн 28.09.2026: null в данных значит «ещё грузится» (или таблица
+// недоступна), [] — «реально пусто». Пока данных нет, показываем три
+// серые полоски; кнопка «Повторить» дёргает общий reload на случай,
+// если запрос упал и авто-обновление ещё не подоспело.
+function CardSkeleton({ onRetry }) {
+  return (
+    <div className="tc-card-skel" aria-busy="true">
+      <span className="tc-skel tc-skel-row"></span>
+      <span className="tc-skel tc-skel-row w70"></span>
+      <span className="tc-skel tc-skel-row w45"></span>
+      {onRetry && (
+        <button className="tc-skel-retry" onClick={onRetry}>Повторить</button>
+      )}
     </div>
   );
 }
@@ -437,6 +461,7 @@ function Empty({ icon, title, hint, plain, cta, ctaTone, onCta }) {
 export default function TeacherTab({
   authorName, greetingName, toast, onTab,
   homework, events, announcements, familyMessages,
+  schedule, overrides,
   onReload, onReloadMessages,
 }) {
   const [form, setForm] = useState(null);      // 'ann' | 'hw' | 'event' | null
@@ -459,14 +484,16 @@ export default function TeacherTab({
   };
 
   const pickedDay = hwDay === "today" ? todayIso : tmrIso;
-  const hw = (homework || []).filter((h) => h.on_date === pickedDay);
+  // Превью в карточках — не длиннее трёх строк (редизайн 28.09.2026,
+  // ТЗ §23): полные списки живут в своих разделах, здесь только сводка.
+  const hw = (homework || []).filter((h) => h.on_date === pickedDay).slice(0, 3);
 
   // События — только предстоящие, ближайшие сверху
   const ev = (events || [])
     .filter((e) => e.on_date >= todayIso)
     .slice()
     .sort((a, b) => (a.on_date < b.on_date ? -1 : 1))
-    .slice(0, 5);
+    .slice(0, 3);
 
   // Свои объявления — последние три
   const myAnn = (announcements || [])
@@ -485,13 +512,22 @@ export default function TeacherTab({
     return [...byFamily.values()].sort((a, b) => {
       if (!!b.unread !== !!a.unread) return b.unread - a.unread;
       return (a.last?.created_at || "") < (b.last?.created_at || "") ? 1 : -1;
-    }).slice(0, 6);
+    }).slice(0, 3);
   }, [familyMessages]);
 
   const pickCard = (id) => {
     if (id === "event") setForm("event");
     else if (id === "note") setPickOpen(true);
     else if (id === "schedule") onTab("schedule");
+  };
+
+  // Клик по карточке статистики (редизайн 28.09.2026, ТЗ §17):
+  // уроки ведут во вкладку расписания, остальные — плавно прокручивают
+  // к своей рабочей карточке ниже на этой же странице.
+  const pickStat = (id) => {
+    if (id === "schedule") { onTab("schedule"); return; }
+    const anchor = { homework: "tc-card-hw", events: "tc-card-ev", messages: "tc-card-msg" }[id];
+    if (anchor) document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -501,6 +537,15 @@ export default function TeacherTab({
         todayIso={todayIso}
         onAnnounce={() => setForm("ann")}
         onHomework={() => setForm("hw")}
+      />
+
+      <TeacherTodayStats
+        schedule={schedule}
+        overrides={overrides}
+        homework={homework}
+        events={events}
+        familyMessages={familyMessages}
+        onPick={pickStat}
       />
 
       <TeacherQuickCards onPick={pickCard} />
@@ -515,16 +560,22 @@ export default function TeacherTab({
           <WorkCard
             icon={<HeadBook />}
             title="Задания и что взять"
+            anchor="tc-card-hw"
             delay="d2"
             tall={hw.length ? null : "tc-h-hw"}
+            head={
+              /* Редизайн 28.09.2026 (ТЗ §22): переключатель дня переехал
+                 из тела карточки в её шапку, справа от заголовка */
+              <div className="tc-seg tc-seg-head">
+                <button className={"tc-seg-btn" + (hwDay === "today" ? " on" : "")}
+                  onClick={() => setHwDay("today")}>Сегодня</button>
+                <button className={"tc-seg-btn" + (hwDay === "tomorrow" ? " on" : "")}
+                  onClick={() => setHwDay("tomorrow")}>Завтра</button>
+              </div>
+            }
           >
-            <div className="tc-seg">
-              <button className={"tc-seg-btn" + (hwDay === "today" ? " on" : "")}
-                onClick={() => setHwDay("today")}>На сегодня</button>
-              <button className={"tc-seg-btn" + (hwDay === "tomorrow" ? " on" : "")}
-                onClick={() => setHwDay("tomorrow")}>На завтра</button>
-            </div>
-            {!hw.length && (
+            {homework === null && <CardSkeleton onRetry={onReload} />}
+            {homework !== null && !hw.length && (
               <Empty
                 icon={<EmptySheet />}
                 title={hwDay === "today" ? "На сегодня заданий пока нет" : "На завтра заданий пока нет"}
@@ -551,10 +602,12 @@ export default function TeacherTab({
           <WorkCard
             icon={<HeadCalendar />}
             title="Ближайшие события"
+            anchor="tc-card-ev"
             delay="d2"
             tall={ev.length ? null : "tc-h-ev"}
           >
-            {!ev.length && (
+            {events === null && <CardSkeleton onRetry={onReload} />}
+            {events !== null && !ev.length && (
               <Empty
                 icon={<EmptyCalendar />}
                 title="Ближайших событий пока нет"
@@ -589,7 +642,8 @@ export default function TeacherTab({
             delay="d3"
             tall={myAnn.length ? null : "tc-h-ann"}
           >
-            {!myAnn.length && (
+            {announcements === null && <CardSkeleton onRetry={onReload} />}
+            {announcements !== null && !myAnn.length && (
               <Empty
                 icon={<EmptyMegaphone />}
                 title="Здесь появятся ваши публикации."
@@ -608,10 +662,12 @@ export default function TeacherTab({
             icon={<HeadLock />}
             title="Личные сообщения семьям"
             sub="Видно только вам и выбранной семье"
+            anchor="tc-card-msg"
             delay="d3"
             tall={threads.length ? null : "tc-h-msg"}
           >
-            {!threads.length && (
+            {familyMessages === null && <CardSkeleton onRetry={onReloadMessages} />}
+            {familyMessages !== null && !threads.length && (
               <Empty
                 icon={<EmptyPeople />}
                 title="Выберите семью, чтобы написать сообщение."

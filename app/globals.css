@@ -1310,10 +1310,11 @@ nav.bottomnav .nav-badge{top:0;right:8px}
    вёрстка не ломается, меняется только ширина колонки. */
 body:has(.teacher-dashboard) .header-inner,
 body:has(.teacher-dashboard) nav.topnav,
-body:has(.teacher-dashboard) main{max-width:1232px}
+body:has(.teacher-dashboard) main{max-width:1220px}
 /* Боковые поля общие для всех трёх полос — иначе логотип, пункты меню
    и левый край карточек встанут по разным вертикалям.
-   1232 − 24 − 24 = 1184 px чистой колонки — ровно как в референсе 2. */
+   1220 − 24 − 24 = 1172 px чистой колонки (редизайн 28.09.2026:
+   контейнер 1220 px по новому ТЗ, было 1232). */
 /* Шапка: 8 + 40 (логотип) + 8 = 56 px (ТЗ §3: 52–56 px). */
 body:has(.teacher-dashboard) .header-inner{padding:8px 24px}
 /* 14 px снизу у меню + 26 px сверху у main = 26 px от меню до даты
@@ -1328,14 +1329,20 @@ body:has(.teacher-dashboard) main{padding:26px 24px 60px}
    правило не касается: селектор ограничен .teacher-dashboard. */
 .teacher-dashboard .card{box-shadow:var(--shadow-card);border:1px solid var(--border)}
 
-/* ТЗ §6: активный пункт меню «Кабинет» — синий фон, белый текст,
-   ЗОЛОТИСТАЯ внешняя обводка с небольшим светлым промежутком и лёгкая
-   тень. Промежуток и кольцо собраны из двух колец box-shadow: сначала
-   светлая прослойка в цвет фона страницы, затем золото. Правило живёт
-   только когда открыт кабинет (body:has), у родителей меню прежнее. */
+/* Редизайн 28.09.2026 (ТЗ §5): пункты меню кабинета — спокойные
+   «пилюли». Активный — БЕЗ прежней золотой обводки и без синей
+   заливки: светло-голубой фон #EAF0FF и насыщенно-синий текст
+   #173FBA, высота 42 px (коридор 40–44), радиус 22 (20–24).
+   Правила живут только когда открыт кабинет (body:has),
+   у родителей меню остаётся прежним — синяя плашка с белым текстом. */
+body:has(.teacher-dashboard) nav.topnav button.nvi-host{
+  min-height:42px;border-radius:22px}
 body:has(.teacher-dashboard) nav.topnav button.nvi-host.active{
-  box-shadow:0 0 0 2.5px #F5F1E8,0 0 0 5px #F0C75A,
-    0 6px 14px rgba(40,91,240,.20)}
+  background:#EAF0FF;color:#173FBA;box-shadow:none}
+/* Круглая светлая подложка за иконкой на светлом фоне пилюли
+   сливалась бы с ним — гасим её только в кабинете. */
+body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
+  background:transparent}
 
 /* — приветствие ------------------------------------------------ */
 /* Вся геометрия сцены считается от --tc-mascot-h: меняется одна
@@ -1357,16 +1364,15 @@ body:has(.teacher-dashboard) nav.topnav button.nvi-host.active{
 /* ТЗ §3: 16–20 px от даты до верхней границы hero. Макушка и облачко
    выходят за эту границу вверх — но справа, где строка даты пуста,
    поэтому ничего не перекрывают и места в потоке не занимают. */
+/* Редизайн 28.09.2026 (ТЗ §6): дата 13.5 px (коридор 13–14). Заглавную
+   букву дня недели теперь даёт сам компонент (TeacherWelcomeCard,
+   fmtToday), поэтому ::first-letter больше не нужен. */
 .tc-date{margin:0 0 18px;display:flex;align-items:center;gap:8px;
-  font-size:12.5px;font-weight:700;letter-spacing:.02em;
+  font-size:13.5px;font-weight:700;letter-spacing:.02em;
   text-transform:none;color:var(--muted)}
 /* 23 px — середина требуемого коридора 22–24 px. flex:none, иначе
    в узкой колонке иконка сожмётся в овал. */
 .tc-date-ico{width:23px;height:23px;flex:none;opacity:.8}
-/* Первая буква дня недели заглавная, остальное — как в исходной строке.
-   Прежний text-transform:uppercase на всю строку здесь не нужен: дата
-   в кабинете читается как обычная подпись, а не как рубрика. */
-.tc-date span::first-letter{text-transform:uppercase}
 
 .tc-welcome{position:relative;
   /* ТЗ §7: зона текста ~54 %, сцена ~46 %. minmax(0,…) — защита от
@@ -1392,33 +1398,37 @@ body:has(.teacher-dashboard) nav.topnav button.nvi-host.active{
    Нижний отступ 9 px — ТЗ §7: 8–10 px до подзаголовка.
    Цвет — тёмно-синий --ink (ТЗ §2 и §5: «плотный тёмно-синий»). Без явного
    объявления приветствие наследовало серый --body от .teacher-dashboard. */
-.tc-greeting{margin-bottom:9px;font-size:clamp(28px,3.5vw,47px);line-height:1.09;
-  font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+.tc-greeting{margin-bottom:9px;font-size:clamp(28px,3.3vw,43px);line-height:1.08;
+  font-weight:700;letter-spacing:-.02em;color:var(--ink)}
 .tc-greet-line{display:block}
-/* ТЗ §5: подзаголовок 23–25 px / 700 / 1.3; ТЗ §7: 23 px до кнопок. */
-.tc-sub{font-size:clamp(17px,1.9vw,24px);font-weight:700;color:var(--body);
+/* Редизайн 28.09.2026 (ТЗ §7): подзаголовок 18–20 px / 600 / 1.3,
+   заметно спокойнее прежнего (23–25/700) — рядом появилась полоса
+   «Сегодня в цифрах», и второй тяжёлый акцент в hero стал лишним. */
+.tc-sub{font-size:clamp(17px,1.6vw,20px);font-weight:600;color:var(--body);
   line-height:1.3;margin-bottom:23px}
 
 /* ТЗ §7: зазор между главными кнопками 16–18 px. */
 .tc-main-btns{display:flex;gap:17px;flex-wrap:wrap}
-/* Высота 61 px (ТЗ §7: 60–62) задана явно, а не набрана паддингами:
-   у кнопок разные иконки, и при padding-вёрстке они разъезжались бы
-   по высоте на пару пикселей. */
+/* Редизайн 28.09.2026 (ТЗ §7): кнопки компактнее прежних — высота
+   52 px (было 61), ширина от ~210 px (было 260), радиус 15 px
+   (коридор 14–16). Высота задана явно, а не набрана паддингами:
+   при padding-вёрстке кнопки разъезжались бы по высоте. */
 .tc-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;
-  cursor:pointer;border:none;border-radius:var(--radius-button);
-  min-height:61px;padding:0 18px;
-  font-size:17.5px;font-weight:700;line-height:1.25;color:#fff;
+  cursor:pointer;border:none;border-radius:15px;
+  min-height:52px;padding:0 18px;
+  font-size:16.5px;font-weight:700;line-height:1.25;color:#fff;
   transition:transform var(--t-micro) var(--ease-out-soft),
     box-shadow var(--t-micro),background var(--t-micro)}
 .tc-btn:hover{transform:translateY(-2px)}
 .tc-btn:active{transform:translateY(0)}
 .tc-btn:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
-/* Ширина около 270 px (ТЗ §7: 260–280) — но как минимум, а не жёстко:
-   если системный шрифт окажется шире, надпись не обрежется. */
-.tc-btn-blue,.tc-btn-lav{min-width:260px}
-/* ТЗ §7: рупор 32–36 px, книга 34–38 px. */
+/* Минимум, а не жёсткая ширина: если системный шрифт окажется шире,
+   надпись не обрежется. */
+.tc-btn-blue,.tc-btn-lav{min-width:210px}
+/* Знак «плюс» вместо прежних крупных рупора и книги: контурный SVG
+   21 px (коридор 20–22) — при 34 px плюс читался бы как мишень. */
 .tc-btn-ico{width:34px;height:34px;flex:none}
-.tc-btn-lav .tc-btn-ico{width:36px;height:36px}
+.tc-btn-ico.tc-btn-plus{width:21px;height:21px}
 .tc-btn-icon{width:20px;height:20px;object-fit:contain;flex:none}
 /* Основная кнопка — одна, насыщенная. Тень — ровно из ТЗ §4:
    «только умеренная: 0 8px 18px rgba(40,91,240,.16)». На hover она
@@ -1557,11 +1567,69 @@ body:has(.teacher-dashboard) nav.topnav button.nvi-host.active{
 /* ТЗ §9: допустим наклон до −3°. */
 .tc-stage.is-in .tc-cloud{opacity:1;transform:rotate(-3deg)}
 
+/* — «Сегодня в цифрах» (редизайн 28.09.2026, ТЗ §12–17) --------- */
+/* Четыре интерактивные карточки-счётчика под hero: уроки, задания,
+   события, сообщения. Пастельные заливки — из той же гаммы, что и
+   быстрые действия, но свои: полоса должна читаться отдельной. */
+.tc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+  margin-bottom:16px}
+.tc-stat{display:flex;align-items:center;gap:12px;min-height:88px;
+  cursor:pointer;text-align:left;border:1.5px solid rgba(255,255,255,.9);
+  border-radius:18px;padding:14px 16px;font-family:var(--font-ui);
+  color:var(--ink);box-shadow:inset 0 2px 0 rgba(255,255,255,.55);
+  transition:transform 160ms var(--ease-out-soft),box-shadow 160ms}
+.tc-stat:hover{transform:translateY(-1px);
+  box-shadow:0 8px 18px rgba(55,45,25,.09),inset 0 2px 0 rgba(255,255,255,.55)}
+.tc-stat:hover .tc-stat-chev{transform:translateX(2px);opacity:.9}
+.tc-stat:focus-visible{outline:3px solid rgba(47,97,245,.2);outline-offset:2px}
+.tc-stat:disabled{cursor:default}
+.tc-stat:disabled:hover{transform:none;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.55)}
+/* Тона: селектор .tc-stat.tone-* — чтобы не пересечься с одноимёнными
+   tone-классами быстрых действий и значков в шапках карточек. */
+.tc-stat.tone-per{background:#F2ECFF}
+.tc-stat.tone-green{background:#F0F8E8}
+.tc-stat.tone-pink{background:#FCECF3}
+.tc-stat.tone-blue{background:#EEF4FF}
+/* Круг под объёмной webp-иконкой: 46 px (коридор 44–48). Белая
+   полупрозрачная подложка отделяет рисунок от пастельного фона. */
+.tc-stat-ico{width:46px;height:46px;flex:none;display:flex;align-items:center;
+  justify-content:center;border-radius:50%;background:rgba(255,255,255,.72)}
+.tc-stat-ico img{width:32px;height:32px;object-fit:contain;display:block}
+.tc-stat-body{display:flex;flex-direction:column;gap:1px;min-width:0}
+/* Цифра 25 px (коридор 24–26), плотный тёмно-синий. */
+.tc-stat-num{font-size:25px;font-weight:700;line-height:1.1;color:var(--ink);
+  letter-spacing:-.01em}
+.tc-stat-label{font-size:13px;font-weight:700;line-height:1.25;color:var(--ink)}
+.tc-stat-sub{font-size:12px;font-weight:500;line-height:1.3;color:var(--muted)}
+.tc-stat-chev{width:16px;height:16px;flex:none;margin-left:auto;
+  color:var(--muted);opacity:.5;
+  transition:transform var(--t-micro) var(--ease-out-soft),opacity var(--t-micro)}
+
+/* — скелеты загрузки (ТЗ §13) ----------------------------------- */
+/* null = данные грузятся → пульсирующие плашки; [] = пусто → tc-empty.
+   Один keyframes на все варианты. */
+@keyframes tc-skel-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+.tc-skel{display:block;border-radius:8px;background:rgba(120,130,160,.16);
+  animation:tc-skel-pulse 1.3s ease-in-out infinite}
+.tc-skel-num{width:34px;height:22px;margin-bottom:5px}
+.tc-skel-line{width:84px;height:11px}
+/* Скелет содержимого рабочей карточки: три строки + «Повторить». */
+.tc-card-skel{display:flex;flex-direction:column;gap:10px;padding:6px 2px 2px}
+.tc-skel-row{height:38px;border-radius:12px}
+.tc-skel-row.w70{width:70%}
+.tc-skel-row.w45{width:45%}
+.tc-skel-retry{align-self:flex-start;margin-top:2px;cursor:pointer;border:none;
+  border-radius:999px;height:32px;padding:0 16px;background:var(--blue-soft);
+  color:var(--blue-deep);font-family:var(--font-ui);font-size:13px;font-weight:700;
+  transition:background var(--t-micro),transform var(--t-micro) var(--ease-out-soft)}
+.tc-skel-retry:hover{background:#DCE6FF;transform:translateY(-1px)}
+
 /* — три быстрых действия --------------------------------------- */
 /* Горизонтальная композиция: крупная иконка → название и подпись →
    стрелка. Заливки светлее, обводки почти не видны. */
 /* ТЗ §3: зазор между карточками 16–18 px. */
-.tc-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+.tc-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
 /* align-items:center — как в референсе 2: иконка, текстовый блок и стрелка
    стоят по оптическому центру карточки. Раньше было start с ручными
    сдвигами (padding-top у текста, margin-top у стрелки) — они держали
@@ -1577,7 +1645,7 @@ body:has(.teacher-dashboard) nav.topnav button.nvi-host.active{
    блика не было вовсе; hover-тень была серой rgba(23,23,23,…) — §4
    такие запрещает, поэтому она переведена в тёплую гамму токена. */
 .tc-quick-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;
-  align-items:center;gap:16px;min-height:120px;
+  align-items:center;gap:16px;min-height:108px;
   cursor:pointer;text-align:left;
   border:1.5px solid rgba(255,255,255,.9);border-radius:22px;
   padding:20px;font-family:var(--font-ui);color:var(--ink);
@@ -1627,8 +1695,11 @@ body:has(.teacher-dashboard) nav.topnav button.nvi-host.active{
    её построчно: задания | события, затем объявления | сообщения.
    align-items:start оставляет каждой карточке свою высоту: строка не
    растягивает более короткую до высоты соседки. */
-.tc-grid{display:grid;grid-template-columns:minmax(0,55fr) minmax(0,45fr);
-  gap:14px 16px;align-items:start}
+/* Редизайн 28.09.2026: колонки равные (1fr 1fr, было 55/45) — полоса
+   «Сегодня в цифрах» забрала на себя роль акцентной зоны, и левой
+   колонке больше не нужен перевес. */
+.tc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:16px;align-items:start}
 /* Поля карточки 16 px вместо общих 20: вместе с ужатой шапкой это и есть
    те ~30 px, на которые пустые карточки не попадали в коридор ТЗ §3. */
 .tc-work{overflow:visible;display:flex;flex-direction:column;padding:16px}
@@ -1712,6 +1783,12 @@ body:has(.teacher-dashboard) nav.topnav button.nvi-host.active{
   transition:background var(--t-micro),color var(--t-micro),border-color var(--t-micro)}
 .tc-seg-btn:hover{color:var(--ink)}
 .tc-seg-btn.on{background:#EDF3FF;border-color:var(--blue);color:var(--blue)}
+/* Редизайн 28.09.2026 (ТЗ §12.1): переключатель переехал в шапку
+   карточки заданий — компактный, прижат вправо, высота кнопок 31 px
+   (коридор 30–32), нижний зазор снимается: его даёт сама шапка. */
+.tc-seg.tc-seg-head{width:auto;margin:0 0 0 auto;gap:5px;
+  grid-template-columns:auto auto}
+.tc-seg-head .tc-seg-btn{height:31px;padding:0 14px;font-size:12.5px}
 
 /* строка-ссылка: объявление, событие, ветка переписки */
 .tc-line{display:flex;align-items:center;gap:10px;width:100%;cursor:pointer;text-align:left;
@@ -1768,6 +1845,13 @@ body:has(.teacher-dashboard) nav.topnav button.nvi-host.active{
   /* ТЗ §14: приветствие 34–40 px, подзаголовок 18–20 px. */
   .tc-greeting{font-size:clamp(34px,3.2vw,40px)}
   .tc-sub{font-size:clamp(18px,1.8vw,20px)}
+}
+
+/* — планшет ≤1100: полоса цифр в два ряда ----------------------- */
+/* Четыре карточки на ширине меньше ~1100 px ужимают подписи до
+   нечитаемых — переходим на 2×2 (редизайн 28.09.2026, ТЗ §14). */
+@media (max-width:1100px){
+  .tc-stats{grid-template-columns:repeat(2,1fr)}
 }
 
 /* — узкий планшет: две зоны перестают помещаться ---------------- */
@@ -1836,9 +1920,24 @@ body:has(.teacher-dashboard) nav.topnav button.nvi-host.active{
      и запас в 260 px превращался бы в пустоту под кнопкой. */
   .tc-h-hw,.tc-h-ev,.tc-h-ann,.tc-h-msg{min-height:0}
   .tc-seg{width:100%}
+  /* Вариант в шапке карточки остаётся компактным и на телефоне:
+     полная ширина сталкивала бы его с заголовком «Задания». */
+  .tc-seg.tc-seg-head{width:auto}
+
+  /* Полоса цифр: две карточки в ряд, на самых узких — в столбик. */
+  .tc-stats{gap:10px;margin-bottom:14px}
+  .tc-stat{min-height:78px;padding:12px 14px;gap:10px}
+  .tc-stat-ico{width:42px;height:42px}
+  .tc-stat-ico img{width:29px;height:29px}
+  .tc-stat-num{font-size:22px}
 
   .chat-thread{max-height:52vh}
   .chat-msg{max-width:90%}
+}
+
+/* На самых узких экранах пары карточек цифр тоже не помещаются. */
+@media (max-width:419px){
+  .tc-stats{grid-template-columns:1fr}
 }
 
 /* ============================================================
