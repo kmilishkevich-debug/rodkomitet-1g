@@ -6,6 +6,7 @@ import { FAMILIES_COUNT } from "./data";
 import { isLive, saveAnnouncement, deleteAnnouncement, markRead, uploadNewsImage } from "@/lib/supabase";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
 import { PostChatInline } from "./PostChat";
+import { shareText, shareUrl } from "@/lib/share";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
 // ===== Редактор объявления (создание и правка) =====
@@ -239,6 +240,20 @@ function AnnouncementCard({
         onSent={onReloadComments}
         toast={toast}
       />
+      {/* Поделиться ссылкой в вайбер-чате — пока объявление в ленте */}
+      {a.status === "active" && (
+        <button
+          className="share-btn"
+          onClick={() =>
+            shareText(
+              `Объявление: «${a.title}». Прочитайте, пожалуйста: ${shareUrl({ tab: "announcements", ann: a.id })}`,
+              toast
+            )
+          }
+        >
+          🔗 Поделиться
+        </button>
+      )}
     </article>
   );
 }
@@ -254,19 +269,32 @@ export default function AnnouncementsTab({
   const [famOpen, setFamOpen] = useState(false);
   const [famAction, setFamAction] = useState(null); // функция, вызываемая после выбора семьи
 
-  // Переход с главной к конкретному объявлению: плавно прокручиваем к его карточке
-  useEffect(() => {
-    let id = null;
+  // Переход с главной или по ссылке «Поделиться» к конкретному объявлению:
+  // ждём загрузку списка, прокручиваем к карточке и подсвечиваем её.
+  // Если объявления уже нет в ленте — говорим об этом тостом.
+  const [focusId, setFocusId] = useState(() => {
+    if (typeof window === "undefined") return null;
     try {
-      id = sessionStorage.getItem("rk1g-focus-ann");
+      const id = sessionStorage.getItem("rk1g-focus-ann");
       sessionStorage.removeItem("rk1g-focus-ann");
-    } catch {}
-    if (!id) return;
+      return id;
+    } catch { return null; }
+  });
+  useEffect(() => {
+    if (!focusId || announcements === null || announcements === undefined) return;
     const t = setTimeout(() => {
-      document.getElementById("ann-" + id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const el = document.getElementById("ann-" + focusId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        el.classList.add("share-flash");
+        setTimeout(() => el.classList.remove("share-flash"), 2600);
+      } else {
+        toast?.("Объявление уже убрано из ленты");
+      }
+      setFocusId(null);
     }, 250);
     return () => clearTimeout(t);
-  }, []);
+  }, [focusId, announcements, toast]);
 
   const all = announcements || [];
   // Порядок: закреплённые → важные → остальные (внутри групп — свежие выше, как из базы)

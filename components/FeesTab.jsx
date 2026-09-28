@@ -11,6 +11,7 @@ import {
   fetchOneOffIncomes, addOneOffIncome, fetchFeeEditsLog, addFeeEdit,
 } from "@/lib/supabase";
 import TreasurerMascot, { MASCOT_GOAL, notifyTreasurer } from "./TreasurerMascot";
+import { shareText, shareUrl } from "@/lib/share";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
 // Полная сумма взносов с семьи на 2026–2027 (50 + 150)
@@ -427,6 +428,18 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
             <Sum value={cashLeft} />
           </div>
         </div>
+        {/* Поделиться ссылкой на сборы в вайбер-чате */}
+        <button
+          className="share-btn"
+          onClick={() =>
+            shareText(
+              `Взносы класса 1 «Г»: посмотреть суммы и остатки можно здесь: ${shareUrl({ tab: "fees" })}`,
+              toast
+            )
+          }
+        >
+          🔗 Поделиться
+        </button>
       </div>
 
       {/* ===== Ведомость взносов по детям (раскрыта по умолчанию) ===== */}

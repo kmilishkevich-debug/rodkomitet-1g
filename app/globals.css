@@ -1888,6 +1888,24 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .pc-privacy{font-size:11.5px;font-weight:500;margin:8px 0 0}
 
 /* ============================================================
+   КНОПКА «ПОДЕЛИТЬСЯ» И ПОДСВЕТКА КАРТОЧКИ ПО ССЫЛКЕ
+   ============================================================ */
+/* небольшая вторичная кнопка внизу карточки — кинуть ссылку в вайбер */
+.share-btn{display:inline-flex;align-items:center;gap:7px;border:none;cursor:pointer;
+  border-radius:12px;padding:7px 12px;margin-top:10px;background:var(--cream);
+  font-family:var(--font-ui);font-size:12.5px;font-weight:700;color:var(--ink);
+  transition:background var(--t-micro)}
+.share-btn:hover{background:var(--blue-soft)}
+
+/* карточка, к которой пришли по ссылке: мягкая вспышка рамкой и фоном */
+.share-flash{animation:shareFlash 2.6s ease-out}
+@keyframes shareFlash{
+  0%{box-shadow:0 0 0 3px var(--blue-soft), 0 0 0 8px rgba(122,162,247,.18)}
+  55%{box-shadow:0 0 0 3px var(--blue-soft), 0 0 0 8px rgba(122,162,247,.10)}
+  100%{box-shadow:0 0 0 0 rgba(122,162,247,0)}
+}
+
+/* ============================================================
    АДАПТИВ КАБИНЕТА (ТЗ §14)
    Три ступени: планшет 768–1199, узкий планшет ≤1023 и телефон ≤767.
    Порядок блоков — от широкого к узкому, чтобы более узкое правило

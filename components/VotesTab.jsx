@@ -4,6 +4,7 @@ import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
 import { FAMILIES_COUNT, fmt } from "./data";
 import { isLive, savePoll, deletePoll, castVote } from "@/lib/supabase";
+import { shareText, shareUrl } from "@/lib/share";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
@@ -370,6 +371,21 @@ function PollCard({ p, committee, canEdit, family, author, toast, onEdit, onRelo
           )}
         </>
       )}
+
+      {/* Поделиться ссылкой в вайбер-чате — пока голосование открыто */}
+      {state === "open" && (
+        <button
+          className="share-btn"
+          onClick={() =>
+            shareText(
+              `Голосование: «${p.question}». Проголосуйте, пожалуйста: ${shareUrl({ tab: "votes", poll: p.id })}`,
+              toast
+            )
+          }
+        >
+          🔗 Поделиться
+        </button>
+      )}
     </article>
   );
 }
@@ -382,19 +398,32 @@ export default function VotesTab({ committee, canEdit, teacher, author, toast, p
   const [famOpen, setFamOpen] = useState(false);
   const [famAction, setFamAction] = useState(null);
 
-  // Переход с главной к конкретному голосованию: плавно прокручиваем к его карточке
-  useEffect(() => {
-    let id = null;
+  // Переход с главной или по ссылке «Поделиться» к конкретному голосованию:
+  // ждём, пока список загрузится, прокручиваем к карточке и подсвечиваем её.
+  // Если голосование уже удалено или убрано в архив — говорим об этом тостом.
+  const [focusId, setFocusId] = useState(() => {
+    if (typeof window === "undefined") return null;
     try {
-      id = sessionStorage.getItem("rk1g-focus-poll");
+      const id = sessionStorage.getItem("rk1g-focus-poll");
       sessionStorage.removeItem("rk1g-focus-poll");
-    } catch {}
-    if (!id) return;
+      return id;
+    } catch { return null; }
+  });
+  useEffect(() => {
+    if (!focusId || polls === null || polls === undefined) return;
     const t = setTimeout(() => {
-      document.getElementById("poll-" + id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const el = document.getElementById("poll-" + focusId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        el.classList.add("share-flash");
+        setTimeout(() => el.classList.remove("share-flash"), 2600);
+      } else {
+        toast?.("Голосование уже закрыто");
+      }
+      setFocusId(null);
     }, 250);
     return () => clearTimeout(t);
-  }, []);
+  }, [focusId, polls, toast]);
 
   const all = polls || [];
   const open = all.filter((p) => pollState(p) === "open");

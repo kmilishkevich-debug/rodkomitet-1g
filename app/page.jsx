@@ -492,12 +492,26 @@ export default function Page() {
       }
       // роль в ref — сразу, иначе разбор адреса ниже ещё не знает про учителя
       roleRef.current = saved;
-      const urlTab = new URLSearchParams(window.location.search).get("tab");
+      const sp = new URLSearchParams(window.location.search);
+      // Ссылки «Поделиться» ведут к конкретной публикации: /?tab=votes&poll=ID
+      // и /?tab=announcements&ann=ID — вкладка сама прокрутит и подсветит карточку
+      try {
+        if (sp.get("poll")) sessionStorage.setItem("rk1g-focus-poll", sp.get("poll"));
+        if (sp.get("ann")) sessionStorage.setItem("rk1g-focus-ann", sp.get("ann"));
+      } catch {}
+      const urlTab = sp.get("tab");
       if (urlTab) applyRoute(urlTab);
       else if (saved === "teacher") setTab("teacher"); // учитель возвращается в свой кабинет
     }
     // Кнопки «назад/вперёд» браузера переключают разделы
-    const onPop = () => applyRoute(new URLSearchParams(window.location.search).get("tab") || "dashboard");
+    const onPop = () => {
+      const q = new URLSearchParams(window.location.search);
+      try {
+        if (q.get("poll")) sessionStorage.setItem("rk1g-focus-poll", q.get("poll"));
+        if (q.get("ann")) sessionStorage.setItem("rk1g-focus-ann", q.get("ann"));
+      } catch {}
+      applyRoute(q.get("tab") || "dashboard");
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [applyRoute]);
