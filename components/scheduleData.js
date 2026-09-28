@@ -1,5 +1,5 @@
 // Расписание уроков — запасные данные (если база недоступна) и общие помощники.
-// Действует первые 20 учебных дней (адаптационный период 1 «Г»).
+// Основное расписание 1 «Г», действует с 29.09.2026 (после адаптационного периода).
 
 export const DAY_NAMES = ["", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница"];
 export const DAY_SHORT = ["", "Пн", "Вт", "Ср", "Чт", "Пт"];
@@ -13,39 +13,42 @@ export const BELLS_FALLBACK = [
 ];
 
 const T = "Головко В. П.";
-const INTRO = "Введение в школьную жизнь";
+const READ = "Обучение грамоте (чтение)";
+const WRITE = "Обучение грамоте (письмо)";
+const MATH = "Математика";
+const ART = "Изобразительное искусство";
 const PE = "Физическая культура и здоровье";
 const PE_NOTE = "Спортивная форма и обувь";
 
 export const LESSONS_FALLBACK = [
   // Понедельник
-  { id: "m1", day: 1, pos: 1, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "m2", day: 1, pos: 2, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "m1", day: 1, pos: 1, subject: "Человек и мир", note: null, room: "166", teacher: T },
+  { id: "m2", day: 1, pos: 2, subject: MATH, note: null, room: "166", teacher: T },
   { id: "m3", day: 1, pos: 3, subject: PE, note: PE_NOTE, room: "166", teacher: null },
-  { id: "m4", day: 1, pos: 4, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "m4", day: 1, pos: 4, subject: ART, note: null, room: "166", teacher: T },
   { id: "m5", day: 1, pos: 5, subject: "Классный час", note: null, room: "166", teacher: T },
   // Вторник
-  { id: "t1", day: 2, pos: 1, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "t2", day: 2, pos: 2, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "t1", day: 2, pos: 1, subject: READ, note: null, room: "166", teacher: T },
+  { id: "t2", day: 2, pos: 2, subject: MATH, note: null, room: "166", teacher: T },
   { id: "t3", day: 2, pos: 3, subject: PE, note: PE_NOTE, room: "166", teacher: null },
-  { id: "t4", day: 2, pos: 4, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "t4", day: 2, pos: 4, subject: WRITE, note: null, room: "166", teacher: T },
   { id: "t5", day: 2, pos: 5, subject: "Факультатив «Элементы логики»", note: null, room: "166", teacher: T },
   // Среда
-  { id: "w1", day: 3, pos: 1, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "w2", day: 3, pos: 2, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "w3", day: 3, pos: 3, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "w1", day: 3, pos: 1, subject: READ, note: null, room: "166", teacher: T },
+  { id: "w2", day: 3, pos: 2, subject: WRITE, note: null, room: "166", teacher: T },
+  { id: "w3", day: 3, pos: 3, subject: MATH, note: null, room: "166", teacher: T },
   { id: "w4", day: 3, pos: 4, subject: "Музыка", note: null, room: "166", teacher: null },
   { id: "w5", day: 3, pos: 5, subject: "Поддерживающее занятие", note: null, room: "166", teacher: T },
   // Четверг (после 3-го урока — информационный час, см. INFO_HOUR)
-  { id: "th1", day: 4, pos: 1, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "th2", day: 4, pos: 2, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "th3", day: 4, pos: 3, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "th1", day: 4, pos: 1, subject: "Белорусский язык", note: null, room: "166", teacher: T },
+  { id: "th2", day: 4, pos: 2, subject: MATH, note: null, room: "166", teacher: T },
+  { id: "th3", day: 4, pos: 3, subject: ART, note: null, room: "166", teacher: T },
   { id: "th4", day: 4, pos: 4, subject: "Факультатив «Вытокі роднай мовы»", note: null, room: "166", teacher: T },
   // Пятница
   { id: "f1", day: 5, pos: 1, subject: PE, note: PE_NOTE, room: "166", teacher: null },
-  { id: "f2", day: 5, pos: 2, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "f3", day: 5, pos: 3, subject: INTRO, note: null, room: "166", teacher: T },
-  { id: "f4", day: 5, pos: 4, subject: INTRO, note: null, room: "166", teacher: T },
+  { id: "f2", day: 5, pos: 2, subject: READ, note: null, room: "166", teacher: T },
+  { id: "f3", day: 5, pos: 3, subject: WRITE, note: null, room: "166", teacher: T },
+  { id: "f4", day: 5, pos: 4, subject: "Трудовое обучение", note: null, room: "166", teacher: T },
   { id: "f5", day: 5, pos: 5, subject: "Поддерживающее занятие", note: null, room: "166", teacher: T },
 ];
 
@@ -80,6 +83,7 @@ export function subjectEmoji(subject) {
   if (s.includes("изо") || s.includes("рисов")) return "🎨";
   if (s.includes("логик")) return "🧩";
   if (s.includes("вытокі") || s.includes("роднай") || s.includes("родная")) return "📗";
+  if (s.includes("письм")) return "✍️";
   if (s.includes("поддержива")) return "✏️";
   if (s.includes("матем")) return "🔢";
   if (s.includes("белорус")) return "📗";
@@ -99,6 +103,7 @@ export function subjectIcon(subject) {
   if (s.includes("изо") || s.includes("рисов")) return { id: "i-sub-art", tone: "pink" };
   if (s.includes("логик")) return { id: "i-sub-math", tone: "blue" };
   if (s.includes("вытокі") || s.includes("роднай") || s.includes("родная")) return { id: "i-sub-abc", tone: "green" };
+  if (s.includes("письм")) return { id: "i-edit", tone: "rose" };
   if (s.includes("поддержива")) return { id: "i-sub-books", tone: "orange" };
   if (s.includes("матем")) return { id: "i-sub-math", tone: "blue" };
   if (s.includes("белорус")) return { id: "i-sub-abc", tone: "green" };
