@@ -1321,6 +1321,22 @@ body:has(.teacher-dashboard) .header-inner{padding:8px 24px}
 body:has(.teacher-dashboard) nav.topnav{padding:14px 24px 0}
 body:has(.teacher-dashboard) main{padding:26px 24px 60px}
 
+/* ТЗ §4: нижние карточки кабинета — «очень мягкая тень и тонкая
+   обводка». Базовый .card приложения несёт серую тень
+   0 10px 30px rgba(23,23,23,.05) и не имеет рамки — внутри кабинета
+   обе характеристики приводятся к токенам ТЗ. Родительских экранов
+   правило не касается: селектор ограничен .teacher-dashboard. */
+.teacher-dashboard .card{box-shadow:var(--shadow-card);border:1px solid var(--border)}
+
+/* ТЗ §6: активный пункт меню «Кабинет» — синий фон, белый текст,
+   ЗОЛОТИСТАЯ внешняя обводка с небольшим светлым промежутком и лёгкая
+   тень. Промежуток и кольцо собраны из двух колец box-shadow: сначала
+   светлая прослойка в цвет фона страницы, затем золото. Правило живёт
+   только когда открыт кабинет (body:has), у родителей меню прежнее. */
+body:has(.teacher-dashboard) nav.topnav button.nvi-host.active{
+  box-shadow:0 0 0 2.5px #F5F1E8,0 0 0 5px #F0C75A,
+    0 6px 14px rgba(40,91,240,.20)}
+
 /* — приветствие ------------------------------------------------ */
 /* Вся геометрия сцены считается от --tc-mascot-h: меняется одна
    переменная — согласованно меняются персонаж, облачко, тень и
@@ -1361,8 +1377,12 @@ body:has(.teacher-dashboard) main{padding:26px 24px 60px}
   /* ТЗ §7: внутреннее поле слева 52–56 px, справа 24–32 px. */
   padding:var(--tc-pad) var(--tc-pad) var(--tc-pad) clamp(24px,4vw,54px);
   min-height:280px;                         /* ТЗ §7: 280–310 px */
-  box-shadow:0 10px 30px rgba(23,23,23,.05);overflow:visible;
-  border:1.5px solid var(--blue-soft)}
+  /* ТЗ §4: очень мягкая ТЁПЛАЯ тень из токена (не серая) и тонкая
+     прохладная обводка 1 px. Прежние значения остались от общего
+     дашборда: rgba(23,23,23,…) — как раз «тяжёлая серая тень»,
+     которую §4 прямо запрещает. */
+  box-shadow:var(--shadow-card);overflow:visible;
+  border:1px solid var(--border)}
 .tc-welcome-text{min-width:0;overflow-wrap:anywhere}
 
 /* ТЗ §5: приветствие 46–48 px / 800 / интерлиньяж 1.06–1.12.
@@ -1400,9 +1420,11 @@ body:has(.teacher-dashboard) main{padding:26px 24px 60px}
 .tc-btn-ico{width:34px;height:34px;flex:none}
 .tc-btn-lav .tc-btn-ico{width:36px;height:36px}
 .tc-btn-icon{width:20px;height:20px;object-fit:contain;flex:none}
-/* Основная кнопка — одна, насыщенная. Тени убавлены. */
-.tc-btn-blue{background:var(--blue);box-shadow:0 5px 14px rgba(72,101,214,.18)}
-.tc-btn-blue:hover{box-shadow:0 8px 18px rgba(72,101,214,.24)}
+/* Основная кнопка — одна, насыщенная. Тень — ровно из ТЗ §4:
+   «только умеренная: 0 8px 18px rgba(40,91,240,.16)». На hover она
+   чуть глубже, но остаётся в той же синей гамме. */
+.tc-btn-blue{background:var(--blue);box-shadow:0 8px 18px rgba(40,91,240,.16)}
+.tc-btn-blue:hover{box-shadow:0 10px 22px rgba(40,91,240,.22)}
 /* Вторая — светлая, читается как второстепенная. */
 .tc-btn-lav{background:#EDE6FB;color:var(--teal-deep);box-shadow:none}
 .tc-btn-lav:hover{background:#E4DAF8;box-shadow:0 4px 12px rgba(182,168,232,.22)}
@@ -1550,18 +1572,25 @@ body:has(.teacher-dashboard) main{padding:26px 24px 60px}
    При ширине колонки 1184 px карточка = 382 px, под текст остаётся
    382 − 40 (поля) − 76 (иконка) − 32 (два зазора) − 19 (стрелка) = 215 px:
    «Изменить расписание» помещается в одну строку (ТЗ §11). */
+/* ТЗ §4: «пастельная заливка, БЕЛАЯ обводка около 1.5 px и лёгкий
+   внутренний блик». Раньше обводки были цветными в тон заливки, а
+   блика не было вовсе; hover-тень была серой rgba(23,23,23,…) — §4
+   такие запрещает, поэтому она переведена в тёплую гамму токена. */
 .tc-quick-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;
   align-items:center;gap:16px;min-height:120px;
-  cursor:pointer;text-align:left;border:1.5px solid transparent;border-radius:22px;
+  cursor:pointer;text-align:left;
+  border:1.5px solid rgba(255,255,255,.9);border-radius:22px;
   padding:20px;font-family:var(--font-ui);color:var(--ink);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.55);
   transition:transform 180ms var(--ease-out-soft),box-shadow 180ms}
-/* ТЗ §11: подъём на 2 px за 160–200 мс. */
-.tc-quick-card:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(23,23,23,.08)}
+/* ТЗ §11: подъём на 2 px за 160–200 мс; блик при этом не пропадает. */
+.tc-quick-card:hover{transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(55,45,25,.10),inset 0 2px 0 rgba(255,255,255,.55)}
 .tc-quick-card:hover .tc-quick-arrow{transform:translateX(3px);opacity:.9}
 .tc-quick-card:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
-.tc-quick-card.tone-pink{background:#FCE9F1;border-color:#F7D9E6}
-.tc-quick-card.tone-green{background:#EDF4E1;border-color:#DEEBCB}
-.tc-quick-card.tone-lav{background:#EFE8FC;border-color:#E2D8F8}
+.tc-quick-card.tone-pink{background:#FCE9F1}
+.tc-quick-card.tone-green{background:#EDF4E1}
+.tc-quick-card.tone-lav{background:#EFE8FC}
 /* Одинаковый бокс под иконку у всех трёх карточек — при object-fit:contain
    рисунки приводятся к одному визуальному размеру независимо от того,
    сколько прозрачных полей у конкретного файла. */
