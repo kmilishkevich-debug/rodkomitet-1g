@@ -1200,6 +1200,15 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .tb-note{background:var(--gold-soft)}
 .tb-note.done{background:var(--cream)}
 
+/* День рождения в «Ближайших событиях» кабинета (28.09.2026):
+   строка-кнопка, клик ведёт на вкладку «Класс» с полным списком на год.
+   Внутри кнопки — span'ы, поэтому телу и подписи возвращаем block. */
+button.tb-row.tb-bd{width:100%;text-align:left;border:none;cursor:pointer;
+  font-family:var(--font-ui);color:var(--ink);
+  transition:background var(--t-micro),transform var(--t-micro) var(--ease-out-soft)}
+button.tb-row.tb-bd:hover{transform:translateY(-1px)}
+.tb-bd .tb-text,.tb-bd .tb-bring{display:block}
+
 /* — кабинет: крупные кнопки действий */
 .tchr-hero{border:1.5px solid var(--blue-soft)}
 .tchr-btns{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px;margin-top:14px}

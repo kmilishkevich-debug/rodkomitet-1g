@@ -13,6 +13,7 @@ import TeacherTodayStats from "./TeacherTodayStats";
 import TeacherQuickCards from "./TeacherQuickCards";
 import TeacherFamilyChat from "./TeacherFamilyChat";
 import { fmtDayWord } from "./TeacherBoard";
+import { BIRTHDAYS_FALLBACK, bdInfo, bdName, fmtBd, inDaysWord } from "./birthdaysData";
 
 // ===== Кабинет классного руководителя =====
 // Рабочий экран на каждый день: приветствие с маскотом, две главные кнопки,
@@ -461,7 +462,7 @@ function Empty({ icon, title, hint, plain, cta, ctaTone, onCta }) {
 export default function TeacherTab({
   authorName, greetingName, toast, onTab,
   homework, events, announcements, familyMessages,
-  schedule, overrides,
+  schedule, overrides, birthdays,
   onReload, onReloadMessages,
 }) {
   const [form, setForm] = useState(null);      // 'ann' | 'hw' | 'event' | null
@@ -488,12 +489,32 @@ export default function TeacherTab({
   // ТЗ §23): полные списки живут в своих разделах, здесь только сводка.
   const hw = (homework || []).filter((h) => h.on_date === pickedDay).slice(0, 3);
 
-  // События — только предстоящие, ближайшие сверху
-  const ev = (events || [])
-    .filter((e) => e.on_date >= todayIso)
-    .slice()
-    .sort((a, b) => (a.on_date < b.on_date ? -1 : 1))
-    .slice(0, 3);
+  // События — только предстоящие, ближайшие сверху. Вперемешку с ними,
+  // по той же дате, идут дни рождения детей на ближайшие 30 дней
+  // (добавлено 28.09.2026): при совпадении даты ДР стоит выше события.
+  // Превью выросло с 3 до 5 строк, чтобы ДР не вытесняли события.
+  // Клик по строке ДР ведёт на вкладку «Класс» — там список на весь год.
+  const bdays = birthdays || BIRTHDAYS_FALLBACK;
+  const bdRows = bdays
+    .map((k) => ({ ...k, ...bdInfo(k.born) }))
+    .filter((k) => k.days <= 30)
+    .map((k) => ({
+      ...k,
+      kind: "bday",
+      key: "bd" + k.id,
+      on_date: `${k.next.getFullYear()}-${String(k.next.getMonth() + 1).padStart(2, "0")}-${String(k.next.getDate()).padStart(2, "0")}`,
+    }));
+  const ev = [
+    ...(events || [])
+      .filter((e) => e.on_date >= todayIso)
+      .map((e) => ({ ...e, kind: "event", key: "ev" + e.id })),
+    ...bdRows,
+  ]
+    .sort((a, b) => {
+      if (a.on_date !== b.on_date) return a.on_date < b.on_date ? -1 : 1;
+      return (a.kind === "bday" ? 0 : 1) - (b.kind === "bday" ? 0 : 1);
+    })
+    .slice(0, 5);
 
   // Свои объявления — последние три
   const myAnn = (announcements || [])
@@ -617,8 +638,25 @@ export default function TeacherTab({
                 onCta={() => setForm("event")}
               />
             )}
-            {ev.map((e) => (
-              <div className="tb-row" key={e.id}>
+            {ev.map((e) => e.kind === "bday" ? (
+              // День рождения: сегодняшний подсвечен золотой плашкой .now
+              // и стоит первым; клик открывает вкладку «Класс»
+              <button
+                className={"tb-row tb-bd" + (e.days === 0 ? " now" : "")}
+                key={e.key}
+                onClick={() => onTab("class")}
+                title="Открыть список класса"
+              >
+                <span className="tb-day">{fmtDayWord(e.on_date, todayIso)}</span>
+                <span className="tb-body">
+                  <span className="tb-text">🎂 <b>{bdName(e)}</b> — день рождения</span>
+                  <span className="tb-bring">
+                    {fmtBd(e.born)}, {e.days === 0 ? <b className="tc-hot">сегодня!</b> : inDaysWord(e.days)}
+                  </span>
+                </span>
+              </button>
+            ) : (
+              <div className="tb-row" key={e.key}>
                 <span className="tb-day">{fmtDayWord(e.on_date, todayIso)}</span>
                 <div className="tb-body">
                   <div className="tb-text"><b>{e.title}</b>{e.time_text ? ` · ${e.time_text}` : ""}</div>
