@@ -62,10 +62,15 @@ export default function TeacherTodayStats({ schedule, overrides, homework, event
   // --- Уроки сегодня: та же математика, что на главной родителей
   // (DashboardTab) — база из live-расписания или запасного набора,
   // поверх — активные опубликованные замены на сегодняшнюю дату.
+  // ВАЖНО: null у schedule/overrides — НЕ «грузится», а штатное
+  // «в базе нет живого расписания / таблицы замен»: page.jsx вызывает
+  // setLiveSchedule только когда данные реально пришли. Поэтому у этой
+  // карточки нет скелета — цифра считается сразу, из живых данных или
+  // из встроенного LESSONS_FALLBACK, как у родителей. Прежняя проверка
+  // на null держала карточку в вечном скелете и блокировала клик.
   let lessonsCount = null; // null → «выходной», число → уроки
   let lessonsSub = "по расписанию";
-  const schedLoading = schedule === null || overrides === null;
-  if (!schedLoading && day >= 1 && day <= 5) {
+  if (day >= 1 && day <= 5) {
     const allLessons = schedule?.lessons?.length ? schedule.lessons : LESSONS_FALLBACK;
     const ovs = activeOverridesFor(overrides || [], todayIso);
     const { lessons, changed } = applyOverridesToDay(allLessons, day, ovs);
@@ -90,7 +95,7 @@ export default function TeacherTodayStats({ schedule, overrides, homework, event
       <StatCard
         tone="tone-per"
         icon="/icons/icon-book.webp"
-        loading={schedLoading}
+        loading={false}
         value={lessonsCount === null ? "—" : lessonsCount}
         label={lessonsCount === null ? "выходной" : plural(lessonsCount, "урок сегодня", "урока сегодня", "уроков сегодня")}
         sub={lessonsCount === null ? "уроков нет" : lessonsSub}
