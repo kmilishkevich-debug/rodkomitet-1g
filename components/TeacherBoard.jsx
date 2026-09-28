@@ -1,6 +1,7 @@
 "use client";
 import { toggleFamilyNote, deleteFamilyNote } from "@/lib/supabase";
 import { Ic } from "./Art";
+import { PostChatInline } from "./PostChat";
 
 // ===== Карточка «От учителя» на «Главной» у родителей =====
 // Всё, что публикует классный руководитель, собрано в одном месте
@@ -38,7 +39,10 @@ export function fmtDayWord(iso, todayIso) {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
-export default function TeacherBoard({ homework, events, notes, onReloadNotes, toast, onTab }) {
+export default function TeacherBoard({
+  homework, events, notes, onReloadNotes, toast, onTab,
+  postComments, chatClosed, family, onNeedFamily, onReloadComments,
+}) {
   const todayIso = minskIso();
 
   // Задания на сегодня и вперёд (вчерашние показываем только сегодня вечером — их
@@ -105,6 +109,12 @@ export default function TeacherBoard({ homework, events, notes, onReloadNotes, t
                   {h.text}
                 </div>
                 {h.bring && <div className="tb-bring">Взять с собой: {h.bring}</div>}
+                <PostChatInline
+                  postKind="hw" postId={h.id}
+                  comments={postComments} closedList={chatClosed}
+                  family={family} onNeedFamily={onNeedFamily}
+                  onSent={onReloadComments} toast={toast}
+                />
               </div>
             </div>
           ))}
@@ -127,6 +137,12 @@ export default function TeacherBoard({ homework, events, notes, onReloadNotes, t
                     {e.place ? e.place : ""}{e.place && e.note ? " · " : ""}{e.note ? e.note : ""}
                   </div>
                 )}
+                <PostChatInline
+                  postKind="event" postId={e.id}
+                  comments={postComments} closedList={chatClosed}
+                  family={family} onNeedFamily={onNeedFamily}
+                  onSent={onReloadComments} toast={toast}
+                />
               </div>
             </div>
           ))}

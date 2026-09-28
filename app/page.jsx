@@ -13,7 +13,7 @@ import TeacherTab from "@/components/TeacherTab";
 import UploadModal from "@/components/UploadModal";
 import LogoutModal from "@/components/LogoutModal";
 import { useFamily, loadSeen, saveSeen } from "@/components/FamilyPicker";
-import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes, fetchHomework, fetchClassEvents, fetchTeacherNotes, fetchFamilyMessages, recordVisit, visitHeartbeat } from "@/lib/supabase";
+import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes, fetchHomework, fetchClassEvents, fetchTeacherNotes, fetchFamilyMessages, fetchPostComments, fetchChatClosed, recordVisit, visitHeartbeat } from "@/lib/supabase";
 import { enablePush, syncPushRole } from "@/lib/push";
 import { isFormOpen, onFormsChange } from "@/lib/formGuard";
 
@@ -349,6 +349,19 @@ export default function Page() {
     reloadFamilyMessages();
   }, [reloadFamilyMessages]);
 
+  // Обсуждения под публикациями учителя (null = таблицы ещё нет, кнопки чата скрыты)
+  const [livePostComments, setLivePostComments] = useState(null);
+  const [liveChatClosed, setLiveChatClosed] = useState(null);
+  const reloadPostComments = useCallback(async () => {
+    const data = await fetchPostComments();
+    if (data) setLivePostComments(data);
+    const closed = await fetchChatClosed();
+    if (closed) setLiveChatClosed(closed);
+  }, []);
+  useEffect(() => {
+    reloadPostComments();
+  }, [reloadPostComments]);
+
   // ===== Авто-обновление данных =====
   // Обновить всё сразу (объявления, прочитано, голосования, расходы, расписание, замены, дни рождения)
   const reloadAll = useCallback(() => {
@@ -364,7 +377,8 @@ export default function Page() {
     reloadEvents();
     reloadTeacherNotes();
     reloadFamilyMessages();
-  }, [reloadAnnouncements, reloadReads, reloadPolls, reloadExpenses, reloadSchedule, reloadOverrides, reloadBirthdays, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes, reloadFamilyMessages]);
+    reloadPostComments();
+  }, [reloadAnnouncements, reloadReads, reloadPolls, reloadExpenses, reloadSchedule, reloadOverrides, reloadBirthdays, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes, reloadFamilyMessages, reloadPostComments]);
 
   // При возврате в приложение (переключение окна/вкладки браузера) и раз в минуту — свежие данные.
   // Пока открыта любая форма — обновление на паузе (иначе оно стирает набранное),
@@ -419,11 +433,13 @@ export default function Page() {
     ch = listen(ch, "homework", reloadHomework);
     ch = listen(ch, "class_events", reloadEvents);
     ch = listen(ch, "family_messages", reloadFamilyMessages);
+    ch = listen(ch, "post_comments", reloadPostComments);
+    ch = listen(ch, "post_chat_closed", reloadPostComments);
     ch.subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [role, reloadAnnouncements, reloadReads, reloadPolls, reloadOverrides, reloadSchedule, reloadExpenses, reloadBirthdays, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes, reloadFamilyMessages]);
+  }, [role, reloadAnnouncements, reloadReads, reloadPolls, reloadOverrides, reloadSchedule, reloadExpenses, reloadBirthdays, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes, reloadFamilyMessages, reloadPostComments]);
 
   // Разбор адреса раздела: /?tab=... → вкладка (старые адреса денег ведут в «Деньги»)
   const applyRoute = useCallback((t) => {
@@ -611,7 +627,7 @@ export default function Page() {
             }}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={shownAnnouncements} polls={shownPolls} reads={liveReads} family={family} setFamily={setFamily} notes={liveNotes} onReloadNotes={reloadNotes} homework={liveHomework} events={liveEvents} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={shownAnnouncements} polls={shownPolls} reads={liveReads} family={family} setFamily={setFamily} notes={liveNotes} onReloadNotes={reloadNotes} homework={liveHomework} events={liveEvents} postComments={livePostComments} chatClosed={liveChatClosed} onReloadComments={reloadPostComments} />}
             {tab === "teacher" && (
               <TeacherTab
                 authorName={authorName}
@@ -627,10 +643,13 @@ export default function Page() {
                 birthdays={liveBirthdays}
                 onReload={() => { reloadHomework(); reloadEvents(); reloadTeacherNotes(); }}
                 onReloadMessages={reloadFamilyMessages}
+                postComments={livePostComments}
+                chatClosed={liveChatClosed}
+                onReloadComments={reloadPostComments}
               />
             )}
             {tab === "schedule" && <ScheduleTab committee={committee} canEditSchedule={canEditSchedule} author={author} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} overrides={liveOverrides} onReloadOverrides={reloadOverrides} />}
-            {tab === "announcements" && <AnnouncementsTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} announcements={shownAnnouncements} reads={liveReads} onReload={reloadAnnouncements} onReloadReads={reloadReads} family={family} setFamily={setFamily} />}
+            {tab === "announcements" && <AnnouncementsTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} announcements={shownAnnouncements} reads={liveReads} onReload={reloadAnnouncements} onReloadReads={reloadReads} family={family} setFamily={setFamily} postComments={livePostComments} chatClosed={liveChatClosed} onReloadComments={reloadPostComments} />}
             {tab === "votes" && <VotesTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} polls={shownPolls} onReload={reloadPolls} family={family} setFamily={setFamily} />}
             {tab === "class" && <ClassTab committee={committee} toast={toast} liveBirthdays={liveBirthdays} />}
             {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} author={author} family={family} />}

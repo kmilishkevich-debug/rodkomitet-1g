@@ -744,7 +744,9 @@ function CommitteeRemind({ authorName, toast }) {
   );
 }
 
-export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls, reads, family, setFamily, notes, onReloadNotes, homework, events }) {
+export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls, reads, family, setFamily, notes, onReloadNotes, homework, events, postComments, chatClosed, onReloadComments }) {
+  // Выбор семьи по требованию (когда пишут в обсуждение, не выбрав семью)
+  const [famOpen, setFamOpen] = useState(false);
   // Персональное приветствие: у комитета/учителя — имя из базы; у семьи — по ребёнку («семья Тимофея»)
   const greetName = authorName
     ? `, ${authorName}`
@@ -872,6 +874,17 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         onReloadNotes={onReloadNotes}
         toast={toast}
         onTab={onTab}
+        postComments={postComments}
+        chatClosed={chatClosed}
+        family={family}
+        onNeedFamily={() => setFamOpen(true)}
+        onReloadComments={onReloadComments}
+      />
+      <FamilyPicker
+        open={famOpen}
+        onClose={() => setFamOpen(false)}
+        title="Выберите свою семью"
+        onPick={(f) => setFamily(f)}
       />
 
       {/* Привязка семьи — только для комитета: у учителя «Главной» больше нет,

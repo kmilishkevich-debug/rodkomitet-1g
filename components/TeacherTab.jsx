@@ -12,6 +12,7 @@ import TeacherWelcomeCard from "./TeacherWelcomeCard";
 import TeacherTodayStats from "./TeacherTodayStats";
 import TeacherQuickCards from "./TeacherQuickCards";
 import TeacherFamilyChat from "./TeacherFamilyChat";
+import { PostChatModal, commentsFor, unreadFor } from "./PostChat";
 import { fmtDayWord } from "./TeacherBoard";
 import { BIRTHDAYS_FALLBACK, bdInfo, bdName, fmtBd, inDaysWord } from "./birthdaysData";
 
@@ -463,12 +464,33 @@ export default function TeacherTab({
   authorName, greetingName, toast, onTab,
   homework, events, announcements, familyMessages,
   schedule, overrides, birthdays,
+  postComments, chatClosed, onReloadComments,
   onReload, onReloadMessages,
 }) {
   const [form, setForm] = useState(null);      // 'ann' | 'hw' | 'event' | null
   const [pickOpen, setPickOpen] = useState(false);
   const [chatFamily, setChatFamily] = useState(null); // {n, child}
+  const [postChat, setPostChat] = useState(null);     // {kind, id, title}
   const [hwDay, setHwDay] = useState("tomorrow");     // 'today' | 'tomorrow'
+
+  // Обсуждения под публикациями. Пока таблицы в базе нет
+  // (postComments === null), кнопки «Обсуждение» не показываем.
+  const chatsOn = postComments !== null && postComments !== undefined;
+  const chatBtn = (kind, id, title) => {
+    if (!chatsOn) return null;
+    const cnt = commentsFor(postComments, kind, id).length;
+    const unread = unreadFor(postComments, kind, id);
+    return (
+      <button
+        className="pc-chatbtn"
+        onClick={() => setPostChat({ kind, id, title })}
+        title="Открыть обсуждение"
+      >
+        💬 Обсуждение{cnt ? ` (${cnt})` : ""}
+        {unread > 0 && <span className="tc-badge">{unread}</span>}
+      </button>
+    );
+  };
 
   const author = authorName || "Учитель";
   const todayIso = minskIso();
@@ -611,6 +633,7 @@ export default function TeacherTab({
                 <div className="tb-body">
                   <div className="tb-text">{h.text}</div>
                   {h.bring && <div className="tb-bring">Взять с собой: {h.bring}</div>}
+                  {chatBtn("hw", h.id, `Задание: ${short(h.text, 60)}`)}
                 </div>
                 <button className="note-del" onClick={() => delHw(h)} aria-label="Удалить" title="Удалить">✕</button>
               </div>
@@ -663,6 +686,7 @@ export default function TeacherTab({
                   {(e.place || e.note) && (
                     <div className="tb-bring">{e.place || ""}{e.place && e.note ? " · " : ""}{e.note || ""}</div>
                   )}
+                  {chatBtn("event", e.id, e.title)}
                 </div>
                 <button className="note-del" onClick={() => delEv(e)} aria-label="Удалить" title="Удалить">✕</button>
               </div>
@@ -689,10 +713,15 @@ export default function TeacherTab({
               />
             )}
             {myAnn.map((a) => (
-              <button className="tc-line" key={a.id} onClick={() => onTab("announcements")}>
-                <span className="tc-line-title">{a.important && <b className="tc-hot">Важно · </b>}{a.title}</span>
-                {a.body && <span className="tc-line-sub">{short(a.body, 70)}</span>}
-              </button>
+              // Кнопка обсуждения не может жить внутри кнопки-строки,
+              // поэтому строка обёрнута в контейнер, а чат — под ней.
+              <div className="pc-annrow" key={a.id}>
+                <button className="tc-line" onClick={() => onTab("announcements")}>
+                  <span className="tc-line-title">{a.important && <b className="tc-hot">Важно · </b>}{a.title}</span>
+                  {a.body && <span className="tc-line-sub">{short(a.body, 70)}</span>}
+                </button>
+                {chatBtn("ann", a.id, a.title)}
+              </div>
             ))}
           </WorkCard>
 
@@ -762,6 +791,19 @@ export default function TeacherTab({
         side="teacher"
         onSent={onReloadMessages}
         onClose={() => { setChatFamily(null); onReloadMessages?.(); }}
+        toast={toast}
+      />
+
+      <PostChatModal
+        open={!!postChat}
+        postKind={postChat?.kind}
+        postId={postChat?.id}
+        title={postChat?.title}
+        comments={postComments}
+        closedList={chatClosed}
+        authorName={author}
+        onSent={onReloadComments}
+        onClose={() => { setPostChat(null); onReloadComments?.(); }}
         toast={toast}
       />
     </section>

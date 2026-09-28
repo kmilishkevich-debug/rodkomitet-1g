@@ -5,6 +5,7 @@ import NavIcon from "./NavIcons";
 import { FAMILIES_COUNT } from "./data";
 import { isLive, saveAnnouncement, deleteAnnouncement, markRead, uploadNewsImage } from "@/lib/supabase";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
+import { PostChatInline } from "./PostChat";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
 // ===== Редактор объявления (создание и правка) =====
@@ -134,7 +135,10 @@ function AnnouncementEditor({ open, initial, author, teacher, onClose, onSaved, 
 }
 
 // ===== Карточка объявления =====
-function AnnouncementCard({ a, committee, canEdit, family, reads, toast, onEdit, onReload, onReloadReads, onNeedFamily }) {
+function AnnouncementCard({
+  a, committee, canEdit, family, reads, toast, onEdit, onReload, onReloadReads,
+  onNeedFamily, postComments, chatClosed, onReloadComments,
+}) {
   const [readsOpen, setReadsOpen] = useState(false);
   const myRead = family && reads.some((r) => r.announcement_id === a.id && r.family_n === family.n);
   const whoRead = reads.filter((r) => r.announcement_id === a.id).sort((x, y) => x.family_n - y.family_n);
@@ -224,12 +228,26 @@ function AnnouncementCard({ a, committee, canEdit, family, reads, toast, onEdit,
           ))}
         </div>
       )}
+      {/* Обсуждение объявления: общий чат семей и учителя */}
+      <PostChatInline
+        postKind="ann"
+        postId={a.id}
+        comments={postComments}
+        closedList={chatClosed}
+        family={family}
+        onNeedFamily={() => onNeedFamily(() => {})}
+        onSent={onReloadComments}
+        toast={toast}
+      />
     </article>
   );
 }
 
 // ===== Вкладка «Объявления» =====
-export default function AnnouncementsTab({ committee, canEdit, teacher, author, toast, announcements, reads, onReload, onReloadReads, family, setFamily }) {
+export default function AnnouncementsTab({
+  committee, canEdit, teacher, author, toast, announcements, reads, onReload, onReloadReads,
+  family, setFamily, postComments, chatClosed, onReloadComments,
+}) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showArchive, setShowArchive] = useState(false);
@@ -315,6 +333,7 @@ export default function AnnouncementsTab({ committee, canEdit, teacher, author, 
           key={a.id} a={a} committee={committee} canEdit={canEdit} family={family}
           reads={reads} toast={toast} onEdit={openEditor} onReload={onReload}
           onReloadReads={onReloadReads} onNeedFamily={needFamily}
+          postComments={postComments} chatClosed={chatClosed} onReloadComments={onReloadComments}
         />
       ))}
 
@@ -328,6 +347,7 @@ export default function AnnouncementsTab({ committee, canEdit, teacher, author, 
               key={a.id} a={a} committee={committee} canEdit={canEdit} family={family}
               reads={reads} toast={toast} onEdit={openEditor} onReload={onReload}
               onReloadReads={onReloadReads} onNeedFamily={needFamily}
+              postComments={postComments} chatClosed={chatClosed} onReloadComments={onReloadComments}
             />
           ))}
         </>
@@ -343,7 +363,7 @@ export default function AnnouncementsTab({ committee, canEdit, teacher, author, 
       <FamilyPicker
         open={famOpen}
         onClose={() => setFamOpen(false)}
-        title="Отметить прочтение: выберите свою семью"
+        title="Выберите свою семью"
         onPick={(f) => {
           setFamily(f);
           if (famAction) famAction(f);

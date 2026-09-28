@@ -1843,6 +1843,51 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .chat-input:focus{outline:2px solid var(--blue-soft)}
 
 /* ============================================================
+   ОБСУЖДЕНИЯ ПОД ПУБЛИКАЦИЯМИ
+   Общий чат семей и учителя под объявлением, заданием, событием.
+   У учителя — кнопка с бейджем и модалка (стили chat-* выше),
+   у родителей — раскрывающийся блок прямо под публикацией.
+   ============================================================ */
+
+/* кнопка «Обсуждение» в кабинете учителя (рядом с публикацией) */
+.pc-chatbtn{display:inline-flex;align-items:center;gap:7px;border:none;cursor:pointer;
+  border-radius:12px;padding:7px 12px;background:var(--cream);
+  font-family:var(--font-ui);font-size:12.5px;font-weight:700;color:var(--ink);
+  transition:background var(--t-micro)}
+.pc-chatbtn:hover{background:var(--blue-soft)}
+.pc-chatbtn .tc-badge{min-width:19px;height:19px;font-size:10.5px}
+
+/* объявление в кабинете: строка-ссылка + кнопка чата под ней
+   (кнопку нельзя класть внутрь .tc-line — она сама кнопка) */
+.pc-annrow{display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+  margin-bottom:10px}
+.pc-annrow .tc-line{margin-bottom:0}
+.pc-annrow:last-child{margin-bottom:0}
+
+/* — раскрывающийся блок у родителей --------------------------- */
+.pc-wrap{margin-top:10px}
+.pc-toggle{display:inline-flex;align-items:center;gap:7px;border:none;cursor:pointer;
+  border-radius:12px;padding:7px 12px;background:var(--cream);
+  font-family:var(--font-ui);font-size:12.5px;font-weight:700;color:var(--ink);
+  transition:background var(--t-micro)}
+.pc-toggle:hover,.pc-toggle.open{background:var(--blue-soft)}
+.pc-arrow{font-size:10px;color:var(--muted)}
+
+.pc-panel{margin-top:10px;padding:12px;border-radius:16px;background:var(--card);
+  border:1.5px solid #E7E2D8}
+.pc-panel .chat-thread{max-height:38vh;padding:12px;margin-bottom:10px}
+.pc-panel .chat-input{margin-bottom:10px}
+
+/* крестик удаления своего сообщения (в строке chat-meta) */
+.pc-del{border:none;background:none;cursor:pointer;padding:0 2px;margin-left:6px;
+  font-size:11px;font-weight:800;color:var(--muted);transition:color var(--t-micro)}
+.pc-del:hover{color:var(--red)}
+
+/* служебные подписи под чатом */
+.pc-closed-note{font-size:12.5px;font-weight:600;margin:0 0 10px}
+.pc-privacy{font-size:11.5px;font-weight:500;margin:8px 0 0}
+
+/* ============================================================
    АДАПТИВ КАБИНЕТА (ТЗ §14)
    Три ступени: планшет 768–1199, узкий планшет ≤1023 и телефон ≤767.
    Порядок блоков — от широкого к узкому, чтобы более узкое правило
