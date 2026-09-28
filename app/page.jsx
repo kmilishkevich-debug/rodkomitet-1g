@@ -13,7 +13,7 @@ import TeacherTab from "@/components/TeacherTab";
 import UploadModal from "@/components/UploadModal";
 import LogoutModal from "@/components/LogoutModal";
 import { useFamily, loadSeen, saveSeen } from "@/components/FamilyPicker";
-import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes, fetchHomework, fetchClassEvents, fetchTeacherNotes, fetchFamilyMessages } from "@/lib/supabase";
+import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes, fetchHomework, fetchClassEvents, fetchTeacherNotes, fetchFamilyMessages, recordVisit, visitHeartbeat } from "@/lib/supabase";
 import { enablePush, syncPushRole } from "@/lib/push";
 import { isFormOpen, onFormsChange } from "@/lib/formGuard";
 
@@ -485,6 +485,25 @@ export default function Page() {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [applyRoute]);
+
+  // Учёт посещений (видит только комитет): при каждом открытии записываем визит,
+  // потом раз в ~5 минут обновляем «пульс» — из него складывается «были до ~20:05».
+  const visitIdRef = useRef(null);
+  useEffect(() => {
+    if (!role) return;
+    // Семья фиксируется вместе с номером — ждём, пока он подтянется из памяти
+    if (role === "parent" && !family?.n) return;
+    let stopped = false;
+    const vRole = role === "parent" ? "family" : role;
+    recordVisit(vRole, role === "parent" ? family.n : null, role === "parent" ? family.child || null : null)
+      .then((id) => { if (!stopped) visitIdRef.current = id; });
+    const pulse = setInterval(() => visitHeartbeat(visitIdRef.current), 5 * 60 * 1000);
+    return () => {
+      stopped = true;
+      clearInterval(pulse);
+      visitIdRef.current = null;
+    };
+  }, [role, family?.n, family?.child]);
 
   const login = (r, fam) => {
     setRole(r);
