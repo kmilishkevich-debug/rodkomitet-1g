@@ -3,12 +3,12 @@ import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import {
   FEES, FEE_COLUMNS, GPD_CHILDREN, fmt, feeRest,
-  GPD_FUND, GPD_FUND_FEE, GPD_FUND_CHARGE, gpdFundRest,
-  GPD_FUND_COLLECTED, GPD_FUND_SPENT, GPD_FUND_REST,
+  GPD_FUND, GPD_FUND_FEE, GPD_FUND_SPENT, groupTotal,
 } from "./data";
 import {
   supabase, isLive, fetchFees, fetchChildNotes, saveFeeValue,
   fetchOneOffIncomes, addOneOffIncome, fetchFeeEditsLog, addFeeEdit,
+  fetchGpdFund, saveGpdPaid, addGpdChild, deleteGpdChild,
 } from "@/lib/supabase";
 import TreasurerMascot, { MASCOT_GOAL, notifyTreasurer } from "./TreasurerMascot";
 import { shareText, shareUrl } from "@/lib/share";
@@ -208,6 +208,34 @@ function OneOffModal({ childNames, onClose, onSave, saving }) {
   );
 }
 
+// Окошко правки взноса в фонде ГПД
+function GpdPaidModal({ row, onClose, onSave, saving }) {
+  const [amount, setAmount] = useState(row.paid ? String(row.paid) : "");
+  useRefreshPause(true);
+  return (
+    <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && onClose()}>
+      <div className="modal">
+        <h3>Взнос в фонд ГПД</h3>
+        <div className="muted">{row.child} · взнос {fmt(GPD_FUND_FEE)} BYN с ребёнка</div>
+        <label className="fee-lb">Сумма, BYN</label>
+        <input
+          className="fee-inp" type="number" step="0.01" inputMode="decimal"
+          value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
+        />
+        <div className="actions">
+          <button className="btn small white" onClick={onClose}>Отмена</button>
+          <button
+            className="btn small teal" disabled={saving}
+            onClick={() => onSave(parseFloat(String(amount).replace(",", ".")) || 0)}
+          >
+            Сохранить
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Крупная сумма плитки кассы: число крупно, BYN меньше, табличные цифры
 function Sum({ value, className = "" }) {
   return (
@@ -217,7 +245,7 @@ function Sum({ value, className = "" }) {
   );
 }
 
-export default function FeesTab({ committee, toast, onOpenUpload, author, onGoExpenses, family }) {
+export default function FeesTab({ committee, toast, onOpenUpload, author, onGoExpenses, family, liveGroups }) {
   const [listOpen, setListOpen] = useState(true); // ведомость по детям раскрыта по умолчанию
   const [gpdOpen, setGpdOpen] = useState(false);
   const [howOpen, setHowOpen] = useState(false); // «Как устроена общая касса»
@@ -234,16 +262,21 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
   const [cellEdit, setCellEdit] = useState(null); // { row, column, amount, method, note }
   const [oneOffOpen, setOneOffOpen] = useState(false);
 
+  const [gpdLive, setGpdLive] = useState(null); // живой список фонда ГПД из базы
+  const [gpdEdit, setGpdEdit] = useState(null); // редактируемая строка фонда
+
   const editor = author || "Комитет";
 
   const reload = async () => setLive(await fetchFees());
   const reloadOneOffs = async () => setOneOffs(await fetchOneOffIncomes());
   const reloadLog = async () => setLog(await fetchFeeEditsLog());
+  const reloadGpd = async () => setGpdLive(await fetchGpdFund());
   useEffect(() => {
     reload();
     fetchChildNotes().then(setNotes);
     reloadOneOffs();
     reloadLog();
+    reloadGpd();
   }, []);
 
   // Ходит ли ребёнок в ГПД: живые пометки из базы или встроенный список
@@ -374,6 +407,81 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
   };
 
   const oneOffTotal = round2((oneOffs || []).reduce((s, o) => s + o.amount, 0));
+
+  // ===== Фонд ГПД: живой список детей + «Потрачено» из раздела «Расходы» =====
+  // Дети: из базы (gpd_fund_children) или встроенный запасной список.
+  const gpdRows = gpdLive || GPD_FUND.map((r) => ({ id: "demo-" + r.n, child: r.child, paid: r.paid }));
+  const gpdCollected = round2(gpdRows.reduce((s, r) => s + (r.paid || 0), 0));
+  // «Потрачено» — автоматически: сумма живых групп расходов, в названии которых есть «ГПД».
+  const gpdSpent = liveGroups
+    ? round2(liveGroups.filter((g) => /гпд/i.test(g.title || "")).reduce((s, g) => s + groupTotal(g), 0))
+    : GPD_FUND_SPENT;
+  // Доля расходов делится на всех детей в списке фонда.
+  const gpdCharge = gpdRows.length ? gpdSpent / gpdRows.length : 0;
+  const gpdRest = round2(gpdCollected - gpdSpent);
+
+  const openGpdCell = (r) => {
+    if (!committee) return;
+    if (!gpdLive) return toast("Правка взносов ГПД заработает после запуска файла gpd-fund-setup.sql в Supabase");
+    setGpdEdit(r);
+  };
+
+  const saveGpdCell = async (amount) => {
+    const r = gpdEdit;
+    const old = r.paid || 0;
+    setSaving(true);
+    try {
+      await saveGpdPaid(r.id, amount);
+      if (round2(old) !== round2(amount)) {
+        await addFeeEdit({
+          target: "Фонд ГПД", child: r.child, field: "Взнос",
+          old_amount: old, new_amount: amount, editor,
+        });
+        if (amount > old) {
+          notifyTreasurer({ type: "contribution", id: "gpd:" + r.id + ":" + Date.now(), child: r.child, amount: round2(amount - old) });
+        }
+      }
+      setGpdEdit(null);
+      toast("Взнос сохранён, изменение записано в журнал");
+      reloadGpd(); reloadLog();
+    } catch (e) {
+      toast("Не получилось сохранить: " + e.message);
+    }
+    setSaving(false);
+  };
+
+  const addGpdKid = async () => {
+    if (!gpdLive) return toast("Добавление детей заработает после запуска файла gpd-fund-setup.sql в Supabase");
+    const name = window.prompt("Фамилия и имя ребёнка для фонда ГПД:");
+    if (!name || !name.trim()) return;
+    try {
+      await addGpdChild(name.trim(), gpdRows.length + 1);
+      await addFeeEdit({
+        target: "Фонд ГПД", child: name.trim(), field: "Добавлен в список",
+        old_amount: null, new_amount: 0, editor,
+      });
+      toast("Ребёнок добавлен в фонд ГПД");
+      reloadGpd(); reloadLog();
+    } catch (e) {
+      toast("Не получилось добавить: " + e.message);
+    }
+  };
+
+  const removeGpdKid = async (r) => {
+    if (!gpdLive) return toast("Удаление детей заработает после запуска файла gpd-fund-setup.sql в Supabase");
+    if (!window.confirm(`Убрать «${r.child}» из списка фонда ГПД?`)) return;
+    try {
+      await deleteGpdChild(r.id);
+      await addFeeEdit({
+        target: "Фонд ГПД", child: r.child, field: "Удалён из списка",
+        old_amount: r.paid || 0, new_amount: null, editor,
+      });
+      toast("Ребёнок удалён из фонда ГПД");
+      reloadGpd(); reloadLog();
+    } catch (e) {
+      toast("Не получилось удалить: " + e.message);
+    }
+  };
 
   // ===== Общая касса класса: собрано / потрачено / осталось (без сумм фонда ГПД) =====
   const totalCharges = round2(columns.filter((c) => c.kind === "charge").reduce((s, c) => s + (totals[c.id] || 0), 0));
@@ -571,27 +679,28 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
           <div>
             <h3>Фонд ГПД <span className="chip violet">Дополнительный сбор</span></h3>
             <div className="fee-meta">
-              {GPD_FUND.length} детей · {fmt(GPD_FUND_FEE)} BYN с ребёнка · свой список: без троих ребят класса, зато с тремя из других классов
+              {gpdRows.length} {plural(gpdRows.length, "ребёнок", "ребёнка", "детей")} · {fmt(GPD_FUND_FEE)} BYN с ребёнка · свой список — не совпадает со списком класса
             </div>
           </div>
         </div>
         <div className="fin-gpd-stats">
           <div className="fin-gpd-stat blue">
             <span className="fin-gpd-lb"><Ic id="i-users" />Собрано</span>
-            <span className="fin-gpd-sum">{fmt(GPD_FUND_COLLECTED)} <i>BYN</i></span>
+            <span className="fin-gpd-sum">{fmt(gpdCollected)} <i>BYN</i></span>
           </div>
           <div className="fin-gpd-stat pink">
             <span className="fin-gpd-lb"><Ic id="i-receipt" />Потрачено</span>
-            <span className="fin-gpd-sum">{fmt(GPD_FUND_SPENT)} <i>BYN</i></span>
+            <span className="fin-gpd-sum">{fmt(gpdSpent)} <i>BYN</i></span>
           </div>
           <div className="fin-gpd-stat green">
             <span className="fin-gpd-lb"><Ic id="i-check" />Остаток</span>
-            <span className="fin-gpd-sum">{fmt(GPD_FUND_REST)} <i>BYN</i></span>
+            <span className="fin-gpd-sum">{fmt(gpdRest)} <i>BYN</i></span>
           </div>
         </div>
         <div className="muted" style={{ marginBottom: 12 }}>
-          Остаток {fmt(GPD_FUND_REST)} BYN — как в таблице казначея: в кассе фонда 650,00 − 338,32 = 311,68,
-          минус 13,01 — доля расходов Дашкевич Варвары, взнос которой ещё не сдан.
+          Остаток {fmt(gpdRest)} BYN = собрано {fmt(gpdCollected)} − потрачено {fmt(gpdSpent)}.
+          «Потрачено» подтягивается автоматически из групп «ГПД» в разделе «Расходы».
+          Доля каждого ребёнка: {fmt(gpdSpent)} ÷ {gpdRows.length} = {fmt(gpdCharge)} BYN.
         </div>
         <div className="fin-actions">
           <button className="btn outline" onClick={() => setGpdOpen(!gpdOpen)} aria-expanded={gpdOpen}>
@@ -600,6 +709,11 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
           <button className="btn outline" onClick={() => onGoExpenses && onGoExpenses(true)}>
             <Ic id="i-receipt" />Расходы ГПД
           </button>
+          {committee && gpdOpen && (
+            <button className="btn outline" onClick={addGpdKid}>
+              <Ic id="i-plus" />Добавить ребёнка
+            </button>
+          )}
         </div>
         {gpdOpen && (
           <div style={{ marginTop: 14, overflowX: "auto" }}>
@@ -611,32 +725,47 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
                   <th>Взнос</th>
                   <th>Хознужды ГПД</th>
                   <th>Остаток</th>
+                  {committee && gpdLive && <th></th>}
                 </tr>
-                {GPD_FUND.map((r) => {
-                  const rest = gpdFundRest(r);
+                {gpdRows.map((r, i) => {
+                  const rest = round2((r.paid || 0) - gpdCharge);
+                  const inner = r.paid ? <b>{fmt(r.paid)}</b> : "—";
                   return (
-                    <tr key={r.n}>
-                      <td>{r.n}</td>
+                    <tr key={r.id}>
+                      <td>{i + 1}</td>
                       <td style={{ whiteSpace: "nowrap" }}>{r.child}</td>
-                      <td>{r.paid ? <b>{fmt(r.paid)}</b> : "—"}</td>
-                      <td>−{fmt(GPD_FUND_CHARGE)}</td>
+                      <td>
+                        {committee ? (
+                          <button className="cell-btn" title={"Изменить взнос: " + r.child} onClick={() => openGpdCell(r)}>
+                            {inner}
+                          </button>
+                        ) : inner}
+                      </td>
+                      <td>−{fmt(gpdCharge)}</td>
                       <td>
                         <b style={rest < 0 ? { color: "#c2410c" } : undefined}>{fmt(rest)}</b>
                         {rest < 0 && <span className="chip amber" style={{ marginLeft: 6 }}>доплата</span>}
                       </td>
+                      {committee && gpdLive && (
+                        <td>
+                          <button className="mini-btn danger" title="Убрать из списка" onClick={() => removeGpdKid(r)}><Ic id="i-x" /></button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
                 <tr>
                   <td colSpan={2} style={{ textAlign: "right" }}><b>Итого:</b></td>
-                  <td><b>{fmt(GPD_FUND_COLLECTED)}</b></td>
-                  <td><b>−{fmt(GPD_FUND_SPENT)}</b></td>
-                  <td><b>{fmt(GPD_FUND_REST)}</b></td>
+                  <td><b>{fmt(gpdCollected)}</b></td>
+                  <td><b>−{fmt(gpdSpent)}</b></td>
+                  <td><b>{fmt(gpdRest)}</b></td>
+                  {committee && gpdLive && <td></td>}
                 </tr>
               </tbody>
             </table>
             <div className="muted" style={{ marginTop: 8 }}>
               «Хознужды ГПД» — доля каждого ребёнка в общих тратах фонда · отрицательный остаток — взнос ещё не сдан
+              {committee ? " · нажмите на взнос, чтобы исправить его (изменение попадёт в журнал)" : ""}
             </div>
           </div>
         )}
@@ -738,6 +867,7 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
 
       {cellEdit && <CellModal cell={cellEdit} onClose={() => setCellEdit(null)} onSave={saveCell} saving={saving} />}
       {oneOffOpen && <OneOffModal childNames={rows.map((r) => r.child)} onClose={() => setOneOffOpen(false)} onSave={saveOneOff} saving={saving} />}
+      {gpdEdit && <GpdPaidModal row={gpdEdit} onClose={() => setGpdEdit(null)} onSave={saveGpdCell} saving={saving} />}
     </section>
   );
 }

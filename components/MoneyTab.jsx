@@ -32,7 +32,7 @@ export default function MoneyTab({ sub, onSub, committee, toast, onOpenUpload, l
           </button>
         ))}
       </div>
-      {sub === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={onOpenUpload} author={author} onGoExpenses={goExpenses} family={family} />}
+      {sub === "fees" && <FeesTab committee={committee} toast={toast} onOpenUpload={onOpenUpload} author={author} onGoExpenses={goExpenses} family={family} liveGroups={liveGroups} />}
       {sub === "expenses" && <ExpensesTab committee={committee} toast={toast} liveGroups={liveGroups} onReload={onReload} focusGpd={gpdFocus} onFocusDone={() => setGpdFocus(false)} />}
       {sub === "history" && <HistoryTab toast={toast} committee={committee} />}
     </section>

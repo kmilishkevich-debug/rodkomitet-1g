@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
-import { fetchCashExtras, fetchFees, addFamilyNote, toggleFamilyNote, deleteFamilyNote, isLive } from "@/lib/supabase";
+import { fetchCashExtras, fetchFees, fetchGpdFund, addFamilyNote, toggleFamilyNote, deleteFamilyNote, isLive } from "@/lib/supabase";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
@@ -763,6 +763,15 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     });
   }, []);
   const extraIncome = extras ? extras.oneOff + extras.campaigns : 0;
+  // Живой остаток фонда ГПД: собрано (таблица фонда) − потрачено (группы «ГПД» в расходах)
+  const [gpdFund, setGpdFund] = useState(null);
+  useEffect(() => {
+    fetchGpdFund().then((data) => { if (data) setGpdFund(data); });
+  }, []);
+  const gpdRest = gpdFund && liveGroups
+    ? Math.round((gpdFund.reduce((s, r) => s + (r.paid || 0), 0)
+        - liveGroups.filter((g) => /гпд/i.test(g.title || "")).reduce((s, g) => s + groupTotal(g), 0)) * 100) / 100
+    : GPD_FUND_REST;
   // Касса класса = остаток по ведомости взносов (CASH_NOW) + разовые поступления.
   // Не считаем через «собрано − потрачено»: в «потрачено» входят расходы фонда ГПД,
   // который собирается отдельно и классную кассу не уменьшает.
@@ -950,7 +959,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
             {/* Фонд ГПД одной строкой — вся строка ведёт в «Деньги → Расходы» */}
             <button className="cash-row gpd" onClick={() => onTab("expenses")}>
               <span className="cash-row-lbl"><img src="/icons/icon-people.webp" className="row-3d" alt="" /> Фонд ГПД <span className="tag-pill">Отдельный сбор</span></span>
-              <span className="cash-row-val">Остаток: {fmt(GPD_FUND_REST)} BYN <span className="gpd-arrow" aria-hidden="true">›</span></span>
+              <span className="cash-row-val">Остаток: {fmt(gpdRest)} BYN <span className="gpd-arrow" aria-hidden="true">›</span></span>
             </button>
 
             <button className="pill-btn blue cash-open" onClick={() => onTab("fees")}>Открыть финансы →</button>
