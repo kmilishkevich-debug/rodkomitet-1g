@@ -32,6 +32,14 @@ export function readExpenseDraft() {
   return readDraft(DRAFT_NEW);
 }
 
+// receipt_url хранит несколько ссылок через перенос строки
+function splitReceipts(s) {
+  return String(s || "")
+    .split(/\n+/)
+    .map((u) => u.trim())
+    .filter(Boolean);
+}
+
 // «2 уп (48 шт)» → 2 ; «3» → 3
 function qtyNumber(qty) {
   const m = String(qty || "").replace(",", ".").match(/[\d.]+/);
@@ -65,7 +73,8 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
   const [comment, setComment] = useState("");
   const [free, setFree] = useState(false);
   const [planned, setPlanned] = useState(false);
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);       // новые фото чеков (ещё не загружены)
+  const [keptUrls, setKeptUrls] = useState([]); // уже прикреплённые чеки, которые оставляем
   const [saving, setSaving] = useState(false);
   const [restored, setRestored] = useState(false); // показать подсказку «черновик восстановлен»
   const [initial, setInitial] = useState(null);    // состояние полей на момент открытия
@@ -125,7 +134,8 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
     setRestored(!!d);
     setInitial(base);
     setConflict("");
-    setFile(null);
+    setFiles([]);
+    setKeptUrls(splitReceipts(editItem?.receipt_url));
     baselineRef.current = stamp(editItem);
     if (cameraRef.current) cameraRef.current.value = "";
     if (galleryRef.current) galleryRef.current.value = "";
@@ -156,7 +166,14 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
     [groupId, newGroupTitle, name, price, qty, sum, sumTouched, place, date, comment, free, planned]
   );
 
-  const dirty = useMemo(() => isDirty(values, initial) || !!file, [values, initial, file]);
+  const keptChanged = useMemo(
+    () => keptUrls.join("\n") !== splitReceipts(editItem?.receipt_url).join("\n"),
+    [keptUrls, editItem]
+  );
+  const dirty = useMemo(
+    () => isDirty(values, initial) || files.length > 0 || keptChanged,
+    [values, initial, files, keptChanged]
+  );
 
   // Черновик пишем и для нового расхода, и для правки существующего
   useDraftAutosave(open, dkey, values, dirty);
@@ -176,10 +193,13 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
   const changePrice = (v) => { setPrice(v); setSumTouched(false); };
   const changeQty = (v) => { setQty(v); setSumTouched(false); };
 
-  const takeFile = (f) => {
-    if (!f) return;
-    if (!f.type?.startsWith("image/")) return toast("Это не изображение — нужен файл с фото чека");
-    setFile(f);
+  // Добавляет один или несколько файлов к списку чеков
+  const takeFiles = (list) => {
+    const arr = Array.from(list || []).filter(Boolean);
+    if (!arr.length) return;
+    const good = arr.filter((f) => f.type?.startsWith("image/"));
+    if (good.length < arr.length) toast("Это не изображение — нужен файл с фото чека");
+    if (good.length) setFiles((prev) => [...prev, ...good]);
   };
 
   // Вставка фото чека из буфера обмена (Ctrl+V / «Вставить» на телефоне)
@@ -189,8 +209,8 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
       if (it.type?.startsWith("image/")) {
         const f = it.getAsFile();
         if (f) {
-          takeFile(f);
-          toast("Фото чека вставлено из буфера обмена");
+          takeFiles([f]);
+          toast("Фото чека добавлено из буфера обмена");
           e.preventDefault();
           return;
         }
@@ -219,7 +239,6 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
 
     const sumNum = free || planned ? 0 : parseFloat(String(shownSum).replace(",", "."));
     if (!free && !planned && (isNaN(sumNum) || sumNum <= 0)) return toast("Укажите цену или сумму");
-    if (!planned && !free && !file && !editItem?.receipt_url) return toast("Прикрепите фото чека — без него расход не сохраняется");
 
     setSaving(true);
     try {
@@ -234,8 +253,10 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
         gid = data.id;
       }
 
-      let receipt_url = editItem?.receipt_url || null;
-      if (file) receipt_url = await uploadReceipt(file);
+      // Чеки: оставленные старые + загруженные новые, ссылки через перенос строки
+      const urls = [...keptUrls];
+      for (const f of files) urls.push(await uploadReceipt(f));
+      const receipt_url = urls.length ? urls.join("\n") : null;
 
       const row = {
         group_id: gid,
@@ -361,15 +382,49 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
 
               {!free && (
                 <>
-                  <label>Фото чека {editItem?.receipt_url && !file ? "(уже прикреплён — можно заменить)" : "(обязательно)"}</label>
-                  <div className={"upload-zone" + (file || editItem?.receipt_url ? " done" : "")}>
-                    <div style={{ marginBottom: 8 }}>
-                      {file
-                        ? `✓ ${file.name || "фото"} — прикреплён`
-                        : editItem?.receipt_url
-                          ? "✓ Чек прикреплён · можно заменить"
-                          : "Прикрепите фото чека:"}
-                    </div>
+                  <label>Фото чеков (можно несколько, необязательно)</label>
+                  <div className={"upload-zone" + (files.length || keptUrls.length ? " done" : "")}>
+                    {(keptUrls.length > 0 || files.length > 0) && (
+                      <div style={{ marginBottom: 8, textAlign: "left" }}>
+                        {keptUrls.map((u, idx) => (
+                          <div key={u + idx} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              ✓{" "}
+                              <a href={u} target="_blank" rel="noreferrer" className="receipt-link">
+                                {idx === 0 ? "чек" : `чек ${idx + 1}`}
+                              </a>{" "}
+                              — прикреплён
+                            </span>
+                            <button
+                              type="button"
+                              className="mini-btn danger"
+                              title="Убрать этот чек"
+                              onClick={() => setKeptUrls((prev) => prev.filter((_, j) => j !== idx))}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                        {files.map((f, idx) => (
+                          <div key={(f.name || "фото") + idx} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              ✓ {f.name || "фото"} — будет загружен
+                            </span>
+                            <button
+                              type="button"
+                              className="mini-btn danger"
+                              title="Убрать этот чек"
+                              onClick={() => setFiles((prev) => prev.filter((_, j) => j !== idx))}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {!files.length && !keptUrls.length && (
+                      <div style={{ marginBottom: 8 }}>Прикрепите фото чека (одно или несколько):</div>
+                    )}
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
                       <button type="button" className="btn small white" onClick={() => cameraRef.current?.click()}>
                         📷 Сфотографировать
@@ -379,7 +434,7 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
                       </button>
                     </div>
                     <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
-                      Можно и вставить скриншот из буфера обмена (Ctrl+V)
+                      Можно и вставить скриншот из буфера обмена (Ctrl+V) — каждый добавится отдельным чеком
                     </div>
                   </div>
                   <input
@@ -388,14 +443,15 @@ export default function ExpenseModal({ open, groups, editItem, onClose, onSaved,
                     accept="image/*"
                     capture="environment"
                     style={{ display: "none" }}
-                    onChange={(e) => takeFile(e.target.files?.[0])}
+                    onChange={(e) => { takeFiles(e.target.files); e.target.value = ""; }}
                   />
                   <input
                     ref={galleryRef}
                     type="file"
                     accept="image/*"
+                    multiple
                     style={{ display: "none" }}
-                    onChange={(e) => takeFile(e.target.files?.[0])}
+                    onChange={(e) => { takeFiles(e.target.files); e.target.value = ""; }}
                   />
                 </>
               )}

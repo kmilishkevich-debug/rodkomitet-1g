@@ -148,12 +148,19 @@ export default function ExpensesTab({ committee, toast, liveGroups, onReload, fo
                 <tr key={i.id || i.name} style={i.planned ? { opacity: 0.6 } : undefined}>
                   <td>
                     {i.name}
-                    {i.receipt_url && (
-                      <>
-                        {" "}
-                        <a href={i.receipt_url} target="_blank" rel="noreferrer" className="receipt-link" title="Открыть чек">чек</a>
-                      </>
-                    )}
+                    {i.receipt_url &&
+                      String(i.receipt_url)
+                        .split(/\n+/)
+                        .map((u) => u.trim())
+                        .filter(Boolean)
+                        .map((u, idx) => (
+                          <span key={u + idx}>
+                            {" "}
+                            <a href={u} target="_blank" rel="noreferrer" className="receipt-link" title="Открыть чек">
+                              {idx === 0 ? "чек" : `чек ${idx + 1}`}
+                            </a>
+                          </span>
+                        ))}
                     {(i.comment || (i.purchased_at && liveGroups)) && (
                       <div className="exp-note">
                         {[fmtDate(i.purchased_at), i.comment].filter(Boolean).join(" · ")}
