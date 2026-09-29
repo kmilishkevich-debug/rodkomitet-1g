@@ -88,7 +88,7 @@ export const FEES = [
   { n: 24, child: "Тылецкий Андрей",    ...STD, paid: 183.8, gpd: 0 },
   { n: 25, child: "Шилкин Артём",       ...STD, paid: 200 },
   { n: 26, child: "Шило Тимофей",       ...STD, paid: 204, badge: 3.85 },
-  { n: 27, child: "Шурова Агата",       ...STD, paid: 199.8 },
+  { n: 27, child: "Шурова Агата",       ...STD, paid: 200 },
 ];
 
 // Кто ходит в ГПД (встроенный запасной список): все, у кого есть списание ГПД в таблице класса —
@@ -96,9 +96,8 @@ export const FEES = [
 // Живые пометки и заметки хранятся в базе (таблица child_notes, файл gpd-notes-setup.sql).
 export const GPD_CHILDREN = FEES.filter((f) => (f.gpd || 0) > 0).map((f) => f.child);
 
-// Остаток по ребёнку: взнос минус все списания.
-// Возвращаем точное значение (без округления) — на экране округляет fmt,
-// а итог по всем 27 детям тогда сходится с ведомостью копейка в копейку: 1 209,58.
+// Остаток по ребёнку: взнос минус все списания (по встроенным колонкам, включая гардероб).
+// Опорная функция для встроенных данных; экраны считают остаток через applyAutoFees.
 export function feeRest(f) {
   const charges = FEE_COLUMNS.filter((c) => c.kind === "charge").reduce((s, c) => s + (f[c.key] || 0), 0);
   return f.paid - charges;
@@ -264,31 +263,42 @@ export function applyAutoFees(columns0, rows0, expGroups) {
   const columns = columns0.filter((c) => !isWardColumn(c));
   const groups = expGroups || EXPENSE_GROUPS;
   const auto = {};
+  // Участник фикс-статьи (ГПД): явный 0 — не ходит; пустая ячейка (в базе значение
+  // могло не сохраняться) — смотрим встроенный список ходящих, чтобы не ходящим
+  // не начислялись 25 BYN и норма взноса у них была 175
+  const inFixed = (r, cid) => {
+    const v = r.values[cid];
+    if (v === 0) return false;
+    if (v == null) return GPD_CHILDREN.includes(r.child);
+    return true;
+  };
   columns.forEach((c) => {
     if (c.kind !== "charge") return;
     const rule = AUTO_FEE_RULES.find((a) => a.col.test(c.title || ""));
     if (!rule) return;
-    const count = rows0.filter((r) => r.values[c.id] !== 0).length;
     if (rule.fixed != null) {
+      const count = rows0.filter((r) => inFixed(r, c.id)).length;
       auto[c.id] = { sum: rule.fixed * count, count, share: rule.fixed, fixed: rule.fixed };
       return;
     }
+    const count = rows0.filter((r) => r.values[c.id] !== 0).length;
     const sum = groups.filter((g) => rule.group.test(g.title || "")).reduce((s, g) => s + groupTotal(g), 0);
     auto[c.id] = { sum, count, share: count ? sum / count : 0 };
   });
   const rows = rows0.map((r) => {
     const values = { ...r.values };
     Object.keys(auto).forEach((cid) => {
-      if (values[cid] !== 0) values[cid] = auto[cid].share;
+      if (auto[cid].fixed != null) values[cid] = inFixed(r, cid) ? auto[cid].share : 0;
+      else if (values[cid] !== 0) values[cid] = auto[cid].share;
     });
     return { ...r, values };
   });
   return { columns, rows, auto };
 }
 
-export const TOTAL_COLLECTED = Math.round(FEES.reduce((s, f) => s + f.paid, 0) * 100) / 100; // 5312,20
+export const TOTAL_COLLECTED = Math.round(FEES.reduce((s, f) => s + f.paid, 0) * 100) / 100; // 5312,40
 export const TOTAL_SPENT = Math.round(EXPENSE_GROUPS.reduce((s, g) => s + groupTotal(g), 0) * 100) / 100; // 3914,79 — включая расходы фонда ГПД
-export const CASH_NOW = Math.round(FEES.reduce((s, f) => s + feeRest(f), 0) * 100) / 100; // 1209,58 — остаток по ведомости взносов
+export const CASH_NOW = Math.round(FEES.reduce((s, f) => s + feeRest(f), 0) * 100) / 100; // опорное значение по встроенным колонкам; экраны считают остаток через applyAutoFees
 // Списания из взносов, которых нет в списке расходов (бейджи — покупались через школу)
 export const FEE_ONLY_DEDUCTIONS = Math.round(FEES.reduce((s, f) => s + (f.badge || 0), 0) * 100) / 100; // 15,40
 export const FAMILIES_COUNT = FAMILIES.length; // 27

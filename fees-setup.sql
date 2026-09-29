@@ -158,7 +158,7 @@ begin
   insert into fee_values (row_id, column_id, amount) values (r, c_paid, 204), (r, c_hoz, 37.52), (r, c_badge, 3.85), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
   -- 27. Шурова Агата
   insert into fee_rows (n, child) values (27, 'Шурова Агата') returning id into r;
-  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 199.8), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
+  insert into fee_values (row_id, column_id, amount) values (r, c_paid, 200), (r, c_hoz, 37.52), (r, c_gifts, 34.14), (r, c_magnets, 6.9), (r, c_gpd, 7.02);
 end $$;
 
 -- ЧАСТЬ 3. ОБНОВЛЕНИЕ РАСХОДОВ ПО ТАБЛИЦЕ -----------------------------------
