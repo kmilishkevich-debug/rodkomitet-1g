@@ -108,6 +108,7 @@ function VisitsBlock() {
 
       <div className="card reveal d2" style={{ marginBottom: 14 }}>
         <h3 style={{ marginTop: 0 }}><Ic id="i-users" /> Семьи и последний визит</h3>
+        <div className="kids-scroll">
         <table>
           <tbody>
             <tr><th>№</th><th>Ребёнок</th><th>Последний визит</th><th>Заходов</th></tr>
@@ -121,6 +122,7 @@ function VisitsBlock() {
             ))}
           </tbody>
         </table>
+        </div>
         {famRows.length > 8 && (
           <button className="btn small gold" style={{ marginTop: 10 }} onClick={() => setAllFamilies(!allFamilies)}>
             {allFamilies ? "Свернуть" : `Показать все ${famRows.length} семей`}

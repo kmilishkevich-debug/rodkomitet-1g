@@ -139,7 +139,8 @@ export default function ClassTab({ committee, toast, liveBirthdays }) {
 
       <BirthdayCalendar list={bdays} />
 
-      <div className="card reveal d3" style={{ overflowX: "auto" }}>
+      <div className="card reveal d3">
+        <div className="kids-scroll">
         <table>
           <tbody>
             <tr><th>№</th><th>Ребёнок</th><th>Родители</th><th>Телефоны</th></tr>
@@ -195,6 +196,7 @@ export default function ClassTab({ committee, toast, liveBirthdays }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="muted" style={{ marginTop: 10 }}>

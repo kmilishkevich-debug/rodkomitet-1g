@@ -579,7 +579,7 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
               <button className="btn small white" onClick={addColumn}><Ic id="i-plus" />Новая статья</button>
             )}
           </div>
-          <div style={{ marginTop: 14, overflowX: "auto" }}>
+          <div className="kids-scroll" style={{ marginTop: 14 }}>
             <table>
               <tbody>
                 <tr>
@@ -677,6 +677,8 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div>
             <div className="muted" style={{ marginTop: 8 }}>
               «Осталось сдать» — сколько не хватает до нормы: {fmt(FEE_TARGET)} BYN у ходящих в ГПД, {fmt(FEE_TARGET - GPD_FUND_FEE)} BYN у не ходящих (0 в колонке «ГПД») · «Остаток» — сданное минус списания · отрицательный остаток — нужна доплата
               · статьи «авто» пересчитываются сами при каждой новой трате в разделе «Расходы»; чтобы исключить ребёнка из такой статьи, поставьте ему 0 — его доля разделится между остальными · «ГПД» — фикс {fmt(GPD_FUND_FEE)} BYN в фонд ГПД
@@ -730,7 +732,8 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
           )}
         </div>
         {gpdOpen && (
-          <div style={{ marginTop: 14, overflowX: "auto" }}>
+          <>
+          <div className="kids-scroll" style={{ marginTop: 14 }}>
             <table>
               <tbody>
                 <tr>
@@ -777,11 +780,12 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
                 </tr>
               </tbody>
             </table>
-            <div className="muted" style={{ marginTop: 8 }}>
-              «Хознужды ГПД» — доля каждого ребёнка в общих тратах фонда · отрицательный остаток — взнос ещё не сдан
-              {committee ? " · нажмите на взнос, чтобы исправить его (изменение попадёт в журнал)" : ""}
-            </div>
           </div>
+          <div className="muted" style={{ marginTop: 8 }}>
+            «Хознужды ГПД» — доля каждого ребёнка в общих тратах фонда · отрицательный остаток — взнос ещё не сдан
+            {committee ? " · нажмите на взнос, чтобы исправить его (изменение попадёт в журнал)" : ""}
+          </div>
+          </>
         )}
       </div>
 

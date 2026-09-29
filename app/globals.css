@@ -189,6 +189,24 @@ table{width:100%;border-collapse:collapse;font-size:14px}
 th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--soft-line)}
 td{padding:11px 10px;border-bottom:1px solid var(--soft-line);vertical-align:middle;font-weight:500}
 tr:last-child td{border-bottom:none}
+
+/* ---- Закреплённые «№ + Ребёнок» и шапка в таблицах с детьми ---- */
+.kids-scroll{overflow:auto;max-height:75vh;overscroll-behavior-x:contain}
+.kids-scroll table{min-width:560px}
+.kids-scroll tr>*:nth-child(1),
+.kids-scroll tr>*:nth-child(2){position:sticky;z-index:2;background:var(--card,#fff)}
+.kids-scroll tr>*:nth-child(1){left:0}
+.kids-scroll tr>*:nth-child(2){left:44px;box-shadow:6px 0 8px -6px rgba(23,23,23,.18)}
+/* шапка липнет сверху; её первые две ячейки — «уголки» (и сверху, и слева) */
+.kids-scroll tr:first-child th{position:sticky;top:0;z-index:3;background:var(--card,#fff)}
+.kids-scroll tr:first-child th:nth-child(-n+2){z-index:4}
+.kids-scroll tr:first-child th:first-child{width:44px;min-width:44px}
+/* итоговые строки: ячейка с colSpan занимает оба закреплённых столбца */
+.kids-scroll td[colspan]{left:0;box-shadow:6px 0 8px -6px rgba(23,23,23,.18)}
+.kids-scroll td[colspan]+*{position:static;left:auto;box-shadow:none}
+/* подсветка своей строки сохраняется и в закреплённых ячейках */
+.kids-scroll .fee-my-row td{background:var(--blue-soft)}
+
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .muted{color:var(--muted);font-size:13px;font-weight:500}
 .receipt-thumb{width:42px;height:52px;background:var(--input);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s}
@@ -282,6 +300,8 @@ tr:last-child td{border-bottom:none}
   #notifPanel{right:10px}
   /* Таблицы: белая подложка всегда по ширине таблицы — таблица листается внутри карточки */
   .card:has(table){overflow-x:auto}
+  /* если таблица уже внутри .kids-scroll — листается он сам, карточка не должна скроллить */
+  .card:has(.kids-scroll){overflow-x:visible}
   .card table{min-width:560px}
   th{padding:8px 8px;font-size:10.5px}
   td{padding:10px 8px;font-size:13.5px}
