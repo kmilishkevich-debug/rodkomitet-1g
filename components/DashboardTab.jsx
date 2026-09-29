@@ -5,7 +5,7 @@ import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
   fmt, TOTAL_COLLECTED, TOTAL_SPENT, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal,
-  GPD_FUND_REST, applyAutoFees, fallbackFeeData,
+  GPD_FUND_REST, GPD_FUND_FEE, applyAutoFees, fallbackFeeData,
 } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, INFO_HOUR, scheduleFocus, subjectIcon, lessonDisplay } from "./scheduleData";
 import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu } from "./scheduleOverrides";
@@ -455,7 +455,7 @@ function FamilyWidget({ family, polls, bdays, onTab, liveGroups }) {
     fetchFees().then((data) => { if (data) setFees(data); });
   }, []);
   // Внесено и остаток своей семьи: та же авто-ведомость, что на вкладке «Взносы»
-  let paid = null, rest = null;
+  let paid = null, rest = null, target = 200;
   const src = fees || fallbackFeeData();
   const { columns, rows } = applyAutoFees(src.columns, src.rows, liveGroups);
   const row = rows.find((r) => r.n === family.n);
@@ -467,8 +467,11 @@ function FamilyWidget({ family, polls, bdays, onTab, liveGroups }) {
     });
     paid = Math.round(paid * 100) / 100;
     rest = Math.round(rest * 100) / 100;
+    // Норма взноса: 200 BYN у ходящих в ГПД (175 + 25 в фонд), 175 — у не ходящих (0 в колонке «ГПД»)
+    const gpdCol = columns.find((c) => c.kind === "charge" && /гпд/i.test(c.title || ""));
+    if (gpdCol && row.values[gpdCol.id] === 0) target = 175;
   }
-  const due = paid === null ? null : Math.max(0, Math.round((200 - paid) * 100) / 100);
+  const due = paid === null ? null : Math.max(0, Math.round((target - paid) * 100) / 100);
   // Свой день рождения
   const kid = (bdays || []).find((k) => k.id === family.n);
   const bd = kid ? bdInfo(kid.born) : null;
@@ -491,7 +494,7 @@ function FamilyWidget({ family, polls, bdays, onTab, liveGroups }) {
           <button className="fam-row" onClick={() => onTab("fees")}>
             <span className="fam-row-ico" aria-hidden="true">💰</span>
             <span className="fam-row-body">
-              <b>Взносы: внесено {fmt(paid)} из {fmt(200)} BYN</b>
+              <b>Взносы: внесено {fmt(paid)} из {fmt(target)} BYN</b>
               <span className="fam-row-sub">
                 {due > 0 ? `Осталось сдать ${fmt(due)} BYN` : "Годовой взнос сдан полностью — спасибо!"}
                 {rest !== null ? ` · остаток после списаний: ${fmt(rest)} BYN` : ""}
@@ -764,8 +767,9 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   useEffect(() => {
     fetchGpdFund().then((data) => { if (data) setGpdFund(data); });
   }, []);
+  // «Собрано» фонда — расчётное: 25 BYN × все дети списка (как на вкладке «Взносы»)
   const gpdRest = gpdFund && liveGroups
-    ? Math.round((gpdFund.reduce((s, r) => s + (r.paid || 0), 0)
+    ? Math.round((gpdFund.length * GPD_FUND_FEE
         - liveGroups.filter((g) => /гпд/i.test(g.title || "")).reduce((s, g) => s + groupTotal(g), 0)) * 100) / 100
     : GPD_FUND_REST;
   // Касса класса = остаток по ведомости взносов + разовые поступления.
@@ -788,6 +792,15 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     return s + rest;
   }, 0) * 100) / 100;
   const cash = Math.round((feesRest + extraIncome) * 100) / 100;
+  // Годовой сбор: собрано и цель по ведомости — норма 200 BYN у ходящих в ГПД, 175 у не ходящих
+  const feeGpdCol = feeCalc.columns.find((c) => c.kind === "charge" && /гпд/i.test(c.title || ""));
+  const yearGoal = Math.round(feeCalc.rows.reduce(
+    (s, r) => s + (feeGpdCol && r.values[feeGpdCol.id] === 0 ? 200 - GPD_FUND_FEE : 200), 0) * 100) / 100;
+  const yearCollected = Math.round(feeCalc.rows.reduce((s, r) => {
+    let p = 0;
+    feeCalc.columns.forEach((c) => { if (c.kind === "paid") p += r.values[c.id] || 0; });
+    return s + p;
+  }, 0) * 100) / 100;
   const groupsCount = (liveGroups || EXPENSE_GROUPS).length;
   const bdays = liveBirthdays || BIRTHDAYS_FALLBACK;
   const bdayEv = birthdayEvents(bdays, committee);
@@ -955,10 +968,10 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
             <div className="cash-year">
               <div className="cash-year-top">
                 <b>Годовой сбор 2026–2027</b>
-                <span>Собрано {fmt(TOTAL_COLLECTED)} из {fmt(200 * FAMILIES_COUNT)} BYN</span>
+                <span>Собрано {fmt(yearCollected)} из {fmt(yearGoal)} BYN</span>
               </div>
-              <div className="dprogress"><i style={{ width: Math.round((TOTAL_COLLECTED / (200 * FAMILIES_COUNT)) * 100) + "%" }}></i></div>
-              <div className="cash-year-note">Осталось собрать {fmt(Math.max(0, Math.round((200 * FAMILIES_COUNT - TOTAL_COLLECTED) * 100) / 100))} BYN</div>
+              <div className="dprogress"><i style={{ width: Math.round((yearCollected / yearGoal) * 100) + "%" }}></i></div>
+              <div className="cash-year-note">Осталось собрать {fmt(Math.max(0, Math.round((yearGoal - yearCollected) * 100) / 100))} BYN</div>
             </div>
 
             {/* Расходы за год — включают расходы фонда ГПД (см. раздел «Расходы») */}
