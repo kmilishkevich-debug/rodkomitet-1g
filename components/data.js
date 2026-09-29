@@ -219,6 +219,62 @@ export function groupTotal(g) {
   return g.items.reduce((s, i) => s + (i.planned ? 0 : i.sum || 0), 0);
 }
 
+// ===== Автопересчёт списаний ведомости класса из раздела «Расходы» =====
+// Статья ведомости связывается с группой расходов по названию (переименования не ломают связь,
+// пока в названии остаётся ключевое слово). Сумма группы делится на детей-участников статьи.
+// Правило нуля: вручную поставленный 0 исключает ребёнка из статьи — доля делится на остальных
+// (так у Дорошенко, Сиссауи и Тылецкого нет списания ГПД, а доля считается на 24 детей).
+// Бейдж и магнитные значки правил не имеют — они заполняются только вручную.
+export const AUTO_FEE_RULES = [
+  { col: /хоз/i,    group: /хозяйств/i },
+  { col: /подар/i,  group: /подар/i    },
+  { col: /гпд/i,    group: /гпд/i      },
+  { col: /тетрад/i, group: /тетрад/i   },
+];
+
+// Колонка «Гардероб» убрана из ведомости: строка «Вешалки и стеллажи» входит в группу
+// хознужд и списывается общей долей хознужд (иначе получилось бы задвоение).
+export function isWardColumn(c) {
+  return /гардероб/i.test(c.title || "");
+}
+
+// Единый вид встроенных данных ведомости (колонки + строки) — как из базы
+export function fallbackFeeData() {
+  return {
+    columns: FEE_COLUMNS.map((c) => ({ id: c.key, title: c.title, kind: c.kind })),
+    rows: FEES.map((f) => {
+      const values = {};
+      FEE_COLUMNS.forEach((c) => { values[c.key] = f[c.key] || 0; });
+      return { id: f.n, n: f.n, child: f.child, values, meta: {} };
+    }),
+  };
+}
+
+// Применяет автопересчёт: убирает колонку «Гардероб», для статей с группой расходов
+// подменяет суммы на «итог группы ÷ участники» (нули остаются нулями).
+// Возвращает { columns, rows, auto }, где auto[columnId] = { sum, count, share }.
+export function applyAutoFees(columns0, rows0, expGroups) {
+  const columns = columns0.filter((c) => !isWardColumn(c));
+  const groups = expGroups || EXPENSE_GROUPS;
+  const auto = {};
+  columns.forEach((c) => {
+    if (c.kind !== "charge") return;
+    const rule = AUTO_FEE_RULES.find((a) => a.col.test(c.title || ""));
+    if (!rule) return;
+    const sum = groups.filter((g) => rule.group.test(g.title || "")).reduce((s, g) => s + groupTotal(g), 0);
+    const count = rows0.filter((r) => r.values[c.id] !== 0).length;
+    auto[c.id] = { sum, count, share: count ? sum / count : 0 };
+  });
+  const rows = rows0.map((r) => {
+    const values = { ...r.values };
+    Object.keys(auto).forEach((cid) => {
+      if (values[cid] !== 0) values[cid] = auto[cid].share;
+    });
+    return { ...r, values };
+  });
+  return { columns, rows, auto };
+}
+
 export const TOTAL_COLLECTED = Math.round(FEES.reduce((s, f) => s + f.paid, 0) * 100) / 100; // 5312,20
 export const TOTAL_SPENT = Math.round(EXPENSE_GROUPS.reduce((s, g) => s + groupTotal(g), 0) * 100) / 100; // 3914,79 — включая расходы фонда ГПД
 export const CASH_NOW = Math.round(FEES.reduce((s, f) => s + feeRest(f), 0) * 100) / 100; // 1209,58 — остаток по ведомости взносов

@@ -4,8 +4,8 @@ import { fetchCashExtras, fetchFees, fetchGpdFund, addFamilyNote, toggleFamilyNo
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
-  fmt, TOTAL_COLLECTED, TOTAL_SPENT, CASH_NOW, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal,
-  GPD_FUND_REST, FEES, feeRest,
+  fmt, TOTAL_COLLECTED, TOTAL_SPENT, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal,
+  GPD_FUND_REST, applyAutoFees, fallbackFeeData,
 } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, INFO_HOUR, scheduleFocus, subjectIcon, lessonDisplay } from "./scheduleData";
 import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu } from "./scheduleOverrides";
@@ -449,28 +449,24 @@ function fmtNoteDate(iso) {
 }
 
 // ===== Виджет «Ваша семья»: взнос, день рождения, голосования своего ребёнка =====
-function FamilyWidget({ family, polls, bdays, onTab }) {
+function FamilyWidget({ family, polls, bdays, onTab, liveGroups }) {
   const [fees, setFees] = useState(null);
   useEffect(() => {
     fetchFees().then((data) => { if (data) setFees(data); });
   }, []);
-  // Внесено и остаток своей семьи: из живой ведомости, иначе — из встроенных данных
+  // Внесено и остаток своей семьи: та же авто-ведомость, что на вкладке «Взносы»
   let paid = null, rest = null;
-  if (fees) {
-    const row = fees.rows.find((r) => r.n === family.n);
-    if (row) {
-      paid = 0; rest = 0;
-      fees.columns.forEach((c) => {
-        const v = row.values[c.id] || 0;
-        if (c.kind === "paid") { paid += v; rest += v; } else rest -= v;
-      });
-      paid = Math.round(paid * 100) / 100;
-      rest = Math.round(rest * 100) / 100;
-    }
-  }
-  if (paid === null) {
-    const f = FEES.find((x) => x.n === family.n);
-    if (f) { paid = f.paid; rest = Math.round(feeRest(f) * 100) / 100; }
+  const src = fees || fallbackFeeData();
+  const { columns, rows } = applyAutoFees(src.columns, src.rows, liveGroups);
+  const row = rows.find((r) => r.n === family.n);
+  if (row) {
+    paid = 0; rest = 0;
+    columns.forEach((c) => {
+      const v = row.values[c.id] || 0;
+      if (c.kind === "paid") { paid += v; rest += v; } else rest -= v;
+    });
+    paid = Math.round(paid * 100) / 100;
+    rest = Math.round(rest * 100) / 100;
   }
   const due = paid === null ? null : Math.max(0, Math.round((200 - paid) * 100) / 100);
   // Свой день рождения
@@ -772,10 +768,26 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     ? Math.round((gpdFund.reduce((s, r) => s + (r.paid || 0), 0)
         - liveGroups.filter((g) => /гпд/i.test(g.title || "")).reduce((s, g) => s + groupTotal(g), 0)) * 100) / 100
     : GPD_FUND_REST;
-  // Касса класса = остаток по ведомости взносов (CASH_NOW) + разовые поступления.
-  // Не считаем через «собрано − потрачено»: в «потрачено» входят расходы фонда ГПД,
-  // который собирается отдельно и классную кассу не уменьшает.
-  const cash = Math.round((CASH_NOW + extraIncome) * 100) / 100;
+  // Касса класса = остаток по ведомости взносов + разовые поступления.
+  // Ведомость строится так же, как на вкладке «Взносы»: авто-статьи
+  // пересчитываются из раздела «Расходы» (гардероб входит в хознужды).
+  // Не считаем через «собрано − потрачено»: в «потрачено» входят расходы
+  // фонда ГПД, который собирается отдельно и классную кассу не уменьшает.
+  const [feesData, setFeesData] = useState(null);
+  useEffect(() => {
+    fetchFees().then((data) => { if (data) setFeesData(data); });
+  }, []);
+  const feeSrc = feesData || fallbackFeeData();
+  const feeCalc = applyAutoFees(feeSrc.columns, feeSrc.rows, liveGroups);
+  const feesRest = Math.round(feeCalc.rows.reduce((s, r) => {
+    let rest = 0;
+    feeCalc.columns.forEach((c) => {
+      const v = r.values[c.id] || 0;
+      rest += c.kind === "paid" ? v : -v;
+    });
+    return s + rest;
+  }, 0) * 100) / 100;
+  const cash = Math.round((feesRest + extraIncome) * 100) / 100;
   const groupsCount = (liveGroups || EXPENSE_GROUPS).length;
   const bdays = liveBirthdays || BIRTHDAYS_FALLBACK;
   const bdayEv = birthdayEvents(bdays, committee);
@@ -899,7 +911,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       {/* Привязка семьи — только для комитета: у учителя «Главной» больше нет,
           да и своей семьи в списке класса у него не бывает */}
       {!family && committee && <BindFamilyCard setFamily={setFamily} toast={toast} />}
-      {family && <FamilyWidget family={family} polls={polls} bdays={bdays} onTab={onTab} />}
+      {family && <FamilyWidget family={family} polls={polls} bdays={bdays} onTab={onTab} liveGroups={liveGroups} />}
       {family && <NotesWidget family={family} notes={notes} onReload={onReloadNotes} toast={toast} />}
       {committee && <CommitteeRemind authorName={authorName} toast={toast} />}
 
@@ -930,7 +942,8 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
                 </button>
                 {howOpen && (
                   <div className="cash-how-body">
-                    Остаток по ведомости взносов ({fmt(CASH_NOW)} BYN) + разовые поступления ({fmt(extraIncome)} BYN).
+                    Остаток по ведомости взносов ({fmt(feesRest)} BYN) + разовые поступления ({fmt(extraIncome)} BYN).
+                    Списания в ведомости считаются автоматически из раздела «Расходы».
                     Фонд ГПД собирается отдельно и в эту сумму не входит.
                   </div>
                 )}

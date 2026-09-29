@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import {
-  FEES, FEE_COLUMNS, GPD_CHILDREN, fmt, feeRest,
+  GPD_CHILDREN, fmt,
   GPD_FUND, GPD_FUND_FEE, GPD_FUND_SPENT, groupTotal,
+  applyAutoFees, fallbackFeeData,
 } from "./data";
 import {
   supabase, isLive, fetchFees, fetchChildNotes, saveFeeValue,
@@ -282,24 +283,20 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
   // Ходит ли ребёнок в ГПД: живые пометки из базы или встроенный список
   const isGpd = (child) => (notes ? !!(notes[child] && notes[child].gpd) : GPD_CHILDREN.includes(child));
 
-  // Единый вид данных: живые из базы или встроенные из data.js
-  const columns = live
-    ? live.columns
-    : FEE_COLUMNS.map((c) => ({ id: c.key, title: c.title, kind: c.kind }));
-  const rows = live
-    ? live.rows.map((r) => {
-        const paid = livePaid(r, live.columns);
-        return { ...r, paid, rest: liveRest(r, live.columns), due: Math.max(0, round2(FEE_TARGET - paid)), over: Math.max(0, round2(paid - FEE_TARGET)) };
-      })
-    : FEES.map((f) => {
-        const values = {};
-        FEE_COLUMNS.forEach((c) => { values[c.key] = f[c.key] || 0; });
-        const paid = round2(FEE_COLUMNS.filter((c) => c.kind === "paid").reduce((s, c) => s + (f[c.key] || 0), 0));
-        return {
-          id: f.n, n: f.n, child: f.child, values, meta: {}, paid,
-          rest: feeRest(f), due: Math.max(0, round2(FEE_TARGET - paid)), over: Math.max(0, round2(paid - FEE_TARGET)),
-        };
-      });
+  // Единый вид данных: живые из базы или встроенные из data.js.
+  // Авто-списания (хознужды, подарки, ГПД, тетради) пересчитываются
+  // из раздела «Расходы»; ручной ноль исключает ребёнка из статьи.
+  const src = live || fallbackFeeData();
+  const { columns, rows: autoRows, auto } = applyAutoFees(src.columns, src.rows, liveGroups);
+  const rows = autoRows.map((r) => {
+    const paid = livePaid(r, columns);
+    return {
+      ...r, paid,
+      rest: liveRest(r, columns),
+      due: Math.max(0, round2(FEE_TARGET - paid)),
+      over: Math.max(0, round2(paid - FEE_TARGET)),
+    };
+  });
 
   const totals = {};
   columns.forEach((c) => {
@@ -510,10 +507,12 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
           </button>
           {howOpen && (
             <div className="fin-how muted">
-              Каждая семья сдаёт {fmt(FEE_TARGET)} BYN за учебный год. Из взносов списываются общие траты:
-              хознужды, подарки, гардероб, магнитные значки, доля класса на ГПД и рабочие тетради.
-              Разовые поступления плюсуются в кассу. Фонд ГПД — отдельный сбор со своим списком детей,
-              его суммы в кассе класса не учитываются. Каждая правка сумм попадает в историю изменений внизу страницы.
+              Каждая семья сдаёт {fmt(FEE_TARGET)} BYN за учебный год. Списания по статьям «хознужды»,
+              «подарки», «ГПД» и «рабочие тетради» считаются автоматически из раздела «Расходы»:
+              сумма группы трат делится поровну между детьми (гардероб входит в хознужды).
+              Бейджи и магнитные значки проставляются вручную. Разовые поступления плюсуются в кассу.
+              Фонд ГПД — отдельный сбор со своим списком детей, его суммы в кассе класса не учитываются.
+              Каждая правка сумм попадает в историю изменений внизу страницы.
             </div>
           )}
         </div>
@@ -557,7 +556,7 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
             <div>
               <h3>Взносы 2026–2027 <span className="chip violet">идёт</span></h3>
               <div className="fee-meta">
-                Всего {fmt(FEE_TARGET)} BYN с семьи · из взносов списываются: хознужды, подарки, гардероб, магнитные значки, ГПД, рабочие тетради · бейджи (3,85) — у четверых
+                Всего {fmt(FEE_TARGET)} BYN с семьи · статьи с пометкой «авто» считаются сами из раздела «Расходы» · бейджи и значки — вручную
               </div>
             </div>
             <span className={"chip " + (doneCount === rows.length ? "green" : "amber")}>сдали полностью · {doneCount}/{rows.length}</span>
@@ -595,6 +594,9 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
                       ) : (
                         <span style={{ whiteSpace: "nowrap" }}>
                           {c.title}
+                          {auto[c.id] && (
+                            <span className="chip teal" style={{ marginLeft: 4, padding: "1px 6px", fontSize: 9.5 }} title={"Считается автоматически из раздела «Расходы»: " + fmt(auto[c.id].sum) + " BYN ÷ " + auto[c.id].count}>авто</span>
+                          )}
                           {committee && (
                             <button className="mini-btn" title="Переименовать статью" onClick={() => startEdit(c)} style={{ marginLeft: 4 }}>
                               <Ic id="i-edit" />
@@ -667,6 +669,7 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
             </table>
             <div className="muted" style={{ marginTop: 8 }}>
               «Осталось сдать» — сколько не хватает до полных {fmt(FEE_TARGET)} BYN · «Остаток» — сданное минус списания · отрицательный остаток — нужна доплата
+              · статьи «авто» пересчитываются сами при каждой новой трате в разделе «Расходы»; чтобы исключить ребёнка из такой статьи, поставьте ему 0 — его доля разделится между остальными
               {committee ? " · нажмите на сумму, чтобы исправить её (изменение попадёт в журнал)" : ""}
             </div>
           </div>
