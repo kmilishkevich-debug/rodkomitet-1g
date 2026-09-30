@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
-import { FAMILIES } from "./data";
+import { FAMILIES, FAMILIES_COUNT, FAMILY_CANONICAL_NS, canonicalN, familyLabel } from "./data";
 import { fetchVisits, fetchFamiliesSeen } from "@/lib/supabase";
 
 const teal = { color: "var(--teal-deep)" };
@@ -67,14 +67,28 @@ function VisitsBlock() {
   // База ещё не настроена (visits-setup.sql не запускали) — блок молча не показываем
   if (visits === null && seen === null) return null;
 
-  const seenList = seen || [];
+  // Близнецы — одна семья: визиты под их номерами склеиваем в одну запись
+  const seenByCanon = new Map();
+  for (const s of seen || []) {
+    const c = canonicalN(s.family_n);
+    const prev = seenByCanon.get(c);
+    if (!prev) seenByCanon.set(c, { ...s, family_n: c });
+    else {
+      prev.visits_count = (prev.visits_count || 0) + (s.visits_count || 0);
+      if (new Date(s.last_at) > new Date(prev.last_at)) prev.last_at = s.last_at;
+    }
+  }
+  const seenList = [...seenByCanon.values()];
   const connected = seenList.length;
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const activeWeek = seenList.filter((s) => new Date(s.last_at).getTime() >= weekAgo).length;
 
-  // Сводка по 27 семьям: сначала кто заходил (свежие сверху), потом кто ни разу
-  const byN = new Map(seenList.map((s) => [s.family_n, s]));
-  const famRows = FAMILIES.map((f) => ({ ...f, seen: byN.get(f.n) || null })).sort((a, b) => {
+  // Сводка по семьям: сначала кто заходил (свежие сверху), потом кто ни разу
+  const famRows = FAMILY_CANONICAL_NS.map((n) => ({
+    n,
+    child: familyLabel(n),
+    seen: seenByCanon.get(n) || null,
+  })).sort((a, b) => {
     if (a.seen && b.seen) return new Date(b.seen.last_at) - new Date(a.seen.last_at);
     if (a.seen) return -1;
     if (b.seen) return 1;
@@ -96,7 +110,7 @@ function VisitsBlock() {
       <div className="grid cols2 reveal d2" style={{ marginBottom: 14 }}>
         <div className="card stat">
           <div className="lbl">Подключились к приложению</div>
-          <div className="val" style={teal}>{connected} <span style={{ fontSize: 16, opacity: 0.6 }}>из {FAMILIES.length} семей</span></div>
+          <div className="val" style={teal}>{connected} <span style={{ fontSize: 16, opacity: 0.6 }}>из {FAMILIES_COUNT} семей</span></div>
           <div className="note muted">Заходили хотя бы один раз за всё время</div>
         </div>
         <div className="card stat">

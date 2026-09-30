@@ -189,7 +189,7 @@ export default function LoginScreen({ onLogin }) {
 
       <div className="login-card">
         <div className="login-form-side">
-          <div className="kicker">Родительский комитет · 27 семей</div>
+          <div className="kicker">Родительский комитет · 26 семей</div>
           <div className="login-h1">
             <span className="blob" aria-hidden="true"></span>
             <h1>Наш<span>1 «Г»</span></h1>
@@ -248,7 +248,7 @@ export default function LoginScreen({ onLogin }) {
           <span className="visual-blob yellow" aria-hidden="true"></span>
           <img src="/mascot.jpg" alt="Школа №227 и ученики 1 «Г»" />
           <span className="v-badge tag1g">1 «Г»</span>
-          <span className="v-badge fam">27 семей</span>
+          <span className="v-badge fam">26 семей</span>
           <span className="v-badge byn">BYN</span>
           <div className="v-note">Взносы, расходы и покупки — всегда под рукой.</div>
         </div>

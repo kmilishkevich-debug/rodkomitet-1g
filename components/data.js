@@ -332,4 +332,8 @@ export const TOTAL_SPENT = Math.round(EXPENSE_GROUPS.reduce((s, g) => s + groupT
 export const CASH_NOW = Math.round(FEES.reduce((s, f) => s + feeRest(f), 0) * 100) / 100; // опорное значение по встроенным колонкам; экраны считают остаток через applyAutoFees
 // Списания из взносов, которых нет в списке расходов (бейджи — покупались через школу)
 export const FEE_ONLY_DEDUCTIONS = Math.round(FEES.reduce((s, f) => s + (f.badge || 0), 0) * 100) / 100; // 15,40
-export const FAMILIES_COUNT = FAMILIES.length; // 27
+export const CHILDREN_COUNT = FAMILIES.length; // 27 детей в классе
+// Семей меньше, чем детей: близнецы — одна семья с одним голосом
+export const FAMILIES_COUNT = new Set(FAMILIES.map((f) => canonicalN(f.n))).size; // 26
+// Канонические номера всех семей (у близнецов — один общий)
+export const FAMILY_CANONICAL_NS = [...new Set(FAMILIES.map((f) => canonicalN(f.n)))];

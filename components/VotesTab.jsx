@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
-import { FAMILIES_COUNT, fmt, familyNs } from "./data";
+import { FAMILIES_COUNT, FAMILY_CANONICAL_NS, fmt, familyNs } from "./data";
 import { isLive, savePoll, deletePoll, castVote } from "@/lib/supabase";
 import { shareText, shareUrl } from "@/lib/share";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
@@ -230,8 +230,10 @@ function PollCard({ p, committee, canEdit, family, author, toast, onEdit, onRelo
   const optCount = (optId) => votes.filter((v) => Array.isArray(v.option_ids) && v.option_ids.includes(optId)).length;
   const moneyTotal = votes.reduce((s, v) => s + (v.choice === "agree" ? Number(v.amount || 0) : 0), 0);
   const maxOpt = Math.max(0, ...(p.options || []).map((o) => optCount(o.id)));
-  const notVoted = [];
-  for (let n = 1; n <= FAMILIES_COUNT; n++) if (!votes.some((v) => v.family_n === n)) notVoted.push(n);
+  // Кто не проголосовал — по каноническим номерам семей (близнецы — одна семья)
+  const notVoted = FAMILY_CANONICAL_NS.filter(
+    (n) => !votes.some((v) => familyNs(n).includes(v.family_n))
+  );
 
   // Подпись голоса семьи для комитета
   const voteLabel = (v) => {

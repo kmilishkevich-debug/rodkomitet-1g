@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
-import { FAMILIES, STAFF, FAMILIES_COUNT, GPD_CHILDREN } from "./data";
+import { FAMILIES, STAFF, FAMILIES_COUNT, CHILDREN_COUNT, GPD_CHILDREN } from "./data";
 import { BIRTHDAYS_FALLBACK, fmtBd, bdName, bdInfo, BD_MONTHS } from "./birthdaysData";
 import { isLive, fetchChildNotes, saveChildNote } from "@/lib/supabase";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard } from "@/lib/formGuard";
@@ -123,7 +123,7 @@ export default function ClassTab({ committee, toast, liveBirthdays }) {
         <svg className="cover-deco"><use href="#i-flower" /></svg>
         <h2>
           <NavIcon name="class" uid="h-class" size={32} className="nvi-big" />Наш класс{" "}
-          <span style={{ fontFamily: "'Comfortaa'", fontSize: 13, fontWeight: 700 }}>— {FAMILIES_COUNT} семей</span>
+          <span style={{ fontFamily: "'Comfortaa'", fontSize: 13, fontWeight: 700 }}>— {CHILDREN_COUNT} детей · {FAMILIES_COUNT} семей</span>
         </h2>
       </div>
 
