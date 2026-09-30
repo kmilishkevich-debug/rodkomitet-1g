@@ -7,7 +7,7 @@ import {
   applyAutoFees, fallbackFeeData, familyNs,
 } from "./data";
 import {
-  supabase, isLive, fetchFees, fetchChildNotes, saveFeeValue,
+  supabase, isLive, fetchFees, fetchChildNotes, saveFeeValue, saveFeeValuesBulk,
   fetchOneOffIncomes, addOneOffIncome, fetchFeeEditsLog, addFeeEdit,
   fetchGpdFund, saveGpdPaid, addGpdChild, deleteGpdChild,
 } from "@/lib/supabase";
@@ -237,6 +237,122 @@ function GpdPaidModal({ row, onClose, onSave, saving }) {
   );
 }
 
+// Окошко массовых действий по статье: проставить сумму всем детям сразу
+// или очистить колонку. Открывается нажатием на название статьи в шапке.
+// Две суммы: для ходящих в ГПД и (необязательно) для не ходящих.
+function BulkModal({ column, rows, isGpd, onClose, onApply, onClear, saving }) {
+  const [gpdSum, setGpdSum] = useState("");
+  const [otherSum, setOtherSum] = useState("");
+  const [mode, setMode] = useState("empty"); // empty — только пустым, all — перезаписать все
+  const [step, setStep] = useState("form"); // form → confirm
+
+  useRefreshPause(true);
+
+  const parse = (s) => parseFloat(String(s).replace(",", ".")) || 0;
+  const filled = rows.filter((r) => (r.values[column.id] || 0) > 0).length;
+  const g = parse(gpdSum);
+  const split = otherSum.trim() !== ""; // второе поле заполнено → две разные суммы
+  const o = split ? parse(otherSum) : g;
+
+  // Кому проставляем: всем или только тем, у кого в статье пусто
+  const targets = rows.filter((r) => mode === "all" || !(r.values[column.id] || 0));
+  const gpdT = targets.filter((r) => isGpd(r.child));
+  const othT = targets.filter((r) => !isGpd(r.child));
+  const total = round2(gpdT.length * g + othT.length * o);
+
+  const apply = () => {
+    const entries = targets.map((r) => {
+      const meta = (r.meta && r.meta[column.id]) || {};
+      return { rowId: r.id, columnId: column.id, amount: isGpd(r.child) ? g : o, method: meta.method, note: meta.note };
+    });
+    const logField = column.title + " · массово" +
+      (split ? " (ГПД " + fmt(g) + ", без ГПД " + fmt(o) + ")" : " (" + fmt(g) + " каждому)");
+    onApply({ entries, logField, total });
+  };
+
+  return (
+    <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && onClose()}>
+      <div className="modal">
+        <h3>{column.title}</h3>
+        <div className="muted">Массовая простановка: сумма появится сразу у всех детей в этой статье</div>
+
+        {step === "form" ? (
+          <>
+            <label className="fee-lb">Сумма для детей с ГПД, BYN</label>
+            <input
+              className="fee-inp" type="number" step="0.01" inputMode="decimal"
+              value={gpdSum} onChange={(e) => setGpdSum(e.target.value)} autoFocus
+            />
+            <label className="fee-lb">Сумма для детей без ГПД, BYN (необязательно)</label>
+            <input
+              className="fee-inp" type="number" step="0.01" inputMode="decimal"
+              value={otherSum} onChange={(e) => setOtherSum(e.target.value)}
+              placeholder="пусто — всем одна сумма"
+            />
+            {filled > 0 && (
+              <>
+                <label className="fee-lb">У {filled} {plural(filled, "ребёнка уже есть сумма", "детей уже есть суммы", "детей уже есть суммы")} в этой статье</label>
+                <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+                  <button type="button" className={"btn small " + (mode === "empty" ? "teal" : "white")} onClick={() => setMode("empty")}>
+                    Только пустым
+                  </button>
+                  <button type="button" className={"btn small " + (mode === "all" ? "teal" : "white")} onClick={() => setMode("all")}>
+                    Перезаписать все
+                  </button>
+                </div>
+              </>
+            )}
+            <div className="actions">
+              {filled > 0 && (
+                <button className="btn small white" style={{ color: "#c2410c" }} onClick={onClear} disabled={saving}>
+                  Очистить у всех
+                </button>
+              )}
+              <button className="btn small white" onClick={onClose} disabled={saving}>Отмена</button>
+              <button
+                className="btn small teal"
+                disabled={saving || !(g > 0 || (split && o > 0)) || !targets.length}
+                onClick={() => setStep("confirm")}
+              >
+                Далее
+              </button>
+            </div>
+            {!targets.length && (
+              <div className="muted" style={{ marginTop: 8 }}>Пустых ячеек в статье нет — выберите «Перезаписать все», чтобы обновить суммы.</div>
+            )}
+          </>
+        ) : (
+          <>
+            <div style={{ marginTop: 10 }}>
+              {split ? (
+                <>
+                  <div>ГПД: <b>{fmt(g)}</b> × {gpdT.length} {plural(gpdT.length, "ребёнок", "ребёнка", "детей")}</div>
+                  <div>Без ГПД: <b>{fmt(o)}</b> × {othT.length} {plural(othT.length, "ребёнок", "ребёнка", "детей")}</div>
+                </>
+              ) : (
+                <div>По <b>{fmt(g)}</b> BYN × {targets.length} {plural(targets.length, "ребёнок", "ребёнка", "детей")}</div>
+              )}
+              <div style={{ marginTop: 6 }}>Всего: <b>{fmt(total)} BYN</b></div>
+            </div>
+            <div className="muted" style={{ marginTop: 8 }}>
+              {mode === "all" && filled > 0
+                ? "Уже заполненные суммы будут перезаписаны."
+                : "Уже заполненные суммы не изменятся."}
+              {" "}Изменение попадёт в журнал. Пуш родителям не отправляется.
+            </div>
+            <div className="actions">
+              <button className="btn small white" onClick={() => setStep("form")} disabled={saving}>Назад</button>
+              <button className="btn small teal" onClick={apply} disabled={saving}>
+                {saving ? "Проставляем…" : "Применить"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Крупная сумма плитки кассы: число крупно, BYN меньше, табличные цифры
 function Sum({ value, className = "" }) {
   return (
@@ -261,6 +377,7 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
   const [logOpen, setLogOpen] = useState(false);
 
   const [cellEdit, setCellEdit] = useState(null); // { row, column, amount, method, note }
+  const [bulkCol, setBulkCol] = useState(null); // статья для массовой простановки
   const [oneOffOpen, setOneOffOpen] = useState(false);
 
   const [gpdLive, setGpdLive] = useState(null); // живой список фонда ГПД из базы
@@ -354,6 +471,52 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
       reload(); reloadLog();
     } catch (e) {
       toast("Не получилось сохранить: " + e.message);
+    }
+    setSaving(false);
+  };
+
+  // ===== Массовая простановка сумм по статье =====
+  const openBulk = (c) => {
+    if (!committee) return;
+    if (!live) return toast("Массовая простановка заработает после запуска файла fees2-setup.sql в Supabase");
+    if (auto[c.id]) return toast("Статья «" + c.title + "» считается автоматически из расходов — суммы проставлять не нужно");
+    setBulkCol(c);
+  };
+
+  const applyBulk = async ({ entries, logField, total }) => {
+    setSaving(true);
+    try {
+      await saveFeeValuesBulk(entries);
+      await addFeeEdit({
+        target: "Взносы 2026–2027", child: "Все дети (" + entries.length + ")", field: logField,
+        old_amount: null, new_amount: total, editor,
+      });
+      setBulkCol(null);
+      toast("Суммы проставлены: " + entries.length + " " + plural(entries.length, "ребёнок", "ребёнка", "детей") + ", изменение записано в журнал");
+      reload(); reloadLog();
+    } catch (e) {
+      toast("Не получилось проставить: " + e.message);
+    }
+    setSaving(false);
+  };
+
+  const clearBulk = async () => {
+    const c = bulkCol;
+    const affected = rows.filter((r) => (r.values[c.id] || 0) !== 0);
+    if (!affected.length) return toast("В этой статье и так нет сумм");
+    if (!window.confirm("Очистить статью «" + c.title + "» у всех детей (" + affected.length + ")? Суммы обнулятся, изменение попадёт в журнал.")) return;
+    setSaving(true);
+    try {
+      await saveFeeValuesBulk(affected.map((r) => ({ rowId: r.id, columnId: c.id, amount: 0 })));
+      await addFeeEdit({
+        target: "Взносы 2026–2027", child: "Все дети (" + affected.length + ")", field: c.title + " · массовая очистка",
+        old_amount: totals[c.id] || 0, new_amount: 0, editor,
+      });
+      setBulkCol(null);
+      toast("Статья очищена у всех, изменение записано в журнал");
+      reload(); reloadLog();
+    } catch (e) {
+      toast("Не получилось очистить: " + e.message);
     }
     setSaving(false);
   };
@@ -605,7 +768,16 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
                         </span>
                       ) : (
                         <span style={{ whiteSpace: "nowrap" }}>
-                          {c.title}
+                          {committee ? (
+                            <button
+                              type="button"
+                              title={auto[c.id] ? "Статья считается автоматически" : "Проставить сумму всем детям сразу"}
+                              onClick={() => openBulk(c)}
+                              style={{ background: "none", border: 0, padding: 0, font: "inherit", color: "inherit", cursor: "pointer", textDecoration: "underline dotted" }}
+                            >
+                              {c.title}
+                            </button>
+                          ) : c.title}
                           {auto[c.id] && (
                             <span className="chip teal" style={{ marginLeft: 4, padding: "1px 6px", fontSize: 9.5 }} title={auto[c.id].fixed != null
                               ? "Фиксированный взнос " + fmt(auto[c.id].fixed) + " BYN в фонд ГПД с каждого ходящего ребёнка"
@@ -686,7 +858,7 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
             <div className="muted" style={{ marginTop: 8 }}>
               «Осталось сдать» — сколько не хватает до нормы: {fmt(FEE_TARGET)} BYN у ходящих в ГПД, {fmt(FEE_TARGET - GPD_FUND_FEE)} BYN у не ходящих (0 в колонке «ГПД») · «Остаток» — сданное минус списания · отрицательный остаток — нужна доплата
               · статьи «авто» пересчитываются сами при каждой новой трате в разделе «Расходы»; чтобы исключить ребёнка из такой статьи, поставьте ему 0 — его доля разделится между остальными · «ГПД» — фикс {fmt(GPD_FUND_FEE)} BYN в фонд ГПД
-              {committee ? " · нажмите на сумму, чтобы исправить её (изменение попадёт в журнал)" : ""}
+              {committee ? " · нажмите на сумму, чтобы исправить её, или на название статьи в шапке, чтобы проставить сумму всем детям сразу (изменения попадают в журнал)" : ""}
             </div>
           </div>
         </div>
@@ -888,6 +1060,7 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
       </div>
 
       {cellEdit && <CellModal cell={cellEdit} onClose={() => setCellEdit(null)} onSave={saveCell} saving={saving} />}
+      {bulkCol && <BulkModal column={bulkCol} rows={rows} isGpd={isGpd} onClose={() => setBulkCol(null)} onApply={applyBulk} onClear={clearBulk} saving={saving} />}
       {oneOffOpen && <OneOffModal childNames={rows.map((r) => r.child)} onClose={() => setOneOffOpen(false)} onSave={saveOneOff} saving={saving} />}
       {gpdEdit && <GpdPaidModal row={gpdEdit} onClose={() => setGpdEdit(null)} onSave={saveGpdCell} saving={saving} />}
     </section>
