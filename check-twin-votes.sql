@@ -9,11 +9,11 @@ select
   v.child         as "Ребёнок",
   v.choice        as "Ответ",
   v.amount        as "Сумма",
-  v.created_at    as "Когда"
+  v.voted_at      as "Когда"
 from poll_votes v
 join polls p on p.id = v.poll_id
 where v.family_n in (2, 3)
-order by p.created_at desc, v.created_at;
+order by p.created_at desc, v.voted_at;
 
 -- 2) Голосования, где семья успела проголосовать ДВАЖДЫ (и с №2, и с №3) —
 -- если такие есть, напишите мне, дам SQL для аккуратной чистки
