@@ -249,13 +249,15 @@ function BulkModal({ column, rows, isGpd, onClose, onApply, onClear, saving }) {
   useRefreshPause(true);
 
   const parse = (s) => parseFloat(String(s).replace(",", ".")) || 0;
-  const filled = rows.filter((r) => (r.values[column.id] || 0) > 0).length;
+  // Пустая клетка — где суммы нет вовсе. Явный ноль («не участвует») — заполненная!
+  const isEmpty = (r) => r.values[column.id] === undefined || r.values[column.id] === null || r.values[column.id] === "";
+  const filled = rows.filter((r) => !isEmpty(r)).length;
   const g = parse(gpdSum);
   const split = otherSum.trim() !== ""; // второе поле заполнено → две разные суммы
   const o = split ? parse(otherSum) : g;
 
-  // Кому проставляем: всем или только тем, у кого в статье пусто
-  const targets = rows.filter((r) => mode === "all" || !(r.values[column.id] || 0));
+  // Кому проставляем: всем или только тем, у кого в статье пусто (нули не трогаем)
+  const targets = rows.filter((r) => mode === "all" || isEmpty(r));
   const gpdT = targets.filter((r) => isGpd(r.child));
   const othT = targets.filter((r) => !isGpd(r.child));
   const total = round2(gpdT.length * g + othT.length * o);
