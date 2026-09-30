@@ -65,13 +65,15 @@ export default function TeacherFamilyChat({
       });
       setText("");
       onSent?.();
-      // Родителю — пуш; учителю пуши не шлём, он и так в кабинете
+      // Родителю — адресный пуш только этой семье (текст личный!);
+      // учителю пуши не шлём, он и так в кабинете
       if (fromTeacher) {
         sendManualPush({
           title: "Сообщение от учителя",
           body: body.length > 90 ? body.slice(0, 90) + "…" : body,
           url: "/?tab=dashboard",
-          audience: "parents",
+          audience: "family",
+          familyNs: familyNs(familyN),
         }).catch(() => {});
       }
     } catch (e) {

@@ -100,7 +100,7 @@ function ManualPush({ toast }) {
   );
 }
 
-export default function PushSettings({ committee, role, toast }) {
+export default function PushSettings({ committee, role, familyN, toast }) {
   const [status, setStatus] = useState(null); // null = ещё проверяем
 
   const refresh = () => pushStatus().then(setStatus);
@@ -111,7 +111,8 @@ export default function PushSettings({ committee, role, toast }) {
   if (!isLive) return null;
 
   const turnOn = async () => {
-    const res = await enablePush(role);
+    // Номер семьи — чтобы личные сообщения учителя приходили только этой семье
+    const res = await enablePush(role, familyN);
     if (res.ok) toast("Уведомления включены — теперь напомним о днях рождения и новостях класса");
     else if (res.reason === "denied") toast("Уведомления запрещены в браузере — разрешите их в настройках сайта");
     else if (res.reason === "ios-install") toast("Сначала добавьте сайт на экран «Домой» (шаги ниже)");

@@ -26,9 +26,19 @@ export async function POST(request) {
   if (!title || !text) {
     return NextResponse.json({ ok: false, error: "Нужны заголовок и текст" }, { status: 400 });
   }
-  const audiences = ["committee", "parents", "all"];
+  const audiences = ["committee", "parents", "all", "family"];
   const audience = audiences.includes(body?.audience) ? body.audience : "all";
   const url = typeof body?.url === "string" && body.url.startsWith("/") ? body.url : "/";
-  const result = await sendPushToAll({ title, body: text, url }, audience);
+  // Для адресного пуша одной семье — список её номеров (у близнецов может быть два)
+  let familyNs = [];
+  if (audience === "family") {
+    familyNs = (Array.isArray(body?.familyNs) ? body.familyNs : [])
+      .filter((n) => Number.isInteger(n))
+      .slice(0, 4);
+    if (!familyNs.length) {
+      return NextResponse.json({ ok: false, error: "Не указана семья" }, { status: 400 });
+    }
+  }
+  const result = await sendPushToAll({ title, body: text, url }, audience, { familyNs });
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });
 }

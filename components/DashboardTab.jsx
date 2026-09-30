@@ -1016,7 +1016,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
 
       <RegularNews announcements={announcements} onTab={onTab} />
 
-      <PushSettings committee={committee} role={role} toast={toast} />
+      <PushSettings committee={committee} role={role} familyN={family?.n} toast={toast} />
     </section>
   );
 }
