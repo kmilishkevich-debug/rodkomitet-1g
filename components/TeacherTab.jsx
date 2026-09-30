@@ -7,7 +7,8 @@ import {
 } from "@/lib/supabase";
 import { sendManualPush } from "@/lib/push";
 import { useRefreshPause } from "@/lib/formGuard";
-import FamilyPicker, { familyName } from "./FamilyPicker";
+import FamilyPicker from "./FamilyPicker";
+import { canonicalN, familyLabel } from "./data";
 import TeacherWelcomeCard from "./TeacherWelcomeCard";
 import TeacherTodayStats from "./TeacherTodayStats";
 import TeacherQuickCards from "./TeacherQuickCards";
@@ -543,14 +544,16 @@ export default function TeacherTab({
     .filter((a) => a.status === "active" && (!authorName || a.author === authorName))
     .slice(0, 3);
 
-  // Переписка: одна строка на семью, сверху те, кто ждёт ответа
+  // Переписка: одна строка на семью, сверху те, кто ждёт ответа.
+  // Семья близнецов — одна ветка под каноническим номером.
   const threads = useMemo(() => {
     const byFamily = new Map();
     (familyMessages || []).forEach((m) => {
-      const cur = byFamily.get(m.family_n) || { n: m.family_n, last: null, unread: 0 };
+      const n = canonicalN(m.family_n);
+      const cur = byFamily.get(n) || { n, last: null, unread: 0 };
       cur.last = m; // сообщения приходят по возрастанию времени
       if (!m.from_teacher && !m.read_teacher) cur.unread += 1;
-      byFamily.set(m.family_n, cur);
+      byFamily.set(n, cur);
     });
     return [...byFamily.values()].sort((a, b) => {
       if (!!b.unread !== !!a.unread) return b.unread - a.unread;
@@ -746,9 +749,9 @@ export default function TeacherTab({
             )}
             {threads.map((t) => (
               <button className="tc-line" key={t.n}
-                onClick={() => setChatFamily({ n: t.n, child: familyName(t.n) })}>
+                onClick={() => setChatFamily({ n: t.n, child: familyLabel(t.n) })}>
                 <span className="tc-line-title">
-                  {familyName(t.n)}
+                  {familyLabel(t.n)}
                   {t.unread > 0 && <span className="tc-badge">{t.unread}</span>}
                 </span>
                 <span className="tc-line-sub">
@@ -779,7 +782,11 @@ export default function TeacherTab({
         open={pickOpen}
         onClose={() => setPickOpen(false)}
         title="Какой семье написать?"
-        onPick={(f) => { setChatFamily(f); setPickOpen(false); }}
+        onPick={(f) => {
+          // Близнецы: любой из детей ведёт в общую ветку семьи
+          setChatFamily({ n: canonicalN(f.n), child: familyLabel(f.n) });
+          setPickOpen(false);
+        }}
       />
 
       <TeacherFamilyChat

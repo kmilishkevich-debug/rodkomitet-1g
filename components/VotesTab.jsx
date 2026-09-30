@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
-import { FAMILIES_COUNT, fmt } from "./data";
+import { FAMILIES_COUNT, fmt, familyNs } from "./data";
 import { isLive, savePoll, deletePoll, castVote } from "@/lib/supabase";
 import { shareText, shareUrl } from "@/lib/share";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
@@ -177,7 +177,7 @@ function ResultBar({ label, count, total, highlight }) {
 function PollCard({ p, committee, canEdit, family, author, toast, onEdit, onReload, onNeedFamily }) {
   const state = pollState(p);
   const votes = p.votes || [];
-  const myVote = family ? votes.find((v) => v.family_n === family.n) : null;
+  const myVote = family ? votes.find((v) => familyNs(family.n).includes(v.family_n)) : null;
   const showResults = committee || canEdit || !!myVote || state !== "open";
   const [sel, setSel] = useState([]); // выбранные option_id (single/multi)
   const [moneySum, setMoneySum] = useState(p.amount ?? "");

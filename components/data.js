@@ -31,6 +31,37 @@ export const FAMILIES = [
   { n: 27, child: "Шурова Агата",      parents: ["Шуров Денис Владимирович", "Шурова Марина Александровна"],             phones: ["80(29) 557-84-64", "80(29) 776-16-44"], note: "" },
 ];
 
+// ===== Семьи с несколькими детьми в классе (близнецы) =====
+// У такой семьи один вход и один чат с учителем: всё живёт под «каноническим»
+// номером (canonical), а строки ведомости, дни рождения и заметки раскрываются
+// на все номера из ns. Метка label — общая подпись семьи.
+export const FAMILY_GROUPS = [
+  { ns: [2, 3], canonical: 3, label: "Богдан Давид и Ульяна" },
+];
+
+export function familyGroup(n) {
+  return FAMILY_GROUPS.find((g) => g.ns.includes(n)) || null;
+}
+
+// Все номера семьи: для близнецов [2, 3], для остальных [n]
+export function familyNs(n) {
+  const g = familyGroup(n);
+  return g ? g.ns : [n];
+}
+
+// Канонический номер семьи (под ним хранятся чат, голоса, прочтения)
+export function canonicalN(n) {
+  const g = familyGroup(n);
+  return g ? g.canonical : n;
+}
+
+// Подпись семьи: «Богдан Давид и Ульяна» или имя единственного ребёнка
+export function familyLabel(n) {
+  const g = familyGroup(n);
+  if (g) return g.label;
+  return FAMILIES.find((f) => f.n === n)?.child || `Семья №${n}`;
+}
+
 export const STAFF = [
   { name: "Головко Виктория Петровна", phone: "(29) 553-69-22", role: "Классный руководитель" },
   { name: "Нушаба Алиевна", phone: "(25) 777-55-85", role: "Воспитатель ГПД" },

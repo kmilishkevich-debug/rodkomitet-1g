@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { supabase, isLive, fetchUserRole, verifyFamilyCode } from "@/lib/supabase";
-import { FAMILIES } from "./data";
+import { FAMILIES, canonicalN, familyLabel } from "./data";
 import { Ic } from "./Art";
 
 // Модалка входа родителя: сначала выбираем ребёнка, потом вводим семейный код
@@ -36,9 +36,12 @@ function ParentCodeModal({ open, onClose, onSuccess }) {
     setBusy(true);
     setErr(null);
     try {
-      const res = await verifyFamilyCode(picked.n, code);
+      // У семьи с двумя детьми (близнецы) один общий код — проверяем и входим
+      // под каноническим номером семьи, с общей подписью
+      const famN = canonicalN(picked.n);
+      const res = await verifyFamilyCode(famN, code);
       if (res.ok) {
-        onSuccess({ n: picked.n, child: picked.child });
+        onSuccess({ n: famN, child: familyLabel(picked.n) });
       } else {
         setErr("Код не подходит. Проверьте, что вводите код именно вашей семьи — он в личном сообщении от комитета.");
         setBusy(false);

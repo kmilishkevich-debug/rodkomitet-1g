@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { sendFamilyMessage, markThreadRead } from "@/lib/supabase";
 import { sendManualPush } from "@/lib/push";
 import { useRefreshPause } from "@/lib/formGuard";
+import { familyNs } from "./data";
 
 // ===== Переписка с одной семьёй =====
 // Окно открывается поверх кабинета. Слева — что написал родитель,
@@ -30,12 +31,12 @@ export default function TeacherFamilyChat({
   useRefreshPause(open);
 
   const thread = (messages || [])
-    .filter((m) => m.family_n === familyN)
+    .filter((m) => familyNs(familyN).includes(m.family_n))
     .sort((a, b) => (a.created_at || "") < (b.created_at || "") ? -1 : 1);
 
   // Открыли ветку — значит, прочитали чужие сообщения в ней
   useEffect(() => {
-    if (open && familyN) markThreadRead(familyN, side);
+    if (open && familyN) markThreadRead(familyNs(familyN), side);
   }, [open, familyN, side]);
 
   // Держим последнее сообщение на виду

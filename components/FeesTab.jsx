@@ -4,7 +4,7 @@ import { Ic } from "./Art";
 import {
   GPD_CHILDREN, fmt,
   GPD_FUND, GPD_FUND_FEE, GPD_FUND_SPENT, groupTotal,
-  applyAutoFees, fallbackFeeData,
+  applyAutoFees, fallbackFeeData, familyNs,
 } from "./data";
 import {
   supabase, isLive, fetchFees, fetchChildNotes, saveFeeValue,
@@ -314,10 +314,10 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
   const totalDue = round2(rows.reduce((s, r) => s + r.due, 0));
   const doneCount = rows.filter((r) => r.due <= 0.005).length;
 
-  // Своя семья — первой строкой и с подсветкой
-  const myN = family ? family.n : null;
-  const displayRows = myN
-    ? [...rows.filter((r) => r.n === myN), ...rows.filter((r) => r.n !== myN)]
+  // Своя семья — первой строкой и с подсветкой (у близнецов «свои» обе строки)
+  const myNs = family ? familyNs(family.n) : [];
+  const displayRows = myNs.length
+    ? [...rows.filter((r) => myNs.includes(r.n)), ...rows.filter((r) => !myNs.includes(r.n))]
     : rows;
 
   // ===== Правка ячейки общей таблицы взносов =====
@@ -624,14 +624,14 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
                   <th>Осталось сдать</th>
                 </tr>
                 {displayRows.map((r) => (
-                  <tr key={r.id} className={myN && r.n === myN ? "fee-my-row" : undefined}>
+                  <tr key={r.id} className={myNs.includes(r.n) ? "fee-my-row" : undefined}>
                     <td>{r.n}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       {r.child}
                       {isGpd(r.child) && (
                         <span className="chip green" style={{ marginLeft: 6, padding: "2px 8px", fontSize: 10.5 }}>ГПД</span>
                       )}
-                      {myN && r.n === myN && (
+                      {myNs.includes(r.n) && (
                         <span className="chip blue" style={{ marginLeft: 6, padding: "2px 8px", fontSize: 10.5 }}>ваш ребёнок</span>
                       )}
                     </td>

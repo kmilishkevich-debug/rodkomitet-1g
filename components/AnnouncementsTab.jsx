@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
-import { FAMILIES_COUNT } from "./data";
+import { FAMILIES_COUNT, familyNs } from "./data";
 import { isLive, saveAnnouncement, deleteAnnouncement, markRead, uploadNewsImage } from "@/lib/supabase";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
 import { PostChatInline } from "./PostChat";
@@ -141,7 +141,7 @@ function AnnouncementCard({
   onNeedFamily, postComments, chatClosed, onReloadComments,
 }) {
   const [readsOpen, setReadsOpen] = useState(false);
-  const myRead = family && reads.some((r) => r.announcement_id === a.id && r.family_n === family.n);
+  const myRead = family && reads.some((r) => r.announcement_id === a.id && familyNs(family.n).includes(r.family_n));
   const whoRead = reads.filter((r) => r.announcement_id === a.id).sort((x, y) => x.family_n - y.family_n);
 
   const doRead = async (fam) => {

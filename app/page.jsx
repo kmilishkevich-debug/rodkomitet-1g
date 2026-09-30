@@ -13,6 +13,7 @@ import TeacherTab from "@/components/TeacherTab";
 import UploadModal from "@/components/UploadModal";
 import LogoutModal from "@/components/LogoutModal";
 import { useFamily, loadSeen, saveSeen } from "@/components/FamilyPicker";
+import { familyNs } from "@/components/data";
 import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes, fetchHomework, fetchClassEvents, fetchTeacherNotes, fetchFamilyMessages, fetchPostComments, fetchChatClosed, recordVisit, visitHeartbeat } from "@/lib/supabase";
 import { enablePush, syncPushRole } from "@/lib/push";
 import { isFormOpen, onFormsChange } from "@/lib/formGuard";
@@ -251,7 +252,8 @@ export default function Page() {
       knownNoteIds.current = null;
       return;
     }
-    const data = await fetchFamilyNotes(familyNRef.current);
+    // Семья близнецов видит заметки обоих детей — передаём все номера семьи
+    const data = await fetchFamilyNotes(familyNs(familyNRef.current));
     if (!data) return;
     setLiveNotes(data);
     const ids = new Set(data.map((n) => n.id));

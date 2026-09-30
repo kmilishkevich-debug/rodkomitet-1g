@@ -4,7 +4,7 @@ import {
   sendPostComment, markPostCommentsRead, deletePostComment, setChatClosed,
 } from "@/lib/supabase";
 import { sendCommentPush } from "@/lib/push";
-import { familyName } from "./FamilyPicker";
+import { familyLabel, familyNs } from "./data";
 import { useRefreshPause } from "@/lib/formGuard";
 
 // ===== Обсуждения под публикациями учителя =====
@@ -228,7 +228,7 @@ export function PostChatInline({
     try {
       await sendPostComment({
         post_kind: postKind, post_id: postId, family_n: family.n,
-        from_teacher: false, author: `Семья · ${familyName(family.n)}`, text: body,
+        from_teacher: false, author: `Семья · ${familyLabel(family.n)}`, text: body,
       });
       onSent?.();
       // Учителю — пуш о новом сообщении (родителям пуши не шлём)
@@ -262,7 +262,7 @@ export function PostChatInline({
             thread={thread}
             closed={closed}
             canWrite={true}
-            canDeleteMsg={(m) => !m.from_teacher && family?.n && m.family_n === family.n}
+            canDeleteMsg={(m) => !m.from_teacher && family?.n && familyNs(family.n).includes(m.family_n)}
             placeholder="Написать в обсуждение…"
             emptyText="Сообщений пока нет. Напишите первым — увидят учитель и все семьи класса."
             onSend={send}

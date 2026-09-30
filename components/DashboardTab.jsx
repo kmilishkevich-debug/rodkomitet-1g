@@ -6,6 +6,7 @@ import NavIcon from "./NavIcons";
 import {
   fmt, TOTAL_COLLECTED, TOTAL_SPENT, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal,
   GPD_FUND_REST, GPD_FUND_FEE, applyAutoFees, fallbackFeeData,
+  FAMILIES, familyNs, familyGroup,
 } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, INFO_HOUR, scheduleFocus, subjectIcon, lessonDisplay } from "./scheduleData";
 import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu } from "./scheduleOverrides";
@@ -163,7 +164,7 @@ function goFocus(kind, id, tab, onTab) {
 
 // Семья прочитала объявление? (по отметкам в базе)
 function isReadBy(a, reads, family) {
-  return !!(family && (reads || []).some((r) => r.announcement_id === a.id && r.family_n === family.n));
+  return !!(family && (reads || []).some((r) => r.announcement_id === a.id && familyNs(family.n).includes(r.family_n)));
 }
 
 // ===== Важные объявления на главной (ТЗ §7): жёлтая подложка, «Прочитать» =====
@@ -202,7 +203,7 @@ function ImportantNews({ announcements, reads, family, onTab }) {
 function ActivePolls({ polls, family, onTab }) {
   const open = (polls || []).filter((p) => pollState(p) === "open");
   if (!open.length) return null;
-  const voted = (p) => !!(family && (p.votes || []).some((v) => v.family_n === family.n));
+  const voted = (p) => !!(family && (p.votes || []).some((v) => familyNs(family.n).includes(v.family_n)));
   // Сначала те, где семья ещё не голосовала; внутри — более срочные (ближний срок) выше
   const sorted = [...open].sort((a, b) => {
     const va = voted(a) ? 1 : 0, vb = voted(b) ? 1 : 0;
@@ -454,39 +455,49 @@ function FamilyWidget({ family, polls, bdays, onTab, liveGroups }) {
   useEffect(() => {
     fetchFees().then((data) => { if (data) setFees(data); });
   }, []);
+  // У семьи-близнецов в классе двое детей — считаем по всем их строкам ведомости
+  const myNs = familyNs(family.n);
   // Внесено и остаток своей семьи: та же авто-ведомость, что на вкладке «Взносы»
-  let paid = null, rest = null, target = 200;
+  let paid = null, rest = null, target = 0;
   const src = fees || fallbackFeeData();
   const { columns, rows } = applyAutoFees(src.columns, src.rows, liveGroups);
-  const row = rows.find((r) => r.n === family.n);
-  if (row) {
-    paid = 0; rest = 0;
+  const myRows = rows.filter((r) => myNs.includes(r.n));
+  const gpdCol = columns.find((c) => c.kind === "charge" && /гпд/i.test(c.title || ""));
+  myRows.forEach((row) => {
+    if (paid === null) { paid = 0; rest = 0; }
     columns.forEach((c) => {
       const v = row.values[c.id] || 0;
       if (c.kind === "paid") { paid += v; rest += v; } else rest -= v;
     });
+    // Норма взноса: 200 BYN у ходящих в ГПД (175 + 25 в фонд), 175 — у не ходящих (0 в колонке «ГПД»)
+    target += gpdCol && row.values[gpdCol.id] === 0 ? 175 : 200;
+  });
+  if (paid !== null) {
     paid = Math.round(paid * 100) / 100;
     rest = Math.round(rest * 100) / 100;
-    // Норма взноса: 200 BYN у ходящих в ГПД (175 + 25 в фонд), 175 — у не ходящих (0 в колонке «ГПД»)
-    const gpdCol = columns.find((c) => c.kind === "charge" && /гпд/i.test(c.title || ""));
-    if (gpdCol && row.values[gpdCol.id] === 0) target = 175;
+  } else {
+    target = 200;
   }
   const due = paid === null ? null : Math.max(0, Math.round((target - paid) * 100) / 100);
-  // Свой день рождения
-  const kid = (bdays || []).find((k) => k.id === family.n);
-  const bd = kid ? bdInfo(kid.born) : null;
+  // Дни рождения детей семьи (у близнецов — оба)
+  const kids = (bdays || []).filter((k) => myNs.includes(k.id));
   // Голосования, где семья ещё не ответила
   const noAnswer = (polls || []).filter(
-    (p) => pollState(p) === "open" && !(p.votes || []).some((v) => v.family_n === family.n)
+    (p) => pollState(p) === "open" && !(p.votes || []).some((v) => myNs.includes(v.family_n))
   );
-  const first = childFirstName(family.child);
+  // «Личная сводка семьи Тимофея» / для близнецов «…Давида и Ульяны»
+  const group = familyGroup(family.n);
+  const firstNames = group
+    ? group.ns.map((n) => childFirstName(FAMILIES.find((f) => f.n === n)?.child))
+    : [childFirstName(family.child)];
+  const namesGen = firstNames.map(ruGenitive).join(" и ");
   return (
     <div className="card fam-widget reveal d2">
       <div className="dash-card-head">
         <img src="/icons/icon-people.webp" className="head-3d" alt="" />
         <div className="dash-card-titles">
           <h2 className="sec-title">Ваша семья · {family.child}</h2>
-          <div className="dash-card-sub">Личная сводка семьи {ruGenitive(first)}</div>
+          <div className="dash-card-sub">Личная сводка семьи {namesGen}</div>
         </div>
       </div>
       <div className="fam-rows">
@@ -503,18 +514,22 @@ function FamilyWidget({ family, polls, bdays, onTab, liveGroups }) {
             <span className="fam-row-arrow" aria-hidden="true">›</span>
           </button>
         )}
-        {bd && (
-          <button className="fam-row" onClick={() => onTab("class")}>
-            <span className="fam-row-ico" aria-hidden="true">🎂</span>
-            <span className="fam-row-body">
-              <b>День рождения {ruGenitive(first)} — {fmtBd(kid.born)}</b>
-              <span className="fam-row-sub">
-                {bd.days === 0 ? `Сегодня исполняется ${bd.turns} — поздравляем!` : `Исполнится ${bd.turns} — ${inDaysWord(bd.days)}`}
+        {kids.map((kid) => {
+          const bd = bdInfo(kid.born);
+          if (!bd) return null;
+          return (
+            <button className="fam-row" key={kid.id} onClick={() => onTab("class")}>
+              <span className="fam-row-ico" aria-hidden="true">🎂</span>
+              <span className="fam-row-body">
+                <b>День рождения {ruGenitive(kid.first || childFirstName(family.child))} — {fmtBd(kid.born)}</b>
+                <span className="fam-row-sub">
+                  {bd.days === 0 ? `Сегодня исполняется ${bd.turns} — поздравляем!` : `Исполнится ${bd.turns} — ${inDaysWord(bd.days)}`}
+                </span>
               </span>
-            </span>
-            <span className="fam-row-arrow" aria-hidden="true">›</span>
-          </button>
-        )}
+              <span className="fam-row-arrow" aria-hidden="true">›</span>
+            </button>
+          );
+        })}
         <button className="fam-row" onClick={() => onTab("votes")}>
           <span className="fam-row-ico" aria-hidden="true">🗳️</span>
           <span className="fam-row-body">
@@ -749,7 +764,11 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   // Персональное приветствие: у комитета/учителя — имя из базы; у семьи — по ребёнку («семья Тимофея»)
   const greetName = authorName
     ? `, ${authorName}`
-    : family ? `, семья ${ruGenitive(childFirstName(family.child))}` : "";
+    : family
+      ? `, семья ${(familyGroup(family.n)
+          ? familyGroup(family.n).ns.map((n) => ruGenitive(childFirstName(FAMILIES.find((f) => f.n === n)?.child))).join(" и ")
+          : ruGenitive(childFirstName(family.child)))}`
+      : "";
   // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
   const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
   // Поступления сверх старого сбора: платежи по новым сборам + разовые поступления
@@ -818,7 +837,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     (a) => a.status === "active" && a.important && !isReadBy(a, reads, family)
   );
   const pollsNoAnswer = (polls || []).filter(
-    (p) => pollState(p) === "open" && !(family && (p.votes || []).some((v) => v.family_n === family.n))
+    (p) => pollState(p) === "open" && !(family && (p.votes || []).some((v) => familyNs(family.n).includes(v.family_n)))
   );
   const eventsCount =
     (impUnread.length ? 1 : 0) + (pollsNoAnswer.length ? 1 : 0) +

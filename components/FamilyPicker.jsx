@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { FAMILIES } from "./data";
+import { FAMILIES, canonicalN, familyLabel } from "./data";
 
 // ===== Общие помощники для объявлений и голосований =====
 
@@ -11,7 +11,17 @@ export function loadFamily() {
     const raw = localStorage.getItem("rk1g-family");
     if (!raw) return null;
     const f = JSON.parse(raw);
-    if (f && typeof f.n === "number" && f.child) return f;
+    if (f && typeof f.n === "number" && f.child) {
+      // Семьи-близнецы: старые сессии (вход был по одному из детей)
+      // приводим к общему каноническому номеру и общей подписи
+      const canon = canonicalN(f.n);
+      if (canon !== f.n || familyLabel(f.n) !== f.child) {
+        const fixed = { ...f, n: canon, child: familyLabel(f.n) };
+        saveFamily(fixed);
+        return fixed;
+      }
+      return f;
+    }
   } catch {}
   return null;
 }
