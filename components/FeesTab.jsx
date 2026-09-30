@@ -11,7 +11,7 @@ import {
   fetchOneOffIncomes, addOneOffIncome, fetchFeeEditsLog, addFeeEdit,
   fetchGpdFund, saveGpdPaid, addGpdChild, deleteGpdChild,
 } from "@/lib/supabase";
-import TreasurerMascot, { MASCOT_GOAL, notifyTreasurer } from "./TreasurerMascot";
+import TreasurerMascot, { notifyTreasurer } from "./TreasurerMascot";
 import { shareText, shareUrl } from "@/lib/share";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
@@ -307,6 +307,9 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
     totals[c.id] = round2(rows.reduce((s, r) => s + (r.values[c.id] || 0), 0));
   });
   const totalPaid = columns.filter((c) => c.kind === "paid").reduce((s, c) => s + totals[c.id], 0);
+  // Цель банки казначея: сумма норм по всем семьям (200 у ходящих в ГПД, 175 — у не ходящих).
+  // Пересчитывается сама при изменении списка детей или пометок ГПД — без захардкоженных чисел.
+  const mascotGoal = round2(rows.reduce((s, r) => s + r.target, 0));
   const totalRest = round2(rows.reduce((s, r) => s + r.rest, 0));
   const totalDue = round2(rows.reduce((s, r) => s + r.due, 0));
   const doneCount = rows.filter((r) => r.due <= 0.005).length;
@@ -524,9 +527,10 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
             </div>
           )}
         </div>
-        {/* Пушистый казначей с банкой «Общее дело 1Г» — как и раньше, живёт в кассе */}
+        {/* Пушистый казначей с банкой «Общее дело 1Г» — как и раньше, живёт в кассе.
+            В банке — только взносы семей (без разовых поступлений), цель — сумма норм по семьям. */}
         <div className="fin-mascot">
-          <TreasurerMascot collected={totalPaid} goal={MASCOT_GOAL} />
+          <TreasurerMascot collected={totalPaid} goal={mascotGoal} />
         </div>
         {/* Плитки сумм — на всю ширину карточки, чтобы цифры влезали целиком */}
         <div className="fin-tiles">

@@ -23,7 +23,9 @@ import {
   useState,
 } from "react";
 
-export const MASCOT_GOAL = 5400; // цель банки: 200 BYN × 27 семей
+// Запасная цель банки, если снаружи не передали свою.
+// Обычно цель приходит из ведомости: сумма норм по семьям (200 у ходящих в ГПД, 175 — у не ходящих).
+export const MASCOT_GOAL = 5400;
 
 // Шина событий: любой блок сайта может сообщить казначею о взносе или расходе
 export function notifyTreasurer(detail) {
@@ -41,7 +43,8 @@ const toCents = (n) => Math.round((Number(n) || 0) * 100);
 export function computeProgress(collected, goal) {
   const c = toCents(collected);
   const g = Math.max(1, toCents(goal));
-  const pct = Math.max(0, Math.min(100, (c / g) * 100));
+  // Процент не обрезаем сверху: если сдали больше цели (переплаты) — честно показываем 101%, 102%…
+  const pct = Math.max(0, (c / g) * 100);
   return { pct, full: c >= g };
 }
 
