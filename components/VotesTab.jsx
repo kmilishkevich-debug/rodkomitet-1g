@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
-import { FAMILIES_COUNT, FAMILY_CANONICAL_NS, fmt, familyNs } from "./data";
+import { FAMILIES_COUNT, FAMILY_CANONICAL_NS, fmt, familyNs, canonicalN } from "./data";
 import { isLive, savePoll, deletePoll, castVote } from "@/lib/supabase";
 import { shareText, shareUrl } from "@/lib/share";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
@@ -224,11 +224,22 @@ function PollCard({ p, committee, canEdit, family, author, toast, onEdit, onRelo
     } catch (e) { toast("Не получилось удалить: " + (e.message || "ошибка")); }
   };
 
-  // Итоги по типам
-  const yesCnt = votes.filter((v) => v.choice === "yes" || v.choice === "agree").length;
-  const noCnt = votes.filter((v) => v.choice === "no").length;
-  const optCount = (optId) => votes.filter((v) => Array.isArray(v.option_ids) && v.option_ids.includes(optId)).length;
-  const moneyTotal = votes.reduce((s, v) => s + (v.choice === "agree" ? Number(v.amount || 0) : 0), 0);
+  // Итоги по типам. На всякий случай считаем не больше одного голоса на семью
+  // (если в старых голосованиях близнецы успели проголосовать с обеих строк)
+  const seenFam = new Set();
+  const famVotes = votes.filter((v) => {
+    const c = canonicalN(v.family_n);
+    if (seenFam.has(c)) return false;
+    seenFam.add(c);
+    return true;
+  });
+  // В «да/нет» голос семьи близнецов идёт за обоих детей
+  const voteWeight = (v) => (p.type === "yesno" ? familyNs(v.family_n).length : 1);
+  const yesCnt = famVotes.filter((v) => v.choice === "yes" || v.choice === "agree").reduce((s, v) => s + voteWeight(v), 0);
+  const noCnt = famVotes.filter((v) => v.choice === "no").reduce((s, v) => s + voteWeight(v), 0);
+  const votesTotal = famVotes.reduce((s, v) => s + voteWeight(v), 0);
+  const optCount = (optId) => famVotes.filter((v) => Array.isArray(v.option_ids) && v.option_ids.includes(optId)).length;
+  const moneyTotal = famVotes.reduce((s, v) => s + (v.choice === "agree" ? Number(v.amount || 0) : 0), 0);
   const maxOpt = Math.max(0, ...(p.options || []).map((o) => optCount(o.id)));
   // Кто не проголосовал — по каноническим номерам семей (близнецы — одна семья)
   const notVoted = FAMILY_CANONICAL_NS.filter(
@@ -325,26 +336,26 @@ function PollCard({ p, committee, canEdit, family, author, toast, onEdit, onRelo
         <div className="vote-results">
           {p.type === "yesno" && (
             <>
-              <ResultBar label="Да" count={yesCnt} total={votes.length} highlight={yesCnt >= noCnt && votes.length > 0} />
-              <ResultBar label="Нет" count={noCnt} total={votes.length} highlight={noCnt > yesCnt} />
+              <ResultBar label="Да" count={yesCnt} total={votesTotal} highlight={yesCnt >= noCnt && votesTotal > 0} />
+              <ResultBar label="Нет" count={noCnt} total={votesTotal} highlight={noCnt > yesCnt} />
             </>
           )}
           {(p.type === "single" || p.type === "multi") &&
             (p.options || []).map((o) => (
-              <ResultBar key={o.id} label={o.title} count={optCount(o.id)} total={votes.length} highlight={votes.length > 0 && optCount(o.id) === maxOpt} />
+              <ResultBar key={o.id} label={o.title} count={optCount(o.id)} total={famVotes.length} highlight={famVotes.length > 0 && optCount(o.id) === maxOpt} />
             ))}
           {p.type === "money" && (
             <>
-              <ResultBar label="Сдадут" count={yesCnt} total={votes.length} highlight={yesCnt >= noCnt && votes.length > 0} />
-              <ResultBar label="Не сдадут" count={noCnt} total={votes.length} highlight={noCnt > yesCnt} />
+              <ResultBar label="Сдадут" count={yesCnt} total={famVotes.length} highlight={yesCnt >= noCnt && famVotes.length > 0} />
+              <ResultBar label="Не сдадут" count={noCnt} total={famVotes.length} highlight={noCnt > yesCnt} />
             </>
           )}
-          <div className="vote-turnout">Проголосовали {votes.length} из {FAMILIES_COUNT} семей</div>
+          <div className="vote-turnout">Проголосовали {famVotes.length} из {FAMILIES_COUNT} семей</div>
         </div>
       ) : (
         state === "open" && (
           <div className="vote-turnout">
-            Проголосовали {votes.length} из {FAMILIES_COUNT} семей · итоги откроются после вашего голоса
+            Проголосовали {famVotes.length} из {FAMILIES_COUNT} семей · итоги откроются после вашего голоса
           </div>
         )
       )}
@@ -357,13 +368,17 @@ function PollCard({ p, committee, canEdit, family, author, toast, onEdit, onRelo
           </button>
           {whoOpen && (
             <div className="vote-who">
-              {votes.map((v) => (
-                <div className="vote-who-row" key={v.id}>
-                  <span className="vote-who-name">{v.child || familyName(v.family_n)}</span>
-                  <span className="vote-who-val">{voteLabel(v)}</span>
-                </div>
-              ))}
-              {votes.length === 0 && <span className="muted">Пока никто не голосовал</span>}
+              {famVotes.flatMap((v) => {
+                // Голос семьи близнецов показываем отдельной строкой за каждого ребёнка
+                const ns = familyNs(v.family_n);
+                return ns.map((n) => (
+                  <div className="vote-who-row" key={v.id + "-" + n}>
+                    <span className="vote-who-name">{ns.length > 1 ? familyName(n) : (v.child || familyName(n))}</span>
+                    <span className="vote-who-val">{voteLabel(v)}</span>
+                  </div>
+                ));
+              })}
+              {famVotes.length === 0 && <span className="muted">Пока никто не голосовал</span>}
               {notVoted.length > 0 && (
                 <div className="vote-who-missing">
                   <b>Не голосовали ({notVoted.length}):</b> {notVoted.map((n) => familyName(n).split(" ")[0]).join(", ")}
