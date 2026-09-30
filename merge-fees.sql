@@ -7,6 +7,26 @@
 --  3. Показывает контрольную таблицу: ребёнок, взнос, осталось до 200.
 -- Запускать целиком в Supabase → SQL Editor → Run. Повторный запуск не навредит.
 
+-- Страховка: если fees2-setup.sql ещё не запускали, создаём журнал правок
+-- и колонку note сами — иначе скрипт упал бы на insert'ах ниже.
+create table if not exists public.fee_edits_log (
+  id uuid primary key default gen_random_uuid(),
+  target text not null,
+  child text,
+  field text,
+  old_amount numeric,
+  new_amount numeric,
+  editor text,
+  at timestamptz not null default now()
+);
+alter table public.fee_edits_log enable row level security;
+drop policy if exists "fee_edits_log read" on public.fee_edits_log;
+create policy "fee_edits_log read" on public.fee_edits_log for select using (true);
+drop policy if exists "fee_edits_log write" on public.fee_edits_log;
+create policy "fee_edits_log write" on public.fee_edits_log for all to authenticated using (true) with check (true);
+
+alter table public.fee_values add column if not exists note text;
+
 do $$
 declare
   paid_col uuid;

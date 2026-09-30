@@ -21,6 +21,15 @@ import ScheduleUpdateModal from "./ScheduleUpdateModal";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
 // Модалка редактирования урока основного расписания (только для комитета)
+// «урок/урока/уроков» — по правилам русского языка
+function pluralRu(n, one, few, many) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+
 function LessonModal({ lesson, onClose, onSaved, toast }) {
   const [subject, setSubject] = useState("");
   const [note, setNote] = useState("");
@@ -270,7 +279,7 @@ export default function ScheduleTab({ committee, canEditSchedule, author, toast,
                 <h3>{DAY_NAMES[day]}</h3>
                 {isFocus && <span className="chip green">{focus.label}</span>}
                 {hasChanges && <span className="chip" style={{ background: "var(--gold-soft, #fdf3d8)", fontSize: 11 }}>изменено · {fmtDateShort(iso)}</span>}
-                <span className="sched-count">{dayLessons.length} урок{dayLessons.length === 5 ? "ов" : dayLessons.length === 1 ? "" : "а"}</span>
+                <span className="sched-count">{dayLessons.length} {pluralRu(dayLessons.length, "урок", "урока", "уроков")}</span>
               </div>
               {dayLessons.map((l) => {
                 const bell = bellByPos[l.pos];

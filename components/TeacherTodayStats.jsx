@@ -75,7 +75,8 @@ export default function TeacherTodayStats({ schedule, overrides, homework, event
     const ovs = activeOverridesFor(overrides || [], todayIso);
     const { lessons, changed } = applyOverridesToDay(allLessons, day, ovs);
     lessonsCount = lessons.length;
-    lessonsSub = changed ? "есть изменения" : "по расписанию";
+    // changed — объект (может быть пустым), поэтому проверяем количество ключей
+    lessonsSub = Object.keys(changed).length ? "есть изменения" : "по расписанию";
   }
 
   // --- Задания: актуальные — на сегодня и будущие даты

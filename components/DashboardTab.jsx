@@ -63,6 +63,15 @@ function ScheduleChangeBanner({ activeOvs, focusIso, focusLabel, endTime, toast,
   );
 }
 
+// «урок/урока/уроков» — по правилам русского языка
+function pluralRu(n, one, few, many) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+
 // Мини-расписание на главной: до 13:00 — уроки сегодня, после — на завтра
 function ScheduleWidget({ liveSchedule, overrides, onTab }) {
   const focus = scheduleFocus();
@@ -75,7 +84,7 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
   const notes = [...new Set(lessons.map((l) => l.note).filter(Boolean))];
   // Заголовок внутри карточки: «Сегодня/Завтра в школе», подстрока — день недели, число уроков, кабинет
   const title = focus.label === "сегодня" ? "Сегодня в школе" : "Завтра в школе";
-  const subtitle = `${DAY_NAMES[focus.day]} · ${lessons.length} урок${lessons.length === 5 ? "ов" : "а"} · каб. 166`;
+  const subtitle = `${DAY_NAMES[focus.day]} · ${lessons.length} ${pluralRu(lessons.length, "урок", "урока", "уроков")} · каб. 166`;
   // Метка времени занятий: от первого звонка до конца последнего урока — из актуальных данных
   const firstBell = lessons.length ? bellByPos[lessons[0].pos] : null;
   const endTime = dayEndTime(lessons, bells);
@@ -836,9 +845,13 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   const impUnread = (announcements || []).filter(
     (a) => a.status === "active" && a.important && !isReadBy(a, reads, family)
   );
-  const pollsNoAnswer = (polls || []).filter(
-    (p) => pollState(p) === "open" && !(family && (p.votes || []).some((v) => familyNs(family.n).includes(v.family_n)))
-  );
+  // Без выбранной семьи (комитет/учитель) «неотвеченных» голосований не считаем —
+  // иначе любой открытый опрос показывал бы им «нужно ваше мнение»
+  const pollsNoAnswer = family
+    ? (polls || []).filter(
+        (p) => pollState(p) === "open" && !(p.votes || []).some((v) => familyNs(family.n).includes(v.family_n))
+      )
+    : [];
   const eventsCount =
     (impUnread.length ? 1 : 0) + (pollsNoAnswer.length ? 1 : 0) +
     (bdayEv.today.length ? 1 : 0) + (schedOvs.length ? 1 : 0);

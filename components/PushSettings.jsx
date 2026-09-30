@@ -80,7 +80,7 @@ function ManualPush({ toast }) {
         <input placeholder="Например: Встречаемся в 18:00 в кабинете 166" value={text} onChange={(e) => setText(e.target.value)} maxLength={180} />
         <label>Кому</label>
         <div className="push-aud">
-          <button className={"chip-btn" + (audience === "parents" ? " active" : "")} onClick={() => setAudience("parents")}>Всем родителям</button>
+          <button className={"chip-btn" + (audience === "parents" ? " active" : "")} onClick={() => setAudience("parents")}>Родителям и комитету</button>
           <button className={"chip-btn" + (audience === "committee" ? " active" : "")} onClick={() => setAudience("committee")}>Только комитету</button>
           <button className={"chip-btn" + (audience === "all" ? " active" : "")} onClick={() => setAudience("all")}>Всем, включая учителя</button>
         </div>
@@ -169,7 +169,8 @@ export default function PushSettings({ committee, role, familyN, toast }) {
         {status === "unsupported" && (
           <div className="muted">Этот браузер не поддерживает уведомления</div>
         )}
-        {committee && status === "on" && <ManualPush toast={toast} />}
+        {/* Рассылка идёт через сервер, поэтому не зависит от подписки этого устройства */}
+        {committee && <ManualPush toast={toast} />}
       </div>
     </>
   );

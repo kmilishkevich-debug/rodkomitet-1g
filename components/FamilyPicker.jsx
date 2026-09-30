@@ -120,7 +120,7 @@ export default function FamilyPicker({ open, onClose, onPick, title }) {
           {list.map((f) => (
             <button
               key={f.n}
-              className="fam-row"
+              className="pick-row"
               onClick={() => {
                 // Близнецы: сразу отдаём канонический номер и общую подпись семьи,
                 // чтобы голос/прочтение/сообщение записались под одним номером

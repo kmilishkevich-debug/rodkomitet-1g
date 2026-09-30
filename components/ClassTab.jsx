@@ -14,6 +14,15 @@ const MONTH_TITLES = [
   "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
 ];
 
+// «именинник/именинника/именинников» — по правилам русского языка
+function pluralRu(n, one, few, many) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+
 function BirthdayCalendar({ list }) {
   const byMonth = {};
   list.forEach((k) => {
@@ -28,7 +37,7 @@ function BirthdayCalendar({ list }) {
       <div className="sec-head reveal d3">
         <span className="sec-dot pink"><Ic id="i-cake" /></span>
         <h2 className="sec-title">Дни рождения класса</h2>
-        <span className="sec-note">{list.length} именинник{list.length % 10 >= 5 || list.length % 10 === 0 ? "ов" : "а"} · комитет получает напоминание за 5 дней, родители — за 1 день</span>
+        <span className="sec-note">{list.length} {pluralRu(list.length, "именинник", "именинника", "именинников")} · комитет получает напоминание за 5 дней, родители — за 1 день</span>
       </div>
       <div className="bday-months reveal d3">
         {MONTH_ORDER.filter((m) => byMonth[m]).map((m) => (

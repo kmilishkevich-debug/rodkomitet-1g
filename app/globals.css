@@ -236,7 +236,7 @@ tr:last-child td{border-bottom:none}
 .greeting .hl:hover{transform:translateY(-2px) rotate(0deg)!important;box-shadow:0 8px 18px rgba(23,23,23,.12)}
 .hl.y{background:var(--gold);transform:rotate(-2deg)} .hl.p{background:var(--rose);transform:rotate(1.5deg)}
 .hl.g{background:var(--blue);color:#fff;transform:rotate(-1deg)} .hl.b{background:var(--demo-blue);transform:rotate(2deg)}
-.greet-date{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:8px}
+/* .greet-date задан ниже, в блоке нового дашборда */
 .greet-blob{width:96px;flex:none;margin-top:6px}
 @media(max-width:560px){.greet-blob{display:none}}
 
@@ -1020,8 +1020,9 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .fam-search{width:100%;padding:11px 14px;border:none;border-radius:12px;background:var(--input);font-size:15px;font-weight:600;font-family:'Onest';margin-bottom:10px}
 .fam-search:focus{outline:2px solid var(--blue-soft)}
 .fam-list{max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
-.fam-row{display:flex;align-items:center;gap:10px;border:none;background:var(--input);border-radius:12px;padding:9px 12px;cursor:pointer;font-family:'Onest';font-size:14.5px;font-weight:600;color:var(--ink);text-align:left;transition:.12s}
-.fam-row:hover{background:var(--blue-soft)}
+/* Строка списка выбора семьи (у сводки на главной — свой .fam-row ниже) */
+.pick-row{display:flex;align-items:center;gap:10px;border:none;background:var(--input);border-radius:12px;padding:9px 12px;cursor:pointer;font-family:'Onest';font-size:14.5px;font-weight:600;color:var(--ink);text-align:left;transition:.12s}
+.pick-row:hover{background:var(--blue-soft)}
 .fam-n{flex:none;width:26px;height:26px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--blue)}
 .fam-name{flex:1}
 

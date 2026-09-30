@@ -72,7 +72,7 @@ function ParentCodeModal({ open, onClose, onSuccess }) {
             />
             <div className="fam-list">
               {list.map((f) => (
-                <button key={f.n} className="fam-row" onClick={() => { setPicked(f); setErr(null); }}>
+                <button key={f.n} className="pick-row" onClick={() => { setPicked(f); setErr(null); }}>
                   <span className="fam-n">{f.n}</span>
                   <span className="fam-name">{f.child}</span>
                   {f.note && <span className="tag-pill">{f.note}</span>}
