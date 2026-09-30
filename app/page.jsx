@@ -13,8 +13,8 @@ import TeacherTab from "@/components/TeacherTab";
 import UploadModal from "@/components/UploadModal";
 import LogoutModal from "@/components/LogoutModal";
 import { useFamily, loadSeen, saveSeen } from "@/components/FamilyPicker";
-import { familyNs } from "@/components/data";
-import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes, fetchHomework, fetchClassEvents, fetchTeacherNotes, fetchFamilyMessages, fetchPostComments, fetchChatClosed, recordVisit, visitHeartbeat } from "@/lib/supabase";
+import { familyNs, applyFamiliesFromDb } from "@/components/data";
+import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes, fetchHomework, fetchClassEvents, fetchTeacherNotes, fetchFamilyMessages, fetchPostComments, fetchChatClosed, fetchFamilies, recordVisit, visitHeartbeat } from "@/lib/supabase";
 import { enablePush, syncPushRole } from "@/lib/push";
 import { isFormOpen, onFormsChange } from "@/lib/formGuard";
 
@@ -288,6 +288,19 @@ export default function Page() {
     reloadBirthdays();
   }, [reloadBirthdays]);
 
+  // Живой список семей из базы: подменяет встроенный (вход, голосования, счётчики)
+  const [liveFamilies, setLiveFamilies] = useState(null);
+  const reloadFamilies = useCallback(async () => {
+    const data = await fetchFamilies();
+    if (data) {
+      applyFamiliesFromDb(data);
+      setLiveFamilies(data);
+    }
+  }, []);
+  useEffect(() => {
+    reloadFamilies();
+  }, [reloadFamilies]);
+
   // ===== Кабинет классного руководителя =====
   // Домашнее задание (null = таблица ещё не создана, карточка «От учителя» просто не появится)
   const [liveHomework, setLiveHomework] = useState(null);
@@ -374,13 +387,14 @@ export default function Page() {
     reloadSchedule();
     reloadOverrides();
     reloadBirthdays();
+    reloadFamilies();
     reloadNotes();
     reloadHomework();
     reloadEvents();
     reloadTeacherNotes();
     reloadFamilyMessages();
     reloadPostComments();
-  }, [reloadAnnouncements, reloadReads, reloadPolls, reloadExpenses, reloadSchedule, reloadOverrides, reloadBirthdays, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes, reloadFamilyMessages, reloadPostComments]);
+  }, [reloadAnnouncements, reloadReads, reloadPolls, reloadExpenses, reloadSchedule, reloadOverrides, reloadBirthdays, reloadFamilies, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes, reloadFamilyMessages, reloadPostComments]);
 
   // При возврате в приложение (переключение окна/вкладки браузера) и раз в минуту — свежие данные.
   // Пока открыта любая форма — обновление на паузе (иначе оно стирает набранное),
@@ -430,6 +444,7 @@ export default function Page() {
     ch = listen(ch, "expenses", reloadExpenses);
     ch = listen(ch, "receipts", reloadExpenses);
     ch = listen(ch, "birthdays", reloadBirthdays);
+    ch = listen(ch, "families", reloadFamilies);
     ch = listen(ch, "family_notes", reloadNotes);
     ch = listen(ch, "family_notes", reloadTeacherNotes);
     ch = listen(ch, "homework", reloadHomework);
@@ -441,7 +456,7 @@ export default function Page() {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [role, reloadAnnouncements, reloadReads, reloadPolls, reloadOverrides, reloadSchedule, reloadExpenses, reloadBirthdays, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes, reloadFamilyMessages, reloadPostComments]);
+  }, [role, reloadAnnouncements, reloadReads, reloadPolls, reloadOverrides, reloadSchedule, reloadExpenses, reloadBirthdays, reloadFamilies, reloadNotes, reloadHomework, reloadEvents, reloadTeacherNotes, reloadFamilyMessages, reloadPostComments]);
 
   // Разбор адреса раздела: /?tab=... → вкладка (старые адреса денег ведут в «Деньги»)
   const applyRoute = useCallback((t) => {
@@ -675,8 +690,8 @@ export default function Page() {
             {tab === "schedule" && <ScheduleTab committee={committee} canEditSchedule={canEditSchedule} author={author} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} overrides={liveOverrides} onReloadOverrides={reloadOverrides} />}
             {tab === "announcements" && <AnnouncementsTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} announcements={shownAnnouncements} reads={liveReads} onReload={reloadAnnouncements} onReloadReads={reloadReads} family={family} setFamily={setFamily} postComments={livePostComments} chatClosed={liveChatClosed} onReloadComments={reloadPostComments} />}
             {tab === "votes" && <VotesTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} polls={shownPolls} onReload={reloadPolls} family={family} setFamily={setFamily} />}
-            {tab === "class" && <ClassTab committee={committee} toast={toast} liveBirthdays={liveBirthdays} />}
-            {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} author={author} family={family} />}
+            {tab === "class" && <ClassTab committee={committee} teacher={teacher} toast={toast} liveBirthdays={liveBirthdays} families={liveFamilies} onReloadFamilies={reloadFamilies} />}
+            {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} author={author} family={family} onReloadFamilies={reloadFamilies} />}
           </main>
           </div>
           <BottomNav tab={tab} role={role} moneySub={moneySub} onTab={showTab} newsBadge={newsBadge} pollsBadge={pollsBadge} notesBadge={notesBadge} />

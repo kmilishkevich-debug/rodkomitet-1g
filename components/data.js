@@ -332,8 +332,53 @@ export const TOTAL_SPENT = Math.round(EXPENSE_GROUPS.reduce((s, g) => s + groupT
 export const CASH_NOW = Math.round(FEES.reduce((s, f) => s + feeRest(f), 0) * 100) / 100; // опорное значение по встроенным колонкам; экраны считают остаток через applyAutoFees
 // Списания из взносов, которых нет в списке расходов (бейджи — покупались через школу)
 export const FEE_ONLY_DEDUCTIONS = Math.round(FEES.reduce((s, f) => s + (f.badge || 0), 0) * 100) / 100; // 15,40
-export const CHILDREN_COUNT = FAMILIES.length; // 27 детей в классе
+export let CHILDREN_COUNT = FAMILIES.length; // 27 детей в классе
 // Семей меньше, чем детей: близнецы — одна семья с одним голосом
-export const FAMILIES_COUNT = new Set(FAMILIES.map((f) => canonicalN(f.n))).size; // 26
+export let FAMILIES_COUNT = new Set(FAMILIES.map((f) => canonicalN(f.n))).size; // 26
 // Канонические номера всех семей (у близнецов — один общий)
-export const FAMILY_CANONICAL_NS = [...new Set(FAMILIES.map((f) => canonicalN(f.n)))];
+export let FAMILY_CANONICAL_NS = [...new Set(FAMILIES.map((f) => canonicalN(f.n)))];
+
+// ===== Живой список семей из базы (таблица families) =====
+// Когда база настроена, page.jsx загружает семьи и вызывает эту функцию:
+// встроенные FAMILIES и FAMILY_GROUPS подменяются данными из базы «на месте»,
+// поэтому все экраны (вход, голосования, счётчики) сразу видят актуальный список.
+// Скрытые (выбывшие) дети в общий список не попадают.
+export function applyFamiliesFromDb(list) {
+  if (!list || !list.length) return;
+  const visible = list.filter((f) => !f.hidden);
+  FAMILIES.length = 0;
+  visible.forEach((f) => {
+    FAMILIES.push({
+      n: f.n,
+      child: f.child,
+      parents: [f.father, f.mother].filter(Boolean),
+      phones: [f.phone1, f.phone2].filter(Boolean),
+      note: f.note || "",
+    });
+  });
+  // Семьи-близнецы собираем по twin_with: строка указывает на «главный» номер
+  FAMILY_GROUPS.length = 0;
+  const byCanon = {};
+  visible.forEach((f) => {
+    if (f.twin_with == null) return;
+    const canon = f.twin_with;
+    (byCanon[canon] = byCanon[canon] || new Set([canon])).add(f.n);
+  });
+  Object.entries(byCanon).forEach(([canon, nsSet]) => {
+    const ns = [...nsSet].sort((a, b) => a - b);
+    const kids = ns
+      .map((n) => visible.find((f) => f.n === n))
+      .filter(Boolean);
+    if (kids.length < 2) return; // второй близнец скрыт — семья снова «обычная»
+    const lastName = kids[0].child.split(" ")[0];
+    const firstNames = kids.map((k) => k.child.split(" ").slice(1).join(" ") || k.child);
+    FAMILY_GROUPS.push({
+      ns,
+      canonical: Number(canon),
+      label: `${lastName} ${firstNames.join(" и ")}`,
+    });
+  });
+  CHILDREN_COUNT = FAMILIES.length;
+  FAMILIES_COUNT = new Set(FAMILIES.map((f) => canonicalN(f.n))).size;
+  FAMILY_CANONICAL_NS = [...new Set(FAMILIES.map((f) => canonicalN(f.n)))];
+}

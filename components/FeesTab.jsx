@@ -10,6 +10,7 @@ import {
   supabase, isLive, fetchFees, fetchChildNotes, saveFeeValue, saveFeeValuesBulk,
   fetchOneOffIncomes, addOneOffIncome, fetchFeeEditsLog, addFeeEdit,
   fetchGpdFund, saveGpdPaid, addGpdChild, deleteGpdChild,
+  renameChildEverywhere, addFamilyEdit,
 } from "@/lib/supabase";
 import TreasurerMascot, { notifyTreasurer } from "./TreasurerMascot";
 import { shareText, shareUrl } from "@/lib/share";
@@ -364,7 +365,7 @@ function Sum({ value, className = "" }) {
   );
 }
 
-export default function FeesTab({ committee, toast, onOpenUpload, author, onGoExpenses, family, liveGroups }) {
+export default function FeesTab({ committee, toast, onOpenUpload, author, onGoExpenses, family, liveGroups, onReloadFamilies }) {
   const [listOpen, setListOpen] = useState(true); // ведомость по детям раскрыта по умолчанию
   const [gpdOpen, setGpdOpen] = useState(false);
   const [howOpen, setHowOpen] = useState(false); // «Как устроена общая касса»
@@ -401,6 +402,28 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
 
   // Ходит ли ребёнок в ГПД: живые пометки из базы или встроенный список
   const isGpd = (child) => (notes ? !!(notes[child] && notes[child].gpd) : GPD_CHILDREN.includes(child));
+
+  // Переименование ребёнка прямо из ведомости: обновляет карточку семьи,
+  // ведомость, пометки и коды входа — и попадает в журнал правок списков
+  const renameChild = async (r) => {
+    if (!isLive || !live) {
+      return toast("Переименование заработает после запуска файла families-setup.sql в Supabase");
+    }
+    const answer = window.prompt("Фамилия и имя ребёнка:", r.child);
+    if (answer == null) return;
+    const newName = answer.trim();
+    if (!newName || newName === r.child) return;
+    try {
+      await renameChildEverywhere(r.child, newName);
+      addFamilyEdit({ n: r.n, child: newName, field: "ребёнок", old_value: r.child, new_value: newName, editor });
+      toast("Переименовано всюду: ведомость, список класса, коды входа");
+      reload();
+      fetchChildNotes().then(setNotes);
+      onReloadFamilies && onReloadFamilies();
+    } catch (e) {
+      toast("Не получилось переименовать: " + (e.message || e));
+    }
+  };
 
   // Единый вид данных: живые из базы или встроенные из data.js.
   // Авто-списания (хознужды, подарки, тетради) пересчитываются из раздела «Расходы»,
@@ -802,6 +825,11 @@ export default function FeesTab({ committee, toast, onOpenUpload, author, onGoEx
                     <td>{r.n}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       {r.child}
+                      {committee && (
+                        <button className="mini-btn" title={"Переименовать: " + r.child} onClick={() => renameChild(r)}>
+                          <Ic id="i-edit" />
+                        </button>
+                      )}
                       {isGpd(r.child) && (
                         <span className="chip green" style={{ marginLeft: 6, padding: "2px 8px", fontSize: 10.5 }}>ГПД</span>
                       )}

@@ -4,7 +4,10 @@ import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import { FAMILIES, STAFF, FAMILIES_COUNT, CHILDREN_COUNT, GPD_CHILDREN } from "./data";
 import { BIRTHDAYS_FALLBACK, fmtBd, bdName, bdInfo, BD_MONTHS } from "./birthdaysData";
-import { isLive, fetchChildNotes, saveChildNote } from "@/lib/supabase";
+import {
+  isLive, fetchChildNotes, saveChildNote,
+  saveFamily, addFamily, renameChildEverywhere, addFamilyEdit, fetchFamilyEditsLog,
+} from "@/lib/supabase";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard } from "@/lib/formGuard";
 
 // Учебный год: с сентября по август — так календарь идёт «по порядку года класса»
@@ -61,8 +64,41 @@ function BirthdayCalendar({ list }) {
   );
 }
 
-export default function ClassTab({ committee, toast, liveBirthdays }) {
+// Поля семьи для мини-редактора: ключ, подпись, подсказка
+const FAM_FIELDS = [
+  ["child", "Ребёнок (Фамилия Имя)", ""],
+  ["father", "Папа (ФИО)", ""],
+  ["mother", "Мама (ФИО)", ""],
+  ["phone1", "Телефон папы", "обычно 80(29) 123-45-67"],
+  ["phone2", "Телефон мамы", "обычно 80(29) 123-45-67"],
+  ["note", "Заметка", "например «Родительский комитет»"],
+  ["twin", "Одна семья с №… (для близнецов)", "номер строки, например 3"],
+];
+const FAM_FIELD_TITLES = {
+  child: "ребёнок", father: "папа", mother: "мама",
+  phone1: "телефон папы", phone2: "телефон мамы", note: "заметка", twin: "близнецы",
+};
+
+// Семейный код для входа нового ребёнка — как в family-codes-setup.sql: «АБВ-123»
+function genFamilyCode() {
+  const L = "ABCDEFGHJKMNPQRSTUVWXYZ"; // без похожих I, L, O
+  let s = "";
+  for (let i = 0; i < 3; i++) s += L[Math.floor(Math.random() * L.length)];
+  return s + "-" + String(Math.floor(100 + Math.random() * 900));
+}
+
+export default function ClassTab({ committee, teacher, toast, liveBirthdays, families, onReloadFamilies }) {
   const bdays = liveBirthdays || BIRTHDAYS_FALLBACK;
+  const canEdit = committee || teacher;
+  const editorName = teacher ? "Учитель" : "Комитет";
+
+  // Строки таблицы: живой список из базы (выбывшие видны только комитету и учителю)
+  // или встроенный запасной список, пока база не настроена.
+  const rows = families
+    ? families
+        .filter((f) => !f.hidden || canEdit)
+        .map((f) => ({ ...f, parents: [f.father, f.mother].filter(Boolean), phones: [f.phone1, f.phone2].filter(Boolean) }))
+    : FAMILIES.map((f) => ({ ...f, hidden: false }));
   // «Фамилия Имя» → дата рождения, чтобы показать дату прямо в таблице семей
   const bornByChild = Object.fromEntries(bdays.map((k) => [`${k.last} ${k.first}`, k.born]));
 
@@ -126,6 +162,118 @@ export default function ClassTab({ committee, toast, liveBirthdays }) {
     }
   };
 
+  // ===== Редактор семьи: ФИО, телефоны, заметка, близнецы, скрытие, добавление =====
+  const [famEdit, setFamEdit] = useState(null); // номер семьи или "new"
+  const [famForm, setFamForm] = useState(null);
+  const [famBase, setFamBase] = useState(null);
+  const [famSaving, setFamSaving] = useState(false);
+  const [log, setLog] = useState(null);
+  const [showLog, setShowLog] = useState(false);
+
+  const famKey = famEdit != null ? "family:" + famEdit : "";
+  const famDirty = !!(famBase && famForm && FAM_FIELDS.some(([k]) => famForm[k] !== famBase[k]));
+  useRefreshPause(famEdit != null);
+  useDraftAutosave(famEdit != null, famKey, famForm, famDirty);
+
+  const famGuard = () => {
+    if (!isLive || !families) {
+      toast("Редактирование списков заработает после запуска файла families-setup.sql в Supabase");
+      return false;
+    }
+    return true;
+  };
+
+  const startFamEdit = (f) => {
+    if (!famGuard()) return;
+    const base = {
+      child: f.child, father: f.father || "", mother: f.mother || "",
+      phone1: f.phone1 || "", phone2: f.phone2 || "", note: f.note || "",
+      twin: f.twin_with ? String(f.twin_with) : "",
+    };
+    const d = readDraft("family:" + f.n);
+    setFamEdit(f.n);
+    setFamForm(d || { ...base });
+    setFamBase(base);
+  };
+
+  const startFamAdd = () => {
+    if (!famGuard()) return;
+    const base = { child: "", father: "", mother: "", phone1: "", phone2: "", note: "", twin: "" };
+    const d = readDraft("family:new");
+    setFamEdit("new");
+    setFamForm(d || base);
+    setFamBase(base);
+  };
+
+  const cancelFamEdit = () => {
+    if (!confirmDiscard(famDirty, "Закрыть без сохранения? Набранное пропадёт.")) return;
+    clearDraft(famKey);
+    setFamEdit(null);
+  };
+
+  const saveFam = async () => {
+    const child = famForm.child.trim();
+    if (!child) return toast("Укажите фамилию и имя ребёнка");
+    const twinRaw = famForm.twin.trim();
+    const twin = twinRaw === "" ? null : Number(twinRaw);
+    if (twinRaw !== "" && (!Number.isInteger(twin) || twin < 1)) {
+      return toast("«Одна семья с №…» — укажите номер строки из списка, например 3");
+    }
+    const fields = {
+      child, father: famForm.father.trim(), mother: famForm.mother.trim(),
+      phone1: famForm.phone1.trim(), phone2: famForm.phone2.trim(),
+      note: famForm.note.trim(), twin_with: twin,
+    };
+    setFamSaving(true);
+    try {
+      if (famEdit === "new") {
+        const n = Math.max(0, ...families.map((f) => f.n)) + 1;
+        const code = genFamilyCode();
+        await addFamily({ n, ...fields }, code);
+        addFamilyEdit({ n, child, field: "добавлен", old_value: "", new_value: child, editor: editorName });
+        toast(`${child} — в списке под №${n}. Семейный код для входа: ${code}`);
+      } else {
+        await saveFamily(famEdit, fields);
+        if (child !== famBase.child) await renameChildEverywhere(famBase.child, child);
+        FAM_FIELDS.forEach(([k]) => {
+          const newV = k === "twin" ? twinRaw : fields[k];
+          if (newV !== famBase[k]) {
+            addFamilyEdit({ n: famEdit, child, field: FAM_FIELD_TITLES[k], old_value: famBase[k], new_value: newV, editor: editorName });
+          }
+        });
+        toast("Сохранено — изменения видны во всём приложении");
+      }
+      clearDraft(famKey);
+      setFamEdit(null);
+      onReloadFamilies && onReloadFamilies();
+    } catch (e) {
+      toast("Не получилось сохранить: " + (e.message || e));
+    } finally {
+      setFamSaving(false);
+    }
+  };
+
+  const toggleHidden = async (f) => {
+    if (!famGuard()) return;
+    const to = !f.hidden;
+    if (to && !window.confirm(`Пометить, что ${f.child} выбыл(а) из класса?\nРебёнок скроется из списков, но история и деньги сохранятся — вернуть можно в любой момент.`)) return;
+    try {
+      await saveFamily(f.n, { hidden: to });
+      addFamilyEdit({ n: f.n, child: f.child, field: to ? "скрыт" : "возвращён", old_value: "", new_value: to ? "выбыл(а)" : "снова в классе", editor: editorName });
+      toast(to ? "Помечено: выбыл(а). Строка осталась у комитета — можно «Вернуть»" : `${f.child} снова в списке класса`);
+      onReloadFamilies && onReloadFamilies();
+    } catch (e) {
+      toast("Не получилось: " + (e.message || e));
+    }
+  };
+
+  const toggleLog = async () => {
+    if (showLog) return setShowLog(false);
+    if (!famGuard()) return;
+    setLog(await fetchFamilyEditsLog());
+    setShowLog(true);
+  };
+
   return (
     <section id="tab-class">
       <div className="section-cover reveal d1" style={{ background: "var(--blue-soft)" }}>
@@ -153,18 +301,27 @@ export default function ClassTab({ committee, toast, liveBirthdays }) {
         <table>
           <tbody>
             <tr><th>№</th><th>Ребёнок</th><th>Родители</th><th>Телефоны</th></tr>
-            {FAMILIES.map((f) => (
-              <tr key={f.n}>
+            {rows.map((f) => (
+              <tr key={f.n} style={f.hidden ? { opacity: 0.55 } : undefined}>
                 <td>{f.n}</td>
                 <td>
                   <b>{f.child}</b>
-                  {noteFor(f.child).gpd && (
+                  {f.hidden && (
+                    <span className="chip" style={{ marginLeft: 6, padding: "2px 8px", fontSize: 10.5, background: "#EEE", color: "#777" }}>выбыл(а)</span>
+                  )}
+                  {noteFor(f.child).gpd && !f.hidden && (
                     <span className="chip green" style={{ marginLeft: 6, padding: "2px 8px", fontSize: 10.5 }}>ГПД</span>
                   )}
-                  {committee && (
-                    <button className="mini-btn" title="Пометка: ГПД и заметка" onClick={() => startEditNote(f.child)}>
+                  {canEdit && (
+                    <button className="mini-btn" title="Изменить семью: ФИО, телефоны, заметка" onClick={() => startFamEdit(f)}>
                       <Ic id="i-edit" />
                     </button>
+                  )}
+                  {canEdit && f.hidden && (
+                    <button className="mini-btn" title="Вернуть ребёнка в список класса" onClick={() => toggleHidden(f)}>↩</button>
+                  )}
+                  {committee && (
+                    <button className="mini-btn" title="Пометка: ГПД и заметка" onClick={() => startEditNote(f.child)}>✎</button>
                   )}
                   {bornByChild[f.child] && (
                     <div className="bday-chip"><Ic id="i-cake" /> {fmtBd(bornByChild[f.child])}</div>
@@ -208,8 +365,82 @@ export default function ClassTab({ committee, toast, liveBirthdays }) {
         </div>
       </div>
 
+      {famEdit != null && famForm && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <h3 style={{ margin: "0 0 10px" }}>
+            {famEdit === "new" ? "Новый ребёнок в классе" : `Семья №${famEdit} — правка`}
+          </h3>
+          <div style={{ display: "grid", gap: 8, maxWidth: 440 }}>
+            {FAM_FIELDS.map(([k, title, ph]) => (
+              <label key={k} style={{ display: "grid", gap: 3, fontSize: 13, fontWeight: 600 }}>
+                {title}
+                <input
+                  value={famForm[k]}
+                  onChange={(e) => setFamForm({ ...famForm, [k]: e.target.value })}
+                  onKeyDown={(e) => { if (e.key === "Escape") cancelFamEdit(); }}
+                  placeholder={ph}
+                  autoFocus={k === "child"}
+                  style={{ fontSize: 13.5, padding: "8px 10px", fontWeight: 500 }}
+                />
+              </label>
+            ))}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+              <button className="btn teal small" onClick={saveFam} disabled={famSaving}>
+                {famSaving ? "Сохраняю…" : "Сохранить"}
+              </button>
+              <button className="btn white small" onClick={cancelFamEdit}>Отмена</button>
+              {famEdit !== "new" && (() => {
+                const cur = families && families.find((x) => x.n === famEdit);
+                return cur && !cur.hidden ? (
+                  <button className="btn white small" style={{ color: "#A33" }} onClick={() => { setFamEdit(null); clearDraft(famKey); toggleHidden(cur); }}>
+                    Ребёнок выбыл — скрыть
+                  </button>
+                ) : null;
+              })()}
+            </div>
+            {famEdit === "new" && (
+              <div className="muted" style={{ fontSize: 12.5 }}>
+                Строка в ведомости сборов и семейный код для входа создадутся сами — код покажем после сохранения.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {canEdit && famEdit == null && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+          <button className="btn teal small" onClick={startFamAdd}>+ Добавить ребёнка</button>
+          <button className="btn white small" onClick={toggleLog}>{showLog ? "Скрыть журнал правок" : "Журнал правок списков"}</button>
+        </div>
+      )}
+
+      {canEdit && showLog && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <h3 style={{ margin: "0 0 8px" }}>Журнал правок списков</h3>
+          {!log || !log.length ? (
+            <div className="muted">Правок пока не было.</div>
+          ) : (
+            <div style={{ display: "grid", gap: 6 }}>
+              {log.map((e) => (
+                <div key={e.id} style={{ fontSize: 13, borderBottom: "1px solid var(--input)", paddingBottom: 6 }}>
+                  <b>{e.child}</b> · {e.field}
+                  {(e.old_value || e.new_value) && (
+                    <> : {e.old_value ? <s style={{ opacity: 0.6 }}>{e.old_value}</s> : "—"} → {e.new_value || "—"}</>
+                  )}
+                  <div className="muted" style={{ fontSize: 11.5 }}>
+                    {e.editor} · {new Date(e.at).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="muted" style={{ marginTop: 10 }}>
-        Данные — из общей таблицы класса. Если что-то поменялось, напишите родительскому комитету.
+        {canEdit
+          ? "Кнопка ✎ у имени — правка семьи: ФИО, телефоны, заметка, близнецы. Все изменения попадают в журнал."
+          : "Данные — из общей таблицы класса. Если что-то поменялось, напишите родительскому комитету."}
       </div>
     </section>
   );
