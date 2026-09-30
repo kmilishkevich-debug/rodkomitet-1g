@@ -174,29 +174,17 @@ export default function HistoryTab({ toast, committee }) {
       <div className="section-cover reveal d1" style={{ background: "var(--orange)", color: "#fff" }}>
         <svg className="cover-deco"><use href="#i-flower" /></svg>
         <h2><NavIcon name="history" uid="h-history" size={32} className="nvi-big" />История операций</h2>
-        <button className="btn small white" onClick={() => toast("В полной версии выгрузится Excel-отчёт за выбранный период")}>
-          <Ic id="i-download" />Отчёт (Excel)
-        </button>
       </div>
 
       {committee && <VisitsBlock />}
 
       <div className="card reveal d2">
-        <table>
-          <tbody>
-            <tr><th>Дата</th><th>Событие</th><th>Сумма</th></tr>
-            <tr><td>04.09 10:04</td><td>Козлов Д. загрузил чек по сбору «Фонд класса — сентябрь» (ждёт подтверждения)</td><td style={teal}><b>+15,00</b></td></tr>
-            <tr><td>03.09 19:22</td><td>Комитет подтвердил 4 взноса по сбору «Экскурсия в музей»</td><td style={teal}><b>+100,00</b></td></tr>
-            <tr><td>02.09 14:37</td><td>Подтверждён взнос Смирновой О. — «Экскурсия в музей»</td><td style={teal}><b>+25,00</b></td></tr>
-            <tr><td>01.09 12:10</td><td>Расход: букеты учителям (чек приложен) — Кристина М.</td><td style={pink}><b>−135,00</b></td></tr>
-            <tr><td>30.08 16:45</td><td>Расход: рабочие тетради, 27 компл. (чек приложен) — Ирина П.</td><td style={pink}><b>−243,00</b></td></tr>
-            <tr><td>28.08 09:30</td><td>Завершён сбор «Подарки учителям» — сдали 27/27</td><td style={teal}><b>+540,00</b></td></tr>
-            <tr><td>25.08 20:15</td><td>Итог голосования: осенняя экскурсия — Музей истории (72%)</td><td>—</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div className="muted" style={{ marginTop: 10 }}>
-        Полный журнал: каждый взнос, расход, подтверждение и голосование фиксируются автоматически и не редактируются задним числом.
+        <h3 style={{ marginTop: 0 }}><Ic id="i-clock" /> Журнал операций</h3>
+        <div className="muted">
+          Единый журнал взносов, расходов и голосований появится в одном из следующих обновлений.
+          Пока всё это видно в своих разделах: взносы и расходы — во вкладке «Деньги»,
+          итоги голосований — во вкладке «Голосования».
+        </div>
       </div>
     </section>
   );

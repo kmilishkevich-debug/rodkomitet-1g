@@ -682,7 +682,7 @@ export default function Page() {
           <BottomNav tab={tab} role={role} moneySub={moneySub} onTab={showTab} newsBadge={newsBadge} pollsBadge={pollsBadge} notesBadge={notesBadge} />
         </div>
       )}
-      <UploadModal open={upload.open} name={upload.name} sum={upload.sum} onClose={closeUpload} toast={toast} />
+      <UploadModal open={upload.open} name={upload.name} sum={upload.sum} family={family} onClose={closeUpload} toast={toast} />
       <LogoutModal
         open={logoutOpen}
         onStay={() => {
