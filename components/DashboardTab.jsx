@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
-import { fetchCashExtras, fetchFees, fetchGpdFund, fetchFeeCampaigns, fetchPaymentRequisites, addFamilyNote, toggleFamilyNote, deleteFamilyNote, isLive } from "@/lib/supabase";
+import { fetchCashExtras, fetchFees, fetchGpdFund, fetchFeeCampaigns, fetchPaymentRequisites, addFamilyNote, toggleFamilyNote, deleteFamilyNote, markRead, isLive } from "@/lib/supabase";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
@@ -173,6 +173,15 @@ function isReadBy(a, reads, family) {
   return !!(family && (reads || []).some((r) => r.announcement_id === a.id && familyNs(family.n).includes(r.family_n)));
 }
 
+// Нажали «Прочитать» на главной: сразу отмечаем прочтение семьёй (если семья выбрана)
+// и переходим к объявлению. Отметка окончательная, список прочтений обновится сам (realtime).
+function readAndGo(a, reads, family, onTab) {
+  if (family && !isReadBy(a, reads, family)) {
+    markRead(a.id, family.n, family.child).catch((e) => console.error("Отметка прочтения:", e));
+  }
+  goFocus("ann", a.id, "announcements", onTab);
+}
+
 // ===== Важные объявления на главной (ТЗ §7): жёлтая подложка, «Прочитать» =====
 function ImportantNews({ announcements, reads, family, onTab }) {
   const imp = (announcements || []).filter((a) => a.status === "active" && a.important);
@@ -195,7 +204,7 @@ function ImportantNews({ announcements, reads, family, onTab }) {
               {a.body && <div className="imp-sub">{snippet(a.body)}</div>}
               <div className="imp-meta">{a.author || "Комитет"} · {fmtNewsDate(a.created_at)}</div>
             </div>
-            <button className="pill-btn blue imp-btn" onClick={() => goFocus("ann", a.id, "announcements", onTab)}>
+            <button className="pill-btn blue imp-btn" onClick={() => readAndGo(a, reads, family, onTab)}>
               Прочитать
             </button>
           </div>
@@ -248,7 +257,7 @@ function ActivePolls({ polls, family, onTab }) {
 }
 
 // ===== Обычные объявления внизу главной (ТЗ §11): без дублирования важных =====
-function RegularNews({ announcements, onTab }) {
+function RegularNews({ announcements, reads, family, onTab }) {
   const active = (announcements || []).filter((a) => a.status === "active");
   const regular = active.filter((a) => !a.important).slice(0, 3);
   // Если все объявления важные — карточки уже показаны вверху,
@@ -267,16 +276,22 @@ function RegularNews({ announcements, onTab }) {
         <span className="sec-dot blue"><Ic id="i-bell" /></span>
         <h2 className="sec-title">Объявления класса</h2>
       </div>
-      {regular.map((a) => (
-        <div className="card homenews-card reveal d3" key={a.id}>
-          <div className="homenews-body">
-            <div className="homenews-title">{a.pinned && <span title="Закреплено">📌 </span>}{a.title}</div>
-            {a.body && <div className="homenews-sub">{snippet(a.body)}</div>}
-            <div className="homenews-meta">{a.author || "Комитет"} · {fmtNewsDate(a.created_at)}</div>
+      {regular.map((a) => {
+        const read = isReadBy(a, reads, family);
+        return (
+          <div className="card homenews-card reveal d3" key={a.id}>
+            <div className="homenews-body">
+              <div className="homenews-title">{a.pinned && <span title="Закреплено">📌 </span>}{a.title}</div>
+              {a.body && <div className="homenews-sub">{snippet(a.body)}</div>}
+              <div className="homenews-meta">
+                {a.author || "Комитет"} · {fmtNewsDate(a.created_at)}
+                {read && <span style={{ color: "var(--green, #2e7d32)", fontWeight: 600 }}> · ✓ Прочитано</span>}
+              </div>
+            </div>
+            <button className="pill-btn blue" onClick={() => readAndGo(a, reads, family, onTab)}>Читать</button>
           </div>
-          <button className="pill-btn blue" onClick={() => goFocus("ann", a.id, "announcements", onTab)}>Читать</button>
-        </div>
-      ))}
+        );
+      })}
       <button className="pill-btn news-all-link reveal d3" onClick={() => onTab("announcements")}>
         Все объявления →
       </button>
@@ -1081,7 +1096,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
 
       <BirthdaysWidget committee={committee} ev={bdayEv} list={bdays} onTab={onTab} />
 
-      <RegularNews announcements={announcements} onTab={onTab} />
+      <RegularNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
 
       <PushSettings committee={committee} role={role} familyN={family?.n} toast={toast} />
     </section>

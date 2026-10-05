@@ -209,14 +209,23 @@ function AnnouncementCard({
       )}
       <div className="news-foot">
         {committee ? (
-          <button className="news-read-count" onClick={() => setReadsOpen(!readsOpen)} aria-expanded={readsOpen}>
-            <Ic id="i-check" /> Прочитали {whoRead.length} из {FAMILIES_COUNT} семей {readsOpen ? "▴" : "▾"}
-          </button>
+          <>
+            <button className="news-read-count" onClick={() => setReadsOpen(!readsOpen)} aria-expanded={readsOpen}>
+              <Ic id="i-check" /> Прочитали {whoRead.length} из {FAMILIES_COUNT} семей {readsOpen ? "▴" : "▾"}
+            </button>
+            {myRead ? (
+              <span className="news-read-done"><Ic id="i-check" /> Вы прочитали</span>
+            ) : (
+              <button className="pill-btn blue" onClick={() => (family ? doRead(family) : onNeedFamily(doRead))}>
+                Прочитано
+              </button>
+            )}
+          </>
         ) : myRead ? (
           <span className="news-read-done"><Ic id="i-check" /> Вы прочитали</span>
         ) : (
           <button className="pill-btn blue" onClick={() => (family ? doRead(family) : onNeedFamily(doRead))}>
-            Отметить «прочитано»
+            Прочитано
           </button>
         )}
         {!committee && <span className="muted news-read-cnt">{whoRead.length} из {FAMILIES_COUNT} семей прочитали</span>}
