@@ -691,7 +691,7 @@ export default function Page() {
             {tab === "announcements" && <AnnouncementsTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} announcements={shownAnnouncements} reads={liveReads} onReload={reloadAnnouncements} onReloadReads={reloadReads} family={family} setFamily={setFamily} postComments={livePostComments} chatClosed={liveChatClosed} onReloadComments={reloadPostComments} />}
             {tab === "votes" && <VotesTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} polls={shownPolls} onReload={reloadPolls} family={family} setFamily={setFamily} />}
             {tab === "class" && <ClassTab committee={committee} teacher={teacher} toast={toast} liveBirthdays={liveBirthdays} families={liveFamilies} onReloadFamilies={reloadFamilies} />}
-            {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} author={author} family={family} onReloadFamilies={reloadFamilies} />}
+            {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} teacher={teacher} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} author={author} family={family} onReloadFamilies={reloadFamilies} />}
           </main>
           </div>
           <BottomNav tab={tab} role={role} moneySub={moneySub} onTab={showTab} newsBadge={newsBadge} pollsBadge={pollsBadge} notesBadge={notesBadge} />

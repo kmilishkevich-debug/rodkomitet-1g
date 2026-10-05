@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
-import { fetchCashExtras, fetchFees, fetchGpdFund, addFamilyNote, toggleFamilyNote, deleteFamilyNote, isLive } from "@/lib/supabase";
+import { fetchCashExtras, fetchFees, fetchGpdFund, fetchFeeCampaigns, addFamilyNote, toggleFamilyNote, deleteFamilyNote, isLive } from "@/lib/supabase";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
@@ -809,6 +809,11 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   useEffect(() => {
     fetchFees().then((data) => { if (data) setFeesData(data); });
   }, []);
+  // Целевые сборы (экскурсии и т.п.): напоминание «вы ещё не сдали» своей семье
+  const [feeColls, setFeeColls] = useState(null);
+  useEffect(() => {
+    fetchFeeCampaigns().then((data) => { if (data) setFeeColls(data); });
+  }, []);
   const feeSrc = feesData || fallbackFeeData();
   const feeCalc = applyAutoFees(feeSrc.columns, feeSrc.rows, liveGroups);
   const feesRest = Math.round(feeCalc.rows.reduce((s, r) => {
@@ -829,6 +834,22 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     feeCalc.columns.forEach((c) => { if (c.kind === "paid") p += r.values[c.id] || 0; });
     return s + p;
   }, 0) * 100) / 100;
+  // Долги своей семьи по целевым сборам: сумма — с семьи, близнецы сдают один раз
+  const myCollDues = (() => {
+    if (!family || !Array.isArray(feeColls) || !feeColls.length) return [];
+    const ns = familyNs(family.n);
+    const kids = feeCalc.rows.filter((r) => ns.includes(r.n)).map((r) => r.child);
+    return feeColls
+      .filter((c) => c.status !== "closed")
+      .map((c) => {
+        const parts = Array.isArray(c.participants) && c.participants.length ? c.participants : null;
+        if (parts && !ns.some((n) => parts.includes(n))) return null; // семья не участвует
+        const paid = (c.payments || []).filter((p) => kids.includes(p.child)).reduce((s, p) => s + p.amount, 0);
+        const due = Math.round((Number(c.amount) - paid) * 100) / 100;
+        return due > 0.005 ? { title: c.title, due, paid, deadline: c.deadline } : null;
+      })
+      .filter(Boolean);
+  })();
   const groupsCount = (liveGroups || EXPENSE_GROUPS).length;
   const bdays = liveBirthdays || BIRTHDAYS_FALLBACK;
   const bdayEv = birthdayEvents(bdays, committee);
@@ -913,6 +934,21 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       <BdayBanner ev={bdayEv} />
 
       <ScheduleChangeBanner activeOvs={schedOvs} focusIso={schedIso} focusLabel={schedFocus.label} endTime={schedEnd} toast={toast} onTab={onTab} />
+
+      {/* Напоминание о целевых сборах: висит, пока семья не сдаст полную сумму */}
+      {myCollDues.map((d) => (
+        <div key={d.title} className="attn-card reveal d1">
+          <div className="attn-ico blue"><Ic id="i-coin" /></div>
+          <div className="attn-body">
+            <div className="attn-title">Вы ещё не сдали на «{d.title}»</div>
+            <div className="attn-sub">
+              {d.paid > 0 ? `Сдано ${fmt(d.paid)} BYN, осталось ${fmt(d.due)} BYN` : `Нужно сдать ${fmt(d.due)} BYN с семьи`}
+              {d.deadline ? ` · сдать до ${fmtDateRu(d.deadline)}` : ""}
+            </div>
+          </div>
+          <button className="pill-btn blue" onClick={() => onTab("fees")}>К сборам</button>
+        </div>
+      ))}
 
       <div className="welcome compact reveal d1">
         <div className="welcome-copy">
