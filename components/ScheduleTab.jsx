@@ -204,10 +204,6 @@ export default function ScheduleTab({ committee, canEditSchedule, author, toast,
         </h2>
       </div>
 
-      <div className="sched-badge reveal d2">
-        <Ic id="i-hourglass" /> Временное расписание · действует первые 20 учебных дней (адаптационный период)
-      </div>
-
       {canEdit && (
         <div className="reveal d2" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", margin: "10px 0" }}>
           <button className="btn small teal" onClick={() => openUpdate(null)}><Ic id="i-edit" /> Внести изменения</button>

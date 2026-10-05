@@ -150,9 +150,6 @@ function ScheduleWidget({ liveSchedule, overrides, onTab }) {
             <div className="dash-sched-note">Занятия закончатся в <b>{end}</b></div>
           ) : null;
         })()}
-        <div className="dash-sched-foot">
-          <span className="muted" style={{ fontSize: 12 }}>Временное расписание · первые 20 учебных дней</span>
-        </div>
       </div>
     </>
   );
