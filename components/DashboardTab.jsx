@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
-import { fetchCashExtras, fetchFees, fetchGpdFund, fetchFeeCampaigns, addFamilyNote, toggleFamilyNote, deleteFamilyNote, isLive } from "@/lib/supabase";
+import { fetchCashExtras, fetchFees, fetchGpdFund, fetchFeeCampaigns, fetchPaymentRequisites, addFamilyNote, toggleFamilyNote, deleteFamilyNote, isLive } from "@/lib/supabase";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
@@ -814,6 +814,16 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   useEffect(() => {
     fetchFeeCampaigns().then((data) => { if (data) setFeeColls(data); });
   }, []);
+  // Реквизиты для перевода (карта/телефон/банк) — показываем в напоминании о сборе
+  const [payReqs, setPayReqs] = useState(null);
+  useEffect(() => {
+    fetchPaymentRequisites().then(setPayReqs);
+  }, []);
+  const reqsLine = payReqs && (payReqs.card_number || payReqs.phone)
+    ? "Для перевода" + (payReqs.bank ? ` (${payReqs.bank})` : "") +
+      (payReqs.card_number ? `: карта ${payReqs.card_number}` : "") +
+      (payReqs.phone ? `${payReqs.card_number ? " ·" : ":"} тел. ${payReqs.phone}` : "")
+    : null;
   const feeSrc = feesData || fallbackFeeData();
   const feeCalc = applyAutoFees(feeSrc.columns, feeSrc.rows, liveGroups);
   const feesRest = Math.round(feeCalc.rows.reduce((s, r) => {
@@ -846,7 +856,9 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         if (parts && !ns.some((n) => parts.includes(n))) return null; // семья не участвует
         const paid = (c.payments || []).filter((p) => kids.includes(p.child)).reduce((s, p) => s + p.amount, 0);
         const due = Math.round((Number(c.amount) - paid) * 100) / 100;
-        return due > 0.005 ? { title: c.title, due, paid, deadline: c.deadline } : null;
+        // Заявка семьи «на проверке» (чек или наличные) — показываем статус вместо «не сдали»
+        const pending = (c.claims || []).find((cl) => cl.status === "pending" && kids.includes(cl.child));
+        return due > 0.005 ? { title: c.title, due, paid, deadline: c.deadline, pending: pending ? pending.method : null } : null;
       })
       .filter(Boolean);
   })();
@@ -940,10 +952,19 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         <div key={d.title} className="attn-card reveal d1">
           <div className="attn-ico blue"><Ic id="i-coin" /></div>
           <div className="attn-body">
-            <div className="attn-title">Вы ещё не сдали на «{d.title}»</div>
+            <div className="attn-title">
+              {d.pending ? `Заявка по сбору «${d.title}» на проверке` : `Вы ещё не сдали на «${d.title}»`}
+            </div>
             <div className="attn-sub">
-              {d.paid > 0 ? `Сдано ${fmt(d.paid)} BYN, осталось ${fmt(d.due)} BYN` : `Нужно сдать ${fmt(d.due)} BYN с семьи`}
-              {d.deadline ? ` · сдать до ${fmtDateRu(d.deadline)}` : ""}
+              {d.pending
+                ? d.pending === "cash"
+                  ? "Вы передадите наличными — комитет отметит платёж, когда получит деньги"
+                  : "Ваш чек на проверке — комитет подтвердит платёж"
+                : <>
+                    {d.paid > 0 ? `Сдано ${fmt(d.paid)} BYN, осталось ${fmt(d.due)} BYN` : `Нужно сдать ${fmt(d.due)} BYN с семьи`}
+                    {d.deadline ? ` · сдать до ${fmtDateRu(d.deadline)}` : ""}
+                    {reqsLine ? <><br />{reqsLine}</> : null}
+                  </>}
             </div>
           </div>
           <button className="pill-btn blue" onClick={() => onTab("fees")}>К сборам</button>

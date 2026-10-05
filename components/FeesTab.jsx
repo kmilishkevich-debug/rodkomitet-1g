@@ -12,9 +12,10 @@ import {
   fetchGpdFund, saveGpdPaid, addGpdChild, deleteGpdChild,
   renameChildEverywhere, addFamilyEdit,
   fetchFeeCampaigns, createFeeCampaign, updateFeeCampaign, addCampaignPayment,
-  saveAnnouncement,
+  fetchPaymentRequisites, savePaymentRequisites, addCampaignClaim, updateCampaignClaim,
+  uploadReceipt, saveAnnouncement,
 } from "@/lib/supabase";
-import { sendManualPush } from "@/lib/push";
+import { sendManualPush, sendReceiptPush } from "@/lib/push";
 import TreasurerMascot, { notifyTreasurer } from "./TreasurerMascot";
 import { shareText, shareUrl } from "@/lib/share";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
@@ -361,7 +362,7 @@ function BulkModal({ column, rows, isGpd, onClose, onApply, onClear, saving }) {
 
 // Окошко создания и правки целевого сбора (экскурсия, подарок и т.п.)
 // Сумма — с семьи; участники — галочки по списку детей (не все ходят на экскурсии)
-function CollectionModal({ coll, rows, onClose, onSave, saving }) {
+function CollectionModal({ coll, rows, committee, onClose, onSave, saving }) {
   const dkey = "coll:" + (coll ? coll.id : "new");
   const allNs = rows.map((r) => r.n);
   const base = {
@@ -371,6 +372,7 @@ function CollectionModal({ coll, rows, onClose, onSave, saving }) {
     parts: coll && Array.isArray(coll.participants) && coll.participants.length
       ? coll.participants.filter((n) => allNs.includes(n))
       : allNs,
+    teacherVisible: coll ? !!coll.teacher_visible : false,
     markPaid: false, doPush: true, doAnnounce: true,
   };
   const [saved] = useState(() => (typeof window === "undefined" ? null : readDraft(dkey)));
@@ -379,13 +381,14 @@ function CollectionModal({ coll, rows, onClose, onSave, saving }) {
   const [amount, setAmount] = useState(start.amount);
   const [deadline, setDeadline] = useState(start.deadline);
   const [parts, setParts] = useState(start.parts);
+  const [teacherVisible, setTeacherVisible] = useState(start.teacherVisible);
   const [markPaid, setMarkPaid] = useState(start.markPaid);
   const [doPush, setDoPush] = useState(start.doPush);
   const [doAnnounce, setDoAnnounce] = useState(start.doAnnounce);
   const [restored] = useState(!!saved);
 
   useRefreshPause(true);
-  const values = { title, amount, deadline, parts, markPaid, doPush, doAnnounce };
+  const values = { title, amount, deadline, parts, teacherVisible, markPaid, doPush, doAnnounce };
   const dirty = isDirty(values, base);
   useDraftAutosave(true, dkey, values, dirty);
 
@@ -427,6 +430,12 @@ function CollectionModal({ coll, rows, onClose, onSave, saving }) {
             </label>
           ))}
         </div>
+        {committee && (
+          <label style={lbRow}>
+            <input type="checkbox" checked={teacherVisible} onChange={(e) => setTeacherVisible(e.target.checked)} />
+            <span>Показывать сбор учителю</span>
+          </label>
+        )}
         {!coll && (
           <>
             <label style={lbRow}>
@@ -454,7 +463,7 @@ function CollectionModal({ coll, rows, onClose, onSave, saving }) {
                 amount: parseFloat(String(amount).replace(",", ".")) || 0,
                 deadline: deadline || null,
                 participants: parts.length === rows.length ? null : [...parts].sort((x, y) => x - y),
-                markPaid, doPush, doAnnounce,
+                teacherVisible, markPaid, doPush, doAnnounce,
               });
             }}
           >
@@ -500,6 +509,85 @@ function CollPayModal({ coll, fam, child, onClose, onSave, saving }) {
   );
 }
 
+// Окошко правки реквизитов для перевода (только комитет): карта, телефон, банк
+function RequisitesModal({ reqs, onClose, onSave, saving }) {
+  const [card, setCard] = useState((reqs && reqs.card_number) || "");
+  const [phone, setPhone] = useState((reqs && reqs.phone) || "");
+  const [bank, setBank] = useState((reqs && reqs.bank) || "");
+  useRefreshPause(true);
+  return (
+    <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && onClose()}>
+      <div className="modal">
+        <h3>Реквизиты для перевода</h3>
+        <div className="muted">Одни общие на все сборы — родители увидят их в карточке сбора и в напоминании на главной.</div>
+        <label className="fee-lb">Номер карты</label>
+        <input className="fee-inp" value={card} onChange={(e) => setCard(e.target.value)} placeholder="0000 0000 0000 0000" autoFocus />
+        <label className="fee-lb">Номер телефона</label>
+        <input className="fee-inp" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+375 ..." />
+        <label className="fee-lb">Банк</label>
+        <input className="fee-inp" value={bank} onChange={(e) => setBank(e.target.value)} placeholder="например: Беларусбанк" />
+        <div className="actions">
+          <button className="btn small white" onClick={onClose} disabled={saving}>Отмена</button>
+          <button
+            className="btn small teal" disabled={saving}
+            onClick={() => onSave({ card_number: card.trim() || null, phone: phone.trim() || null, bank: bank.trim() || null })}
+          >
+            {saving ? "Сохраняем…" : "Сохранить"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Окошко родителя «Я перевёл(а)»: сумма, фото чека, примечание.
+// Создаёт заявку «на проверке» — комитет подтвердит, и платёж попадёт в кассу.
+function ClaimModal({ coll, fam, child, reqs, onClose, onSave, saving }) {
+  const [amount, setAmount] = useState(fam.due > 0 ? String(fam.due) : "");
+  const [file, setFile] = useState(null);
+  const [note, setNote] = useState("");
+  useRefreshPause(true);
+  const hasReqs = reqs && (reqs.card_number || reqs.phone || reqs.bank);
+  return (
+    <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && onClose()}>
+      <div className="modal">
+        <h3>Я перевёл(а) — {coll.title}</h3>
+        <div className="muted">{child} · {fmt(coll.amount)} BYN с семьи · осталось {fmt(fam.due)} BYN</div>
+        {hasReqs && (
+          <div className="muted" style={{ marginTop: 6 }}>
+            Перевод на карту{reqs.bank ? " (" + reqs.bank + ")" : ""}:
+            {reqs.card_number ? " " + reqs.card_number : ""}{reqs.phone ? " · тел. " + reqs.phone : ""}
+          </div>
+        )}
+        <label className="fee-lb">Сумма перевода, BYN</label>
+        <input
+          className="fee-inp" type="number" step="0.01" inputMode="decimal"
+          value={amount} onChange={(e) => setAmount(e.target.value)}
+        />
+        <label className="fee-lb">Фото или скриншот чека</label>
+        <input
+          className="fee-inp" type="file" accept="image/*"
+          onChange={(e) => setFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+        />
+        <label className="fee-lb">Примечание (необязательно)</label>
+        <input className="fee-inp" value={note} onChange={(e) => setNote(e.target.value)} />
+        <div className="muted" style={{ marginTop: 6 }}>
+          Заявка уйдёт комитету «на проверку». После подтверждения платёж появится в списке «кто сдал».
+        </div>
+        <div className="actions">
+          <button className="btn small white" onClick={onClose} disabled={saving}>Отмена</button>
+          <button
+            className="btn small teal" disabled={saving}
+            onClick={() => onSave(parseFloat(String(amount).replace(",", ".")) || 0, file, note.trim())}
+          >
+            {saving ? "Отправляем…" : "Отправить на проверку"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Крупная сумма плитки кассы: число крупно, BYN меньше, табличные цифры
 function Sum({ value, className = "" }) {
   return (
@@ -535,6 +623,9 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
   const [collModal, setCollModal] = useState(null); // { coll } или { coll: null } = новый
   const [collPay, setCollPay] = useState(null); // { coll, fam, child } — отметить платёж
   const [collOpen, setCollOpen] = useState({}); // раскрытые списки «кто сдал»
+  const [reqs, setReqs] = useState(null); // реквизиты для перевода (карта/телефон/банк)
+  const [reqsOpen, setReqsOpen] = useState(false); // модалка правки реквизитов
+  const [claimModal, setClaimModal] = useState(null); // { coll, fam, child } — заявка «я перевёл(а)»
 
   const editor = author || "Комитет";
   const canManage = committee || teacher; // сборы создают и правят комитет И учитель
@@ -551,6 +642,7 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
     reloadLog();
     reloadGpd();
     reloadColls();
+    fetchPaymentRequisites().then(setReqs);
   }, []);
 
   // Ходит ли ребёнок в ГПД: живые пометки из базы или встроенный список
@@ -858,6 +950,12 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
     return { fams, isPart, partCount, doneCount, collected };
   };
 
+  // Учитель видит только сборы, открытые комитетом галочкой, и созданные им самим.
+  // Комитет и родители видят все сборы.
+  const visibleColls = Array.isArray(colls) && teacher && !committee
+    ? colls.filter((c) => c.teacher_visible || (c.created_by && c.created_by === author))
+    : colls;
+
   const openCollCreate = () => {
     if (colls === null) return toast("Целевые сборы заработают после запуска файла fee-collections-setup.sql в Supabase");
     setCollModal({ coll: null });
@@ -876,10 +974,13 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
     try {
       const old = collModal.coll;
       if (old) {
-        await updateFeeCampaign(old.id, {
+        const patch = {
           title: vals.title, amount: vals.amount,
           deadline: vals.deadline, participants: vals.participants,
-        });
+        };
+        // Видимость учителю меняет только комитет — иначе не трогаем поле
+        if (committee) patch.teacher_visible = vals.teacherVisible;
+        await updateFeeCampaign(old.id, patch);
         if (vals.title !== old.title) {
           await addFeeEdit({
             target: "Целевые сборы", child: vals.title,
@@ -899,6 +1000,10 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
           title: vals.title, amount: vals.amount,
           deadline: vals.deadline, participants: vals.participants,
           sort: (colls || []).length + 1,
+          // Новый сбор скрыт от учителя, пока комитет не поставил галочку;
+          // created_by — чтобы учитель видел сборы, которые создал сам
+          teacher_visible: committee ? vals.teacherVisible : false,
+          created_by: editor,
         });
         await addFeeEdit({
           target: "Целевые сборы", child: vals.title, field: "Создан сбор",
@@ -972,6 +1077,115 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
       reloadColls(); reloadLog();
     } catch (e) {
       toast("Не получилось сохранить: " + (e.message || e));
+    }
+    setSaving(false);
+  };
+
+  // ===== Реквизиты для перевода: одни общие на все сборы, правит комитет =====
+  const saveReqs = async (patch) => {
+    setSaving(true);
+    try {
+      await savePaymentRequisites(patch);
+      setReqs({ id: 1, ...patch });
+      setReqsOpen(false);
+      toast("Реквизиты сохранены — родители увидят их в сборах и напоминаниях");
+    } catch (e) {
+      toast("Не получилось сохранить (запущен ли fee-collections-upgrade.sql?): " + (e.message || e));
+    }
+    setSaving(false);
+  };
+  const copyReqs = async () => {
+    const parts = [];
+    if (reqs?.card_number) parts.push("Карта: " + reqs.card_number);
+    if (reqs?.phone) parts.push("Телефон: " + reqs.phone);
+    if (reqs?.bank) parts.push("Банк: " + reqs.bank);
+    try {
+      await navigator.clipboard.writeText(parts.join("\n"));
+      toast("Реквизиты скопированы");
+    } catch {
+      toast("Не получилось скопировать — выделите текст вручную");
+    }
+  };
+
+  // ===== Заявки родителей: «я перевёл(а) + чек» и «передам наличными» =====
+  // Имя для заявки — первый ребёнок семьи (как в платежах: семья платит один раз)
+  const myClaimChild = () => {
+    const first = rows.find((r) => myNs.includes(r.n));
+    return first ? first.child : family ? family.child : "";
+  };
+  // Заявки моей семьи по сбору (по детям семьи)
+  const myClaims = (coll) => {
+    const names = rows.filter((r) => myNs.includes(r.n)).map((r) => r.child);
+    return (coll.claims || []).filter((cl) => names.includes(cl.child));
+  };
+
+  const submitClaim = async (amount, file, note) => {
+    if (!(amount > 0)) return toast("Укажите сумму перевода");
+    if (!file) return toast("Прикрепите фото или скриншот чека");
+    const { coll } = claimModal;
+    const child = myClaimChild();
+    setSaving(true);
+    try {
+      const receiptUrl = await uploadReceipt(file);
+      await addCampaignClaim({
+        campaign_id: coll.id, child, amount,
+        method: "transfer", receipt_url: receiptUrl, note: note || null,
+      });
+      // Пуш комитету о новом чеке (роут сам ограничивает получателей)
+      sendReceiptPush({
+        body: child + ": " + fmt(amount) + " BYN на «" + coll.title + "»",
+        url: receiptUrl,
+      }).catch(() => null);
+      setClaimModal(null);
+      toast("Заявка отправлена — комитет проверит чек и подтвердит платёж");
+      reloadColls();
+    } catch (e) {
+      toast("Не получилось отправить (запущен ли fee-collections-upgrade.sql?): " + (e.message || e));
+    }
+    setSaving(false);
+  };
+
+  const submitCashClaim = async (coll, fam) => {
+    const child = myClaimChild();
+    if (!window.confirm("Передадите " + fmt(fam.due) + " BYN наличными? Комитет отметит платёж, когда получит деньги.")) return;
+    setSaving(true);
+    try {
+      await addCampaignClaim({ campaign_id: coll.id, child, amount: fam.due, method: "cash" });
+      sendReceiptPush({
+        body: child + ": передаст " + fmt(fam.due) + " BYN наличными на «" + coll.title + "»",
+        url: "/?tab=fees",
+      }).catch(() => null);
+      toast("Заявка отправлена — передайте деньги комитету, и платёж отметят");
+      reloadColls();
+    } catch (e) {
+      toast("Не получилось отправить (запущен ли fee-collections-upgrade.sql?): " + (e.message || e));
+    }
+    setSaving(false);
+  };
+
+  // Комитет подтверждает заявку (платёж попадает в кассу) или отклоняет
+  const decideClaim = async (coll, claim, ok) => {
+    if (!committee) return;
+    if (!ok && !window.confirm("Отклонить заявку? Родитель увидит это и сможет отправить новую.")) return;
+    setSaving(true);
+    try {
+      if (ok) {
+        await addCampaignPayment({
+          campaign_id: coll.id, child: claim.child, amount: claim.amount,
+          method: claim.method, note: "по заявке родителя" + (claim.note ? ": " + claim.note : ""),
+        });
+        await addFeeEdit({
+          target: "Целевые сборы", child: claim.child,
+          field: coll.title + " (" + METHOD_LABEL[claim.method] + ", по заявке)",
+          old_amount: null, new_amount: claim.amount, editor,
+        });
+        notifyTreasurer({ type: "contribution", id: "claim:" + claim.id, child: claim.child, amount: claim.amount });
+      }
+      await updateCampaignClaim(claim.id, { status: ok ? "approved" : "rejected" });
+      toast(ok ? "Заявка подтверждена — платёж записан в кассу" : "Заявка отклонена");
+      reloadColls(); reloadLog();
+    } catch (e) {
+      toast("Не получилось: " + (e.message || e));
     }
     setSaving(false);
   };
@@ -1058,15 +1272,37 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
             <button className="btn small teal" onClick={openCollCreate}>+ Новый сбор</button>
           )}
         </div>
+        {/* Реквизиты для перевода — одни общие на все сборы; правит только комитет */}
+        {(reqs && (reqs.card_number || reqs.phone || reqs.bank)) || committee ? (
+          <div className="fee-meta" style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+            {reqs && (reqs.card_number || reqs.phone || reqs.bank) ? (
+              <>
+                <span>
+                  💳 Для перевода{reqs.bank ? " (" + reqs.bank + ")" : ""}:
+                  {reqs.card_number ? <> карта <b>{reqs.card_number}</b></> : null}
+                  {reqs.phone ? <>{reqs.card_number ? " ·" : ""} тел. <b>{reqs.phone}</b></> : null}
+                </span>
+                <button className="btn small white" onClick={copyReqs}>Скопировать</button>
+              </>
+            ) : (
+              <span className="muted">Реквизиты для перевода пока не заполнены</span>
+            )}
+            {committee && (
+              <button className="btn small white" onClick={() => setReqsOpen(true)}>
+                <Ic id="i-edit" />{reqs && (reqs.card_number || reqs.phone || reqs.bank) ? "Изменить" : "Заполнить реквизиты"}
+              </button>
+            )}
+          </div>
+        ) : null}
         {colls === null && (
           <div className="muted" style={{ marginTop: 8 }}>
             Целевые сборы заработают после запуска файла fee-collections-setup.sql в Supabase (SQL Editor → вставить файл → Run).
           </div>
         )}
-        {Array.isArray(colls) && colls.length === 0 && (
+        {Array.isArray(visibleColls) && visibleColls.length === 0 && (
           <div style={{ marginTop: 8 }}><span className="chip gray">Сборов пока нет</span></div>
         )}
-        {Array.isArray(colls) && colls.map((coll) => {
+        {Array.isArray(visibleColls) && visibleColls.map((coll) => {
           const cc = collCalc(coll);
           const myFam = myNs.length ? cc.fams.get(famOf(myNs[0])) : null;
           const open = !!collOpen[coll.id];
@@ -1090,13 +1326,85 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
               <div className="progress" style={{ marginTop: 6 }}>
                 <i style={{ width: (cc.partCount ? Math.round((cc.doneCount / cc.partCount) * 100) : 0) + "%" }} />
               </div>
-              {family && myFam && myFam.part && (
+              {family && myFam && myFam.part && (() => {
+                // Заявки нашей семьи: pending — ждёт комитета, последняя rejected — можно отправить снова
+                const cls = myClaims(coll);
+                const pending = cls.find((c) => c.status === "pending");
+                const lastRejected =
+                  !pending && cls.length && cls[cls.length - 1].status === "rejected"
+                    ? cls[cls.length - 1]
+                    : null;
+                return (
+                  <div style={{ marginTop: 8 }}>
+                    {myFam.due > 0.005 ? (
+                      pending ? (
+                        <span className="chip blue">
+                          {pending.method === "cash"
+                            ? "Вы передадите наличными — ждёт подтверждения комитета"
+                            : "Ваш чек на проверке у комитета"}
+                        </span>
+                      ) : (
+                        <>
+                          <span className="chip amber">Вы ещё не сдали — осталось {fmt(myFam.due)} BYN</span>
+                          {lastRejected && (
+                            <div className="muted" style={{ marginTop: 4 }}>
+                              Прошлую заявку комитет отклонил — можно отправить новую.
+                            </div>
+                          )}
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                            <button
+                              className="btn small teal"
+                              disabled={saving}
+                              onClick={() => setClaimModal({ coll, fam: myFam, child: myClaimChild() })}
+                            >
+                              Я перевёл(а) — прикрепить чек
+                            </button>
+                            <button
+                              className="btn small white"
+                              disabled={saving}
+                              onClick={() => submitCashClaim(coll, myFam)}
+                            >
+                              Передам наличными
+                            </button>
+                          </div>
+                        </>
+                      )
+                    ) : (
+                      <span className="chip green">Ваша семья сдала — спасибо!</span>
+                    )}
+                  </div>
+                );
+              })()}
+              {committee && (coll.claims || []).some((cl) => cl.status === "pending") && (
                 <div style={{ marginTop: 8 }}>
-                  {myFam.due > 0.005 ? (
-                    <span className="chip amber">Вы ещё не сдали — осталось {fmt(myFam.due)} BYN</span>
-                  ) : (
-                    <span className="chip green">Ваша семья сдала — спасибо!</span>
-                  )}
+                  <span className="chip amber">
+                    Заявки на проверку ({(coll.claims || []).filter((cl) => cl.status === "pending").length})
+                  </span>
+                  {(coll.claims || [])
+                    .filter((cl) => cl.status === "pending")
+                    .map((cl) => (
+                      <div
+                        key={cl.id}
+                        style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}
+                      >
+                        <span>
+                          <b>{cl.child}</b> — {fmt(cl.amount)} BYN, {METHOD_LABEL[cl.method]}
+                          {cl.receipt_url ? (
+                            <>
+                              {" · "}
+                              <a href={cl.receipt_url} target="_blank" rel="noreferrer">чек</a>
+                            </>
+                          ) : null}
+                          {cl.note ? <span className="muted"> · {cl.note}</span> : null}
+                        </span>
+                        <button className="btn small teal" disabled={saving} onClick={() => decideClaim(coll, cl, true)}>
+                          Подтвердить
+                        </button>
+                        <button className="btn small white" disabled={saving} onClick={() => decideClaim(coll, cl, false)}>
+                          Отклонить
+                        </button>
+                      </div>
+                    ))}
                 </div>
               )}
               <button
@@ -1503,8 +1811,10 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
       {bulkCol && <BulkModal column={bulkCol} rows={rows} isGpd={isGpd} onClose={() => setBulkCol(null)} onApply={applyBulk} onClear={clearBulk} saving={saving} />}
       {oneOffOpen && <OneOffModal childNames={rows.map((r) => r.child)} onClose={() => setOneOffOpen(false)} onSave={saveOneOff} saving={saving} />}
       {gpdEdit && <GpdPaidModal row={gpdEdit} onClose={() => setGpdEdit(null)} onSave={saveGpdCell} saving={saving} />}
-      {collModal && <CollectionModal coll={collModal.coll} rows={rows} onClose={() => setCollModal(null)} onSave={saveColl} saving={saving} />}
+      {collModal && <CollectionModal coll={collModal.coll} rows={rows} committee={committee} onClose={() => setCollModal(null)} onSave={saveColl} saving={saving} />}
       {collPay && <CollPayModal coll={collPay.coll} fam={collPay.fam} child={collPay.child} onClose={() => setCollPay(null)} onSave={saveCollPay} saving={saving} />}
+      {reqsOpen && <RequisitesModal reqs={reqs} onClose={() => setReqsOpen(false)} onSave={saveReqs} saving={saving} />}
+      {claimModal && <ClaimModal coll={claimModal.coll} fam={claimModal.fam} child={claimModal.child} reqs={reqs} onClose={() => setClaimModal(null)} onSave={submitClaim} saving={saving} />}
     </section>
   );
 }
