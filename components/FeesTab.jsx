@@ -951,9 +951,9 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
   };
 
   // Учитель видит только сборы, открытые комитетом галочкой, и созданные им самим.
-  // Комитет и родители видят все сборы.
+  // Закрытые сборы учителю не показываем совсем. Комитет и родители видят все сборы.
   const visibleColls = Array.isArray(colls) && teacher && !committee
-    ? colls.filter((c) => c.teacher_visible || (c.created_by && c.created_by === author))
+    ? colls.filter((c) => c.status !== "closed" && (c.teacher_visible || (c.created_by && c.created_by === author)))
     : colls;
 
   const openCollCreate = () => {
@@ -1190,6 +1190,35 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
     setSaving(false);
   };
 
+  // Комитет закрывает сбор (родители больше не видят напоминаний и кнопок)
+  // или открывает его снова. Платежи, правки и расходы комитету доступны всегда.
+  const toggleCollClosed = async (coll) => {
+    if (!committee) return;
+    const closing = coll.status !== "closed";
+    if (
+      closing &&
+      !window.confirm(
+        "Закрыть сбор «" + coll.title + "»? Родители больше не увидят напоминаний и кнопок по нему. " +
+        "Комитет по-прежнему сможет отмечать платежи и вносить правки. Сбор можно будет открыть снова."
+      )
+    )
+      return;
+    setSaving(true);
+    try {
+      await updateFeeCampaign(coll.id, { status: closing ? "closed" : "active" });
+      await addFeeEdit({
+        target: "Целевые сборы", child: coll.title,
+        field: closing ? "Сбор закрыт" : "Сбор открыт снова",
+        old_amount: null, new_amount: null, editor,
+      });
+      toast(closing ? "Сбор закрыт" : "Сбор снова открыт");
+      reloadColls(); reloadLog();
+    } catch (e) {
+      toast("Не получилось: " + (e.message || e));
+    }
+    setSaving(false);
+  };
+
   // ===== Общая касса класса: собрано / потрачено / осталось (без сумм фонда ГПД) =====
   const totalCharges = round2(columns.filter((c) => c.kind === "charge").reduce((s, c) => s + (totals[c.id] || 0), 0));
   const cashCollected = round2(totalPaid + oneOffTotal); // взносы семей + разовые поступления
@@ -1306,27 +1335,39 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
           const cc = collCalc(coll);
           const myFam = myNs.length ? cc.fams.get(famOf(myNs[0])) : null;
           const open = !!collOpen[coll.id];
+          const closed = coll.status === "closed";
           return (
-            <div key={coll.id} style={{ borderTop: "1px solid rgba(0,0,0,.07)", marginTop: 12, paddingTop: 12 }}>
+            <div
+              key={coll.id}
+              style={{ borderTop: "1px solid rgba(0,0,0,.07)", marginTop: 12, paddingTop: 12, opacity: closed ? 0.65 : 1 }}
+            >
               <div className="fee-head">
                 <div>
                   <strong>{coll.title}</strong>{" "}
                   <span className="chip blue">{fmt(coll.amount)} BYN с семьи</span>{" "}
-                  {coll.deadline && <span className="chip amber">сдать до {dateRu(coll.deadline)}</span>}
+                  {closed && <span className="chip gray">сбор закрыт</span>}{" "}
+                  {!closed && coll.deadline && <span className="chip amber">сдать до {dateRu(coll.deadline)}</span>}
                   <div className="fee-meta">
                     Сдали {cc.doneCount} из {cc.partCount} семей · собрано {fmt(cc.collected)} BYN
                   </div>
                 </div>
-                {canManage && (
-                  <button className="mini-btn" title="Изменить сбор" onClick={() => openCollEdit(coll)}>
-                    <Ic id="i-edit" />
-                  </button>
-                )}
+                <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+                  {committee && (
+                    <button className="btn small white" disabled={saving} onClick={() => toggleCollClosed(coll)}>
+                      {closed ? "Открыть снова" : "Закрыть сбор"}
+                    </button>
+                  )}
+                  {canManage && (
+                    <button className="mini-btn" title="Изменить сбор" onClick={() => openCollEdit(coll)}>
+                      <Ic id="i-edit" />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="progress" style={{ marginTop: 6 }}>
                 <i style={{ width: (cc.partCount ? Math.round((cc.doneCount / cc.partCount) * 100) : 0) + "%" }} />
               </div>
-              {family && myFam && myFam.part && (() => {
+              {!closed && family && myFam && myFam.part && (() => {
                 // Заявки нашей семьи: pending — ждёт комитета, последняя rejected — можно отправить снова
                 const cls = myClaims(coll);
                 const pending = cls.find((c) => c.status === "pending");
