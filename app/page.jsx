@@ -484,6 +484,14 @@ export default function Page() {
     } catch {}
   };
 
+  // Просим браузер считать память приложения «постоянной» — тогда телефон
+  // не сотрёт сохранённый вход и выбранную семью при автоочистке места.
+  useEffect(() => {
+    try {
+      navigator.storage?.persist?.().catch(() => {});
+    } catch {}
+  }, []);
+
   // Запоминаем вход + открываем нужную вкладку из адреса (/?tab=...)
   useEffect(() => {
     let saved = null;
@@ -491,21 +499,24 @@ export default function Page() {
       saved = localStorage.getItem("rk1g-role");
     } catch {}
     if (saved === "parent" || saved === "committee" || saved === "teacher") {
-      // Комитет и учитель с подключённой базой должны иметь живую сессию — иначе просим войти заново
+      // Вход помним всегда: сразу впускаем по сохранённой роли, а живость сессии
+      // комитета/учителя проверяем уже в фоне. На экран входа возвращаем только
+      // если Supabase ТОЧНО ответил «сессии нет» — сбой сети не повод просить пароль.
+      setRole(saved);
+      setGreetToken((t) => t + 1); // маскот поздоровается один раз
+      syncPushRole(saved); // тихо обновляем подписку на пуши
       if ((saved === "committee" || saved === "teacher") && supabase) {
-        supabase.auth.getSession().then(({ data }) => {
-          if (data.session) {
-            setRole(saved);
-            setGreetToken((t) => t + 1); // маскот поздоровается один раз
-            syncPushRole(saved); // тихо обновляем подписку на пуши
-          } else {
+        supabase.auth
+          .getSession()
+          .then(({ data, error }) => {
+            if (data?.session) return; // сессия жива — всё хорошо
+            if (error && error.name === "AuthRetryableFetchError") return; // нет сети — остаёмся, обновится позже
+            // Сессии действительно нет (вышли или отозвана) — просим войти заново
+            setRole(null);
+            roleRef.current = null;
             try { localStorage.removeItem("rk1g-role"); } catch {}
-          }
-        });
-      } else {
-        setRole(saved);
-        setGreetToken((t) => t + 1); // маскот поздоровается один раз
-        syncPushRole(saved); // тихо обновляем подписку на пуши
+          })
+          .catch(() => {}); // любой сбой проверки — не выкидываем
       }
       // роль в ref — сразу, иначе разбор адреса ниже ещё не знает про учителя
       roleRef.current = saved;
