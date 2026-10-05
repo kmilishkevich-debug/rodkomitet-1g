@@ -2061,3 +2061,32 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .teacher-dashboard .sec-title,
 .teacher-dashboard .tchr-form-title,
 .teacher-dashboard .modal h3{font-family:var(--font-display);font-weight:500}
+
+/* ============================================================
+   ВЛОЖЕНИЯ К ЗАПИСЯМ (объявления, домашние задания, события)
+   AttachPicker — в формах учителя и комитета,
+   AttachList — показ родителям: фото превью, документы списком.
+   ============================================================ */
+.att-picker{margin:10px 0}
+.att-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.att-row{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.04);
+  border-radius:12px;padding:6px 8px}
+.att-thumb{width:40px;height:40px;object-fit:cover;border-radius:8px;flex:none}
+.att-ico{font-size:22px;width:40px;text-align:center;flex:none}
+.att-info{min-width:0;flex:1}
+.att-row .att-name,.att-doc .att-name{font-size:14px;font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att-size{font-size:12px;opacity:.6;flex:none}
+.att-add{margin-top:2px}
+.att-hint{font-size:12px;opacity:.6;margin-top:6px}
+
+.att-list{margin-top:10px}
+.att-photos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.att-photo{display:block;flex:none}
+.att-photo img{width:96px;height:96px;object-fit:cover;border-radius:12px;
+  display:block;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.att-doc{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.04);
+  border-radius:12px;padding:8px 10px;margin-bottom:6px;text-decoration:none;
+  color:inherit;min-width:0}
+.att-doc:hover{background:rgba(0,0,0,.07)}
+.att-doc .att-name{flex:1;min-width:0}

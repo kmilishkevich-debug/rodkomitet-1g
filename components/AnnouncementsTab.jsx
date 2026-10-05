@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
 import { FAMILIES_COUNT, familyNs } from "./data";
-import { isLive, saveAnnouncement, deleteAnnouncement, markRead, uploadNewsImage } from "@/lib/supabase";
+import { isLive, saveAnnouncement, deleteAnnouncement, markRead } from "@/lib/supabase";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
 import { PostChatInline } from "./PostChat";
 import { shareText, shareUrl } from "@/lib/share";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
+import { AttachPicker, AttachList } from "./Attachments";
 
 // ===== Редактор объявления (создание и правка) =====
 function AnnouncementEditor({ open, initial, author, teacher, onClose, onSaved, toast }) {
@@ -28,13 +29,15 @@ function AnnouncementEditor({ open, initial, author, teacher, onClose, onSaved, 
   const [pinned, setPinned] = useState(!!start.pinned);
   const [teacherVisible, setTeacherVisible] = useState(!!start.teacherVisible);
   const [imageUrl, setImageUrl] = useState(initial?.image_url || null);
-  const [uploading, setUploading] = useState(false);
+  const [files, setFiles] = useState(initial?.files || []);
   const [saving, setSaving] = useState(false);
   const [restored] = useState(!!saved);
 
   // Пока редактор открыт — фоновое обновление данных на паузе
   useRefreshPause(open);
 
+  // files в isDirty не включаем: их прикрепление сохраняется сразу в хранилище,
+  // а String()-сравнение в isDirty всё равно не различает массивы
   const values = { title, body, important, pinned, teacherVisible };
   const dirty = isDirty(values, base);
   useDraftAutosave(open, dkey, values, dirty);
@@ -47,27 +50,6 @@ function AnnouncementEditor({ open, initial, author, teacher, onClose, onSaved, 
 
   if (!open) return null;
 
-  const pickPhoto = () => {
-    const inp = document.createElement("input");
-    inp.type = "file";
-    inp.accept = "image/*";
-    inp.onchange = async () => {
-      const file = inp.files?.[0];
-      if (!file) return;
-      setUploading(true);
-      try {
-        const url = await uploadNewsImage(file);
-        setImageUrl(url);
-        toast("Фото загружено");
-      } catch (e) {
-        console.error(e);
-        toast("Не удалось загрузить фото: " + (e.message || "ошибка"));
-      }
-      setUploading(false);
-    };
-    inp.click();
-  };
-
   const save = async () => {
     if (!title.trim()) { toast("Напишите заголовок объявления"); return; }
     if (!isLive) { toast("База не подключена — объявления пока нельзя сохранять"); return; }
@@ -79,6 +61,7 @@ function AnnouncementEditor({ open, initial, author, teacher, onClose, onSaved, 
         important,
         pinned,
         image_url: imageUrl,
+        files: files.length ? files : null,
         // Учительские объявления она видит всегда; у комитета — по галочке
         teacher_visible: teacher ? true : teacherVisible,
       };
@@ -116,16 +99,14 @@ function AnnouncementEditor({ open, initial, author, teacher, onClose, onSaved, 
             <label className="chk-row"><input type="checkbox" checked={teacherVisible} onChange={(e) => setTeacherVisible(e.target.checked)} /> Видно классному руководителю</label>
           )}
         </div>
-        {imageUrl ? (
+        {/* Старое одиночное фото (объявления, созданные до вложений) */}
+        {imageUrl && (
           <div className="news-editor-photo">
             <img src={imageUrl} alt="Фото объявления" />
             <button className="btn small white" onClick={() => setImageUrl(null)}>Убрать фото</button>
           </div>
-        ) : (
-          <button className="btn small white" onClick={pickPhoto} disabled={uploading}>
-            <Ic id="i-clip" /> {uploading ? "Загрузка…" : "Прикрепить фото"}
-          </button>
         )}
+        <AttachPicker files={files} onChange={setFiles} toast={toast} />
         <div className="actions">
           <button className="btn small white" onClick={close}>Отмена</button>
           <button className="btn small gold" onClick={save} disabled={saving}>{saving ? "Сохраняю…" : initial?.id ? "Сохранить" : "Опубликовать"}</button>
@@ -207,6 +188,7 @@ function AnnouncementCard({
           <img src={a.image_url} alt="Фото к объявлению" loading="lazy" />
         </a>
       )}
+      <AttachList files={a.files} />
       <div className="news-foot">
         {committee ? (
           <>

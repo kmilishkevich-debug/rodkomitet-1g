@@ -7,6 +7,7 @@ import {
 } from "@/lib/supabase";
 import { sendManualPush } from "@/lib/push";
 import { useRefreshPause } from "@/lib/formGuard";
+import { AttachPicker } from "./Attachments";
 import FamilyPicker from "./FamilyPicker";
 import { canonicalN, familyLabel } from "./data";
 import TeacherWelcomeCard from "./TeacherWelcomeCard";
@@ -64,6 +65,7 @@ function AnnounceForm({ author, onDone, toast }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [important, setImportant] = useState(false);
+  const [files, setFiles] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -77,6 +79,7 @@ function AnnounceForm({ author, onDone, toast }) {
         important,
         pinned: false,
         image_url: null,
+        files: files.length ? files : null,
         teacher_visible: true, // своё объявление учитель видит всегда
         author,
         status: "active",
@@ -108,6 +111,7 @@ function AnnounceForm({ author, onDone, toast }) {
         <textarea rows={4} placeholder="Подробности, если нужны" value={body} maxLength={2000}
           onChange={(e) => setBody(e.target.value)} />
       </label>
+      <AttachPicker files={files} onChange={setFiles} toast={toast} />
       <label className="notify-box">
         <input type="checkbox" checked={important} onChange={(e) => setImportant(e.target.checked)} />
         <span>Пометить как важное</span>
@@ -130,6 +134,7 @@ function HomeworkForm({ author, onDone, toast, defaultDate }) {
   const [date, setDate] = useState(defaultDate || tomorrowIso());
   const [text, setText] = useState("");
   const [bring, setBring] = useState("");
+  const [files, setFiles] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -142,6 +147,7 @@ function HomeworkForm({ author, onDone, toast, defaultDate }) {
         subject: null,
         text: t,
         bring: bring.trim() || null,
+        files: files.length ? files : null,
         author,
       });
       sendManualPush({
@@ -175,6 +181,7 @@ function HomeworkForm({ author, onDone, toast, defaultDate }) {
         <input type="text" placeholder="Краски, стакан для воды" value={bring} maxLength={200}
           onChange={(e) => setBring(e.target.value)} />
       </label>
+      <AttachPicker files={files} onChange={setFiles} toast={toast} />
       <div className="tchr-actions">
         <button className="pill-btn" onClick={onDone}>Отмена</button>
         <button className="pill-btn blue" onClick={save} disabled={saving}>
@@ -192,6 +199,7 @@ function EventForm({ author, onDone, toast }) {
   const [title, setTitle] = useState("");
   const [place, setPlace] = useState("");
   const [note, setNote] = useState("");
+  const [files, setFiles] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -205,6 +213,7 @@ function EventForm({ author, onDone, toast }) {
         title: t,
         place: place.trim() || null,
         note: note.trim() || null,
+        files: files.length ? files : null,
         author,
       });
       sendManualPush({
@@ -250,6 +259,7 @@ function EventForm({ author, onDone, toast }) {
         <textarea rows={2} placeholder="Форма одежды по погоде, обед с собой" value={note} maxLength={400}
           onChange={(e) => setNote(e.target.value)} />
       </label>
+      <AttachPicker files={files} onChange={setFiles} toast={toast} />
       <div className="tchr-actions">
         <button className="pill-btn" onClick={onDone}>Отмена</button>
         <button className="pill-btn blue" onClick={save} disabled={saving}>

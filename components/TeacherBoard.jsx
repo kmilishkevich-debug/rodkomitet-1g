@@ -2,6 +2,7 @@
 import { toggleFamilyNote, deleteFamilyNote } from "@/lib/supabase";
 import { Ic } from "./Art";
 import { PostChatInline } from "./PostChat";
+import { AttachList } from "./Attachments";
 
 // ===== Карточка «От учителя» на «Главной» у родителей =====
 // Всё, что публикует классный руководитель, собрано в одном месте
@@ -109,6 +110,7 @@ export default function TeacherBoard({
                   {h.text}
                 </div>
                 {h.bring && <div className="tb-bring">Взять с собой: {h.bring}</div>}
+                <AttachList files={h.files} />
                 <PostChatInline
                   postKind="hw" postId={h.id}
                   comments={postComments} closedList={chatClosed}
@@ -137,6 +139,7 @@ export default function TeacherBoard({
                     {e.place ? e.place : ""}{e.place && e.note ? " · " : ""}{e.note ? e.note : ""}
                   </div>
                 )}
+                <AttachList files={e.files} />
                 <PostChatInline
                   postKind="event" postId={e.id}
                   comments={postComments} closedList={chatClosed}
