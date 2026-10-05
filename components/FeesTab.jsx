@@ -1339,7 +1339,7 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
           return (
             <div
               key={coll.id}
-              style={{ borderTop: "1px solid rgba(0,0,0,.07)", marginTop: 12, paddingTop: 12, opacity: closed ? 0.65 : 1 }}
+              style={{ borderTop: "2px solid rgba(0,0,0,.08)", marginTop: 28, paddingTop: 20, opacity: closed ? 0.65 : 1 }}
             >
               <div className="fee-head">
                 <div>

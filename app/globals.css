@@ -924,6 +924,9 @@ span.tm-jar-img.tm-ph{position:absolute;right:0;bottom:2%;width:44%;height:76%;f
 .fin-mascot .tm-stagebox { width: 100%; max-width: 100%; height: auto; aspect-ratio: 4 / 3; max-height: var(--tm-h); }
 .fin-mascot .tm-caption { width: 100%; flex: none; text-align: center; }
 
+/* Целевые сборы: отступ до следующей карточки */
+.fin-coll { margin-bottom: 20px; }
+
 /* Фонд ГПД */
 .fin-gpd { margin-bottom: 20px; }
 .fin-gpd-stats { display: flex; gap: 22px; flex-wrap: wrap; margin: 14px 0; }
