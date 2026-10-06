@@ -13,6 +13,7 @@ import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDate
 import { BIRTHDAYS_FALLBACK, BD_MONTHS_PREP, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, bdInfo, inDaysWord } from "./birthdaysData";
 import FamilyPicker from "./FamilyPicker";
 import PushSettings from "./PushSettings";
+import { AbsenceCard } from "./Absences";
 import TeacherBoard from "./TeacherBoard";
 import ClassMascot from "./ClassMascot";
 import { pollState, fmtDeadline } from "./VotesTab";
@@ -1021,6 +1022,10 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         title="Выберите свою семью"
         onPick={(f) => setFamily(f)}
       />
+
+      {/* Отсутствия: семья отмечает, что ребёнка не будет — рядом с карточкой
+          «От учителя». Другие родители чужих отсутствий не видят. */}
+      {family && <AbsenceCard family={family} toast={toast} />}
 
       {/* Привязка семьи — только для комитета: у учителя «Главной» больше нет,
           да и своей семьи в списке класса у него не бывает */}

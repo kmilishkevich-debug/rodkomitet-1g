@@ -16,6 +16,7 @@ import TeacherQuickCards from "./TeacherQuickCards";
 import TeacherFamilyChat from "./TeacherFamilyChat";
 import { PostChatModal, commentsFor, unreadFor } from "./PostChat";
 import { fmtDayWord } from "./TeacherBoard";
+import { TeacherAbsenceCard } from "./Absences";
 import { BIRTHDAYS_FALLBACK, bdInfo, bdName, fmtBd, inDaysWord } from "./birthdaysData";
 
 // ===== Кабинет классного руководителя =====
@@ -770,6 +771,11 @@ export default function TeacherTab({
               </button>
             ))}
           </WorkCard>
+
+          {/* Отсутствия детей: кто не придёт сегодня и о ком предупредили
+              заранее — по отметкам родителей (фича 06.10.2026). Карточка
+              самодостаточная: сама грузит данные и обновляется раз в минуту. */}
+          <TeacherAbsenceCard />
       </div>
 
       {form === "ann" && (

@@ -2090,3 +2090,45 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
   color:inherit;min-width:0}
 .att-doc:hover{background:rgba(0,0,0,.07)}
 .att-doc .att-name{flex:1;min-width:0}
+
+/* ===== Отсутствия детей (06.10.2026) ===== */
+/* Карточка семьи на главной + сводка «Кого нет в школе» у учителя */
+.abs-hint{font-size:13px;padding:6px 2px;line-height:1.5}
+.abs-attn-emoji{font-size:22px;line-height:1}
+
+.abs-row{display:flex;align-items:center;gap:10px;background:var(--blue-soft,#eaf2fd);
+  border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.abs-row.past{background:rgba(0,0,0,.04)}
+.abs-row-body{flex:1;min-width:0}
+.abs-row-title{font-size:14px;font-weight:600;line-height:1.35}
+.abs-row-sub{font-size:12.5px;opacity:.65;margin-top:2px}
+.abs-back{flex:none;white-space:nowrap}
+
+.abs-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px}
+.abs-hist-btn{background:none;border:none;cursor:pointer;font:inherit;font-size:13px;
+  color:var(--blue,#2a6ef0);padding:6px 2px}
+.abs-hist-btn:hover{text-decoration:underline}
+
+.abs-form{margin-top:10px;display:flex;flex-direction:column;gap:14px}
+.abs-field{display:flex;flex-direction:column;gap:7px}
+.abs-lbl{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;opacity:.55}
+.abs-pills{display:flex;flex-wrap:wrap;gap:7px}
+.abs-pill{border:1.5px solid rgba(0,0,0,.14);background:var(--card,#fff);border-radius:999px;
+  padding:7px 13px;font:inherit;font-size:13.5px;cursor:pointer;transition:all .15s}
+.abs-pill:hover{border-color:var(--blue,#2a6ef0)}
+.abs-pill.on{background:var(--blue,#2a6ef0);border-color:var(--blue,#2a6ef0);color:#fff;font-weight:600}
+.abs-note{margin-top:2px}
+.abs-doc-hint{font-size:12.5px;opacity:.6}
+.abs-check{display:flex;align-items:flex-start;gap:8px;font-size:13.5px;line-height:1.4;cursor:pointer}
+.abs-check input{margin-top:2px;width:16px;height:16px;flex:none;accent-color:var(--blue,#2a6ef0)}
+.abs-dates{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.abs-date-lbl{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.abs-form-btns{display:flex;gap:10px;flex-wrap:wrap}
+
+.abs-t-lbl{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  opacity:.55;margin:10px 0 6px}
+
+/* Кнопка «Отмена» в форме отсутствий: базовый .pill-btn без фона
+   (белый текст был бы невидим) — даём серый фон, как у .tchr-actions */
+.abs-form-btns .pill-btn{background:var(--muted)}
+.abs-form-btns .pill-btn.blue{background:var(--blue)}
