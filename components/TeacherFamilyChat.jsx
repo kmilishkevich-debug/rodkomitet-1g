@@ -1,14 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { sendFamilyMessage, markThreadRead } from "@/lib/supabase";
-import { sendManualPush } from "@/lib/push";
+import { sendManualPush, sendFamilyChatPush } from "@/lib/push";
 import { useRefreshPause } from "@/lib/formGuard";
 import { familyNs } from "./data";
 
-// ===== Переписка с одной семьёй =====
-// Окно открывается поверх кабинета. Слева — что написал родитель,
-// справа — что написал учитель. Каждое отправленное сообщение уходит
-// родителям пушем: так решено, отдельной галочки «уведомить» больше нет.
+// ===== Личная переписка семьи и учителя =====
+// Одно окно на двоих, сторона задаётся пропом side:
+//   • side="teacher" — учитель в кабинете, «свои» пузыри = от учителя,
+//     каждое сообщение уходит адресным пушем только этой семье;
+//   • side="parent" — родитель на «Главной», «свои» пузыри = от семьи,
+//     сообщение уходит пушем учителю (роут /api/push/family-chat).
+// Отдельной галочки «уведомить» нет: отправил — значит, уведомил.
 
 function fmtTime(iso) {
   if (!iso) return "";
@@ -22,7 +25,8 @@ function fmtTime(iso) {
 }
 
 export default function TeacherFamilyChat({
-  open, familyN, familyChild, messages, authorName, side = "teacher", onSent, onClose, toast,
+  open, familyN, familyChild, messages, authorName, teacherName,
+  side = "teacher", onSent, onClose, toast,
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -65,15 +69,20 @@ export default function TeacherFamilyChat({
       });
       setText("");
       onSent?.();
-      // Родителю — адресный пуш только этой семье (текст личный!);
-      // учителю пуши не шлём, он и так в кабинете
       if (fromTeacher) {
+        // Родителю — адресный пуш только этой семье (текст личный!)
         sendManualPush({
           title: "Сообщение от учителя",
           body: body.length > 90 ? body.slice(0, 90) + "…" : body,
           url: "/?tab=dashboard",
           audience: "family",
           familyNs: familyNs(familyN),
+        }).catch(() => {});
+      } else {
+        // Учителю — пуш о сообщении родителя (роут сам ограничит получателя)
+        sendFamilyChatPush({
+          body: body.length > 90 ? body.slice(0, 90) + "…" : body,
+          url: "/",
         }).catch(() => {});
       }
     } catch (e) {
@@ -91,18 +100,31 @@ export default function TeacherFamilyChat({
   return (
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal chat-modal" role="dialog" aria-modal="true">
-        <h3>{familyChild || `Семья №${familyN}`}</h3>
-        <p className="muted chat-privacy">Видно только вам и этой семье</p>
+        <h3>
+          {fromTeacher
+            ? (familyChild || `Семья №${familyN}`)
+            : (teacherName || "Классный руководитель")}
+        </h3>
+        <p className="muted chat-privacy">
+          {fromTeacher ? "Видно только вам и этой семье" : "Видно только вам и учителю"}
+        </p>
 
         <div className="chat-thread">
           {!thread.length && (
             <div className="chat-empty">
-              Переписки пока нет. Напишите первое сообщение — родитель увидит его
-              на главной и сможет ответить.
+              {fromTeacher
+                ? "Переписки пока нет. Напишите первое сообщение — родитель увидит его на главной и сможет ответить."
+                : "Переписки пока нет. Напишите первое сообщение — учитель увидит его в своём кабинете и сможет ответить."}
             </div>
           )}
           {thread.map((m) => (
-            <div key={m.id} className={"chat-msg" + (m.from_teacher ? " mine" : " theirs")}>
+            <div
+              key={m.id}
+              className={
+                "chat-msg" +
+                ((fromTeacher ? m.from_teacher : !m.from_teacher) ? " mine" : " theirs")
+              }
+            >
               <div className="chat-bubble">{m.text}</div>
               <div className="chat-meta">
                 {m.from_teacher ? (m.author || "Учитель") : "Родитель"} · {fmtTime(m.created_at)}

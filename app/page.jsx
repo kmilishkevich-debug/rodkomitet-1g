@@ -677,7 +677,7 @@ export default function Page() {
             }}
           />
           <main>
-            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={shownAnnouncements} polls={shownPolls} reads={liveReads} family={family} setFamily={setFamily} notes={liveNotes} onReloadNotes={reloadNotes} homework={liveHomework} events={liveEvents} postComments={livePostComments} chatClosed={liveChatClosed} onReloadComments={reloadPostComments} />}
+            {tab === "dashboard" && <DashboardTab committee={committee} role={role} toast={toast} onTab={showTab} onOpenUpload={openUpload} liveGroups={liveGroups} liveSchedule={liveSchedule} liveBirthdays={liveBirthdays} overrides={liveOverrides} mascotRef={mascotRef} greetToken={greetToken} authorName={authorName} announcements={shownAnnouncements} polls={shownPolls} reads={liveReads} family={family} setFamily={setFamily} notes={liveNotes} onReloadNotes={reloadNotes} homework={liveHomework} events={liveEvents} postComments={livePostComments} chatClosed={liveChatClosed} onReloadComments={reloadPostComments} familyMessages={familyMessages} onReloadMessages={reloadFamilyMessages} />}
             {tab === "teacher" && (
               <TeacherTab
                 authorName={authorName}

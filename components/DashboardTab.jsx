@@ -14,6 +14,7 @@ import FamilyPicker from "./FamilyPicker";
 import PushSettings from "./PushSettings";
 import { AbsenceCard } from "./Absences";
 import TeacherBoard from "./TeacherBoard";
+import TeacherFamilyChat from "./TeacherFamilyChat";
 import ClassMascot from "./ClassMascot";
 import { pollState, fmtDeadline } from "./VotesTab";
 import { fmtNewsDate } from "./FamilyPicker";
@@ -779,7 +780,55 @@ function CommitteeRemind({ authorName, toast }) {
   );
 }
 
-export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls, reads, family, setFamily, notes, onReloadNotes, homework, events, postComments, chatClosed, onReloadComments }) {
+// ===== Карточка «Личное сообщение учителю» на «Главной» у родителей =====
+// Вход в личную переписку семьи с классным руководителем: открывает то же
+// окно TeacherFamilyChat, что и у учителя в кабинете, но со стороны родителя
+// (side="parent"). Если семья ещё не выбрана — сначала просим выбрать её.
+function TeacherChatCard({ family, onNeedFamily, messages, teacherName, onSent, toast }) {
+  const [open, setOpen] = useState(false);
+  const ns = family ? familyNs(family.n) : [];
+  // Непрочитанные этой семьёй сообщения от учителя — для бейджа на кнопке
+  const unread = family
+    ? (messages || []).filter((m) => ns.includes(m.family_n) && m.from_teacher && !m.read_family).length
+    : 0;
+  const openChat = () => {
+    if (!family) { onNeedFamily?.(); return; }
+    setOpen(true);
+  };
+  return (
+    <>
+      <div className="card reveal d2 teacher-chat-card">
+        <div className="dash-card-head">
+          <img src="/icons/icon-envelope.webp" className="head-3d" alt="" />
+          <div className="dash-card-titles">
+            <h2 className="sec-title">Личное сообщение учителю</h2>
+            <div className="dash-card-sub">
+              {unread > 0
+                ? `Новых сообщений от учителя: ${unread}`
+                : `Переписку видите только вы и ${teacherName || "классный руководитель"}`}
+            </div>
+          </div>
+        </div>
+        <button className="pill-btn teacher-open" onClick={openChat}>
+          {unread > 0 ? "Прочитать и ответить →" : "Написать учителю →"}
+        </button>
+      </div>
+      <TeacherFamilyChat
+        open={open}
+        familyN={family?.n}
+        familyChild={family?.child}
+        messages={messages}
+        teacherName={teacherName}
+        side="parent"
+        onSent={onSent}
+        onClose={() => setOpen(false)}
+        toast={toast}
+      />
+    </>
+  );
+}
+
+export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls, reads, family, setFamily, notes, onReloadNotes, homework, events, postComments, chatClosed, onReloadComments, familyMessages, onReloadMessages }) {
   // Выбор семьи по требованию (когда пишут в обсуждение, не выбрав семью)
   const [famOpen, setFamOpen] = useState(false);
   // Персональное приветствие: у комитета/учителя — имя из базы; у семьи — по ребёнку («семья Тимофея»)
@@ -1029,6 +1078,23 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         onNeedFamily={() => setFamOpen(true)}
         onReloadComments={onReloadComments}
       />
+
+      {/* Личная переписка семьи с учителем — у всех, кроме самого учителя */}
+      {role !== "teacher" && (
+        <TeacherChatCard
+          family={family}
+          onNeedFamily={() => setFamOpen(true)}
+          messages={familyMessages}
+          teacherName={
+            (homework || []).find((h) => h.author)?.author ||
+            (events || []).find((e) => e.author)?.author ||
+            (notes || []).find((n) => n.from_teacher && n.author)?.author ||
+            null
+          }
+          onSent={onReloadMessages}
+          toast={toast}
+        />
+      )}
       <FamilyPicker
         open={famOpen}
         onClose={() => setFamOpen(false)}
