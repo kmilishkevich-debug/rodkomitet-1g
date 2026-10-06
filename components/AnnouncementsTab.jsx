@@ -118,23 +118,12 @@ function AnnouncementEditor({ open, initial, author, teacher, onClose, onSaved, 
 
 // ===== Карточка объявления =====
 function AnnouncementCard({
-  a, committee, canEdit, family, reads, toast, onEdit, onReload, onReloadReads,
+  a, seeReads, canEdit, family, reads, toast, onEdit, onReload,
   onNeedFamily, postComments, chatClosed, onReloadComments,
 }) {
   const [readsOpen, setReadsOpen] = useState(false);
   const myRead = family && reads.some((r) => r.announcement_id === a.id && familyNs(family.n).includes(r.family_n));
   const whoRead = reads.filter((r) => r.announcement_id === a.id).sort((x, y) => x.family_n - y.family_n);
-
-  const doRead = async (fam) => {
-    try {
-      await markRead(a.id, fam.n, fam.child);
-      onReloadReads();
-      toast("Отмечено: прочитано семьёй " + fam.child.split(" ")[0]);
-    } catch (e) {
-      console.error(e);
-      toast("Не получилось отметить: " + (e.message || "ошибка"));
-    }
-  };
 
   const archive = async (toStatus) => {
     try {
@@ -189,30 +178,22 @@ function AnnouncementCard({
         </a>
       )}
       <AttachList files={a.files} />
+      {/* Открыл объявление — значит прочитал: отметка ставится автоматически,
+          кнопки «Прочитано» больше нет. Список прочитавших видят комитет
+          и учитель (только по своим объявлениям). */}
       <div className="news-foot">
-        {committee ? (
-          <>
-            <button className="news-read-count" onClick={() => setReadsOpen(!readsOpen)} aria-expanded={readsOpen}>
-              <Ic id="i-check" /> Прочитали {whoRead.length} из {FAMILIES_COUNT} семей {readsOpen ? "▴" : "▾"}
-            </button>
-            {myRead ? (
-              <span className="news-read-done"><Ic id="i-check" /> Вы прочитали</span>
-            ) : (
-              <button className="pill-btn blue" onClick={() => (family ? doRead(family) : onNeedFamily(doRead))}>
-                Прочитано
-              </button>
-            )}
-          </>
-        ) : myRead ? (
-          <span className="news-read-done"><Ic id="i-check" /> Вы прочитали</span>
-        ) : (
-          <button className="pill-btn blue" onClick={() => (family ? doRead(family) : onNeedFamily(doRead))}>
-            Прочитано
+        {seeReads ? (
+          <button className="news-read-count" onClick={() => setReadsOpen(!readsOpen)} aria-expanded={readsOpen}>
+            <Ic id="i-check" /> Прочитали {whoRead.length} из {FAMILIES_COUNT} семей {readsOpen ? "▴" : "▾"}
           </button>
+        ) : (
+          <>
+            {myRead && <span className="news-read-done"><Ic id="i-check" /> Вы прочитали</span>}
+            <span className="muted news-read-cnt">{whoRead.length} из {FAMILIES_COUNT} семей прочитали</span>
+          </>
         )}
-        {!committee && <span className="muted news-read-cnt">{whoRead.length} из {FAMILIES_COUNT} семей прочитали</span>}
       </div>
-      {committee && readsOpen && (
+      {seeReads && readsOpen && (
         <div className="news-readers">
           {whoRead.length === 0 && <span className="muted">Пока никто не отметил прочтение</span>}
           {whoRead.map((r) => (
@@ -287,6 +268,21 @@ export default function AnnouncementsTab({
     return () => clearTimeout(t);
   }, [focusId, announcements, toast]);
 
+  // Открыл вкладку с объявлениями — значит прочитал: отмечаем все активные
+  // объявления, которые семья ещё не читала. markRead идемпотентна (повторная
+  // вставка не считается ошибкой), поэтому гонок и дублей не будет.
+  useEffect(() => {
+    if (!family || !Array.isArray(announcements) || !isLive) return;
+    const ns = familyNs(family.n);
+    const unread = announcements.filter(
+      (a) =>
+        a.status === "active" &&
+        !(reads || []).some((r) => r.announcement_id === a.id && ns.includes(r.family_n))
+    );
+    if (!unread.length) return;
+    Promise.allSettled(unread.map((a) => markRead(a.id, family.n, family.child))).then(() => onReloadReads());
+  }, [family, announcements, reads, onReloadReads]);
+
   const all = announcements || [];
   // Порядок: закреплённые → важные → остальные (внутри групп — свежие выше, как из базы)
   const active = all
@@ -349,9 +345,11 @@ export default function AnnouncementsTab({
 
       {active.map((a) => (
         <AnnouncementCard
-          key={a.id} a={a} committee={committee} canEdit={canEdit} family={family}
+          key={a.id} a={a}
+          seeReads={committee || (teacher && a.author === author)}
+          canEdit={canEdit} family={family}
           reads={reads} toast={toast} onEdit={openEditor} onReload={onReload}
-          onReloadReads={onReloadReads} onNeedFamily={needFamily}
+          onNeedFamily={needFamily}
           postComments={postComments} chatClosed={chatClosed} onReloadComments={onReloadComments}
         />
       ))}
@@ -363,9 +361,11 @@ export default function AnnouncementsTab({
           </button>
           {showArchive && archived.map((a) => (
             <AnnouncementCard
-              key={a.id} a={a} committee={committee} canEdit={canEdit} family={family}
+              key={a.id} a={a}
+              seeReads={committee || (teacher && a.author === author)}
+              canEdit={canEdit} family={family}
               reads={reads} toast={toast} onEdit={openEditor} onReload={onReload}
-              onReloadReads={onReloadReads} onNeedFamily={needFamily}
+              onNeedFamily={needFamily}
               postComments={postComments} chatClosed={chatClosed} onReloadComments={onReloadComments}
             />
           ))}

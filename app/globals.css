@@ -2132,3 +2132,13 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
    (белый текст был бы невидим) — даём серый фон, как у .tchr-actions */
 .abs-form-btns .pill-btn{background:var(--muted)}
 .abs-form-btns .pill-btn.blue{background:var(--blue)}
+
+/* Яркая плашка «сдайте деньги» на главной: видна только семье, которая
+   ещё не сдала (по отметкам комитета в ведомости). Пока заявка на проверке —
+   обычная спокойная плашка, без этих стилей. */
+.pay-due-card{background:linear-gradient(120deg,#fff0ee,#ffe2dd);border:2px solid #f5a09a;
+  box-shadow:0 10px 30px rgba(220,80,60,.12)}
+.pay-due-card .attn-ico{background:#e85d4a;color:#fff}
+.pay-due-card .attn-title{color:#b03a2e}
+.pay-due-card .attn-sub{color:#8d4a41}
+.pay-due-card .pill-btn{background:#e85d4a}

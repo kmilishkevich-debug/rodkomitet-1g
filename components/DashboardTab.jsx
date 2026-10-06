@@ -1,11 +1,10 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
-import { fetchCashExtras, fetchFees, fetchGpdFund, fetchFeeCampaigns, fetchPaymentRequisites, addFamilyNote, toggleFamilyNote, deleteFamilyNote, markRead, isLive } from "@/lib/supabase";
+import { fetchCashExtras, fetchFees, fetchFeeCampaigns, fetchPaymentRequisites, addFamilyNote, toggleFamilyNote, deleteFamilyNote, markRead, isLive } from "@/lib/supabase";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
-  fmt, TOTAL_COLLECTED, TOTAL_SPENT, FAMILIES_COUNT, EXPENSE_GROUPS, groupTotal,
-  GPD_FUND_REST, GPD_FUND_FEE, applyAutoFees, fallbackFeeData,
+  fmt, FAMILIES_COUNT, applyAutoFees, fallbackFeeData,
   FAMILIES, familyNs, familyGroup,
 } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, INFO_HOUR, scheduleFocus, subjectIcon, lessonDisplay } from "./scheduleData";
@@ -791,28 +790,13 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           ? familyGroup(family.n).ns.map((n) => ruGenitive(childFirstName(FAMILIES.find((f) => f.n === n)?.child))).join(" и ")
           : ruGenitive(childFirstName(family.child)))}`
       : "";
-  // Живые итоги из базы: потрачено и остаток кассы пересчитываются автоматически
-  const spent = liveGroups ? liveGroups.reduce((s, g) => s + groupTotal(g), 0) : TOTAL_SPENT;
-  // Поступления сверх старого сбора: платежи по новым сборам + разовые поступления
+  // Разовые поступления сверх ведомости (целевые сборы на главной не учитываем)
   const [extras, setExtras] = useState(null);
-  // Раскрытие «Как рассчитано» в синем блоке остатка
-  const [howOpen, setHowOpen] = useState(false);
   useEffect(() => {
     fetchCashExtras().then((data) => {
       if (data) setExtras(data);
     });
   }, []);
-  const extraIncome = extras ? extras.oneOff + extras.campaigns : 0;
-  // Живой остаток фонда ГПД: собрано (таблица фонда) − потрачено (группы «ГПД» в расходах)
-  const [gpdFund, setGpdFund] = useState(null);
-  useEffect(() => {
-    fetchGpdFund().then((data) => { if (data) setGpdFund(data); });
-  }, []);
-  // «Собрано» фонда — расчётное: 25 BYN × все дети списка (как на вкладке «Взносы»)
-  const gpdRest = gpdFund && liveGroups
-    ? Math.round((gpdFund.length * GPD_FUND_FEE
-        - liveGroups.filter((g) => /гпд/i.test(g.title || "")).reduce((s, g) => s + groupTotal(g), 0)) * 100) / 100
-    : GPD_FUND_REST;
   // Касса класса = остаток по ведомости взносов + разовые поступления.
   // Ведомость строится так же, как на вкладке «Взносы»: авто-статьи
   // пересчитываются из раздела «Расходы» (гардероб входит в хознужды).
@@ -847,16 +831,10 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     });
     return s + rest;
   }, 0) * 100) / 100;
-  const cash = Math.round((feesRest + extraIncome) * 100) / 100;
-  // Годовой сбор: собрано и цель по ведомости — норма 200 BYN у ходящих в ГПД, 175 у не ходящих
+  // Остаток только главного сбора: ведомость + разовые поступления (без целевых сборов)
+  const cashMain = Math.round((feesRest + (extras?.oneOff || 0)) * 100) / 100;
+  // Колонка «ГПД» ведомости: по ней понимаем, ходит ли ребёнок в продлёнку (норма 200/175)
   const feeGpdCol = feeCalc.columns.find((c) => c.kind === "charge" && /гпд/i.test(c.title || ""));
-  const yearGoal = Math.round(feeCalc.rows.reduce(
-    (s, r) => s + (feeGpdCol && r.values[feeGpdCol.id] === 0 ? 200 - GPD_FUND_FEE : 200), 0) * 100) / 100;
-  const yearCollected = Math.round(feeCalc.rows.reduce((s, r) => {
-    let p = 0;
-    feeCalc.columns.forEach((c) => { if (c.kind === "paid") p += r.values[c.id] || 0; });
-    return s + p;
-  }, 0) * 100) / 100;
   // Долги своей семьи по целевым сборам: сумма — с семьи, близнецы сдают один раз
   const myCollDues = (() => {
     if (!family || !Array.isArray(feeColls) || !feeColls.length) return [];
@@ -875,7 +853,23 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       })
       .filter(Boolean);
   })();
-  const groupsCount = (liveGroups || EXPENSE_GROUPS).length;
+  // Долг своей семьи по главному (годовому) сбору: «сдал» = отметка комитета
+  // в ведомости (загруженный чек сам по себе не считается). Норма с ребёнка:
+  // 200 BYN у ходящих в ГПД, 175 — у не ходящих; близнецы — по каждой строке.
+  const myFeeDue = (() => {
+    if (!family) return null;
+    const ns = familyNs(family.n);
+    const myRows = feeCalc.rows.filter((r) => ns.includes(r.n));
+    if (!myRows.length) return null;
+    let paid = 0, target = 0;
+    myRows.forEach((row) => {
+      feeCalc.columns.forEach((c) => { if (c.kind === "paid") paid += row.values[c.id] || 0; });
+      target += feeGpdCol && row.values[feeGpdCol.id] === 0 ? 175 : 200;
+    });
+    paid = Math.round(paid * 100) / 100;
+    const due = Math.round((target - paid) * 100) / 100;
+    return due > 0.005 ? { due, paid, target } : null;
+  })();
   const bdays = liveBirthdays || BIRTHDAYS_FALLBACK;
   const bdayEv = birthdayEvents(bdays, committee);
   // Изменение расписания на день из мини-виджета — баннер сверху
@@ -908,7 +902,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     subline = "Сегодня несколько событий: посмотрите блоки ниже — там объявления, голосования и напоминания.";
   } else if (impUnread.length) {
     headline = "Есть важная информация для родителей";
-    subline = "Комитет опубликовал важное объявление — карточка с ним сразу под приветствием.";
+    subline = "Комитет опубликовал важное объявление — карточка с ним в самом верху страницы.";
   } else if (pollsNoAnswer.length) {
     headline = "Нужно ваше мнение";
     subline = "Идёт голосование, где ваша семья ещё не ответила, — карточка ниже ведёт прямо к нему.";
@@ -956,14 +950,35 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     <section id="tab-dashboard">
       <div className="greet-date">{todayLine()}</div>
 
+      {/* Объявления класса — на самом верху главной: сначала важные, затем обычные */}
+      <ImportantNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
+      <RegularNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
+
       <BdayBanner ev={bdayEv} />
 
       <ScheduleChangeBanner activeOvs={schedOvs} focusIso={schedIso} focusLabel={schedFocus.label} endTime={schedEnd} toast={toast} onTab={onTab} />
 
-      {/* Напоминание о целевых сборах: висит, пока семья не сдаст полную сумму */}
+      {/* Яркое напоминание о годовом взносе: видно только семье, которая ещё не сдала.
+          «Сдал» = отметка комитета в ведомости (загруженный чек сам по себе не считается). */}
+      {myFeeDue && (
+        <div className="attn-card pay-due-card reveal d1">
+          <div className="attn-ico"><Ic id="i-coin" /></div>
+          <div className="attn-body">
+            <div className="attn-title">Пожалуйста, сдайте годовой взнос — осталось {fmt(myFeeDue.due)} BYN</div>
+            <div className="attn-sub">
+              Внесено {fmt(myFeeDue.paid)} из {fmt(myFeeDue.target)} BYN с семьи
+              {reqsLine ? <><br />{reqsLine}</> : null}
+            </div>
+          </div>
+          <button className="pill-btn" onClick={() => onTab("fees")}>К взносам</button>
+        </div>
+      )}
+
+      {/* Напоминание о целевых сборах: висит, пока семья не сдаст полную сумму.
+          Пока заявка семьи на проверке — плашка спокойная, не тревожная. */}
       {myCollDues.map((d) => (
-        <div key={d.title} className="attn-card reveal d1">
-          <div className="attn-ico blue"><Ic id="i-coin" /></div>
+        <div key={d.title} className={"attn-card reveal d1" + (d.pending ? "" : " pay-due-card")}>
+          <div className={"attn-ico" + (d.pending ? " blue" : "")}><Ic id="i-coin" /></div>
           <div className="attn-body">
             <div className="attn-title">
               {d.pending ? `Заявка по сбору «${d.title}» на проверке` : `Вы ещё не сдали на «${d.title}»`}
@@ -997,8 +1012,6 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           <ClassMascot ref={mascotRef} cues={cues} greetToken={greetToken} />
         </div>
       </div>
-
-      <ImportantNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
 
       <ActivePolls polls={polls} family={family} onTab={onTab} />
 
@@ -1043,65 +1056,30 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
             <div className="dash-card-head">
               <img src="/icons/icon-piggy.webp" className="head-3d" alt="" />
               <div className="dash-card-titles">
-                <h2 className="sec-title">Деньги класса</h2>
-                <div className="dash-card-sub">{groupsCount} групп расходов · {FAMILIES_COUNT} семей</div>
+                <h2 className="sec-title">Касса класса</h2>
+                <div className="dash-card-sub">Главный сбор · {FAMILIES_COUNT} семей</div>
               </div>
             </div>
 
-            {/* Синий блок остатка */}
+            {/* Остаток только по главному сбору: ведомость + разовые поступления.
+                Целевые сборы и фонд ГПД на главной не показываем — они во вкладке «Взносы» */}
             <div className="cash-hero">
               <div className="cash-hero-main">
                 <div className="cash-hero-lbl">Сейчас в кассе</div>
-                <div className="cash-hero-val">{fmt(cash)} BYN</div>
+                <div className="cash-hero-val">{fmt(cashMain)} BYN</div>
                 <div className="cash-hero-note">
-                  {isLive && extras === null ? "поступления обновляются…" : "Без фонда ГПД"}
+                  {isLive && extras === null ? "поступления обновляются…" : "Главный сбор · без фонда ГПД и целевых сборов"}
                 </div>
-                <button className="cash-how" onClick={() => setHowOpen(!howOpen)} aria-expanded={howOpen}>
-                  Как рассчитано {howOpen ? "▴" : "▾"}
-                </button>
-                {howOpen && (
-                  <div className="cash-how-body">
-                    Остаток по ведомости взносов ({fmt(feesRest)} BYN) + разовые поступления ({fmt(extraIncome)} BYN).
-                    Списания в ведомости считаются автоматически из раздела «Расходы».
-                    Фонд ГПД собирается отдельно и в эту сумму не входит.
-                  </div>
-                )}
               </div>
               <img src="/icons/icon-wallet.webp" className="cash-hero-3d" alt="" />
             </div>
 
-            {/* Годовой сбор — единственное место с суммой «собрано» */}
-            <div className="cash-year">
-              <div className="cash-year-top">
-                <b>Годовой сбор 2026–2027</b>
-                <span>Собрано {fmt(yearCollected)} из {fmt(yearGoal)} BYN</span>
-              </div>
-              <div className="dprogress"><i style={{ width: Math.round((yearCollected / yearGoal) * 100) + "%" }}></i></div>
-              <div className="cash-year-note">Осталось собрать {fmt(Math.max(0, Math.round((yearGoal - yearCollected) * 100) / 100))} BYN</div>
-            </div>
-
-            {/* Расходы за год — включают расходы фонда ГПД (см. раздел «Расходы») */}
-            <div className="cash-rows">
-              <button className="cash-row pinkrow" onClick={() => onTab("expenses")}>
-                <span className="cash-row-lbl"><img src="/icons/icon-receipt.webp" className="row-3d" alt="" /> Расходы, включая ГПД</span>
-                <span className="cash-row-val">{fmt(spent)} BYN</span>
-              </button>
-            </div>
-
-            {/* Фонд ГПД одной строкой — вся строка ведёт в «Деньги → Расходы» */}
-            <button className="cash-row gpd" onClick={() => onTab("expenses")}>
-              <span className="cash-row-lbl"><img src="/icons/icon-people.webp" className="row-3d" alt="" /> Фонд ГПД <span className="tag-pill">Отдельный сбор</span></span>
-              <span className="cash-row-val">Остаток: {fmt(gpdRest)} BYN <span className="gpd-arrow" aria-hidden="true">›</span></span>
-            </button>
-
-            <button className="pill-btn blue cash-open" onClick={() => onTab("fees")}>Открыть финансы →</button>
+            <button className="pill-btn blue cash-open" onClick={() => onTab("fees")}>Подробнее →</button>
           </div>
         </div>
       </div>
 
       <BirthdaysWidget committee={committee} ev={bdayEv} list={bdays} onTab={onTab} />
-
-      <RegularNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
 
       <PushSettings committee={committee} role={role} familyN={family?.n} toast={toast} />
     </section>

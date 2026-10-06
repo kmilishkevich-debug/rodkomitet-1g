@@ -122,7 +122,16 @@ export function AbsenceCard({ family, toast }) {
         reason_note: note || null,
         doc_type: docType,
       });
-      toast("Отметили. Учитель увидит в своей сводке");
+      // Пуш учителю — не ждём ответа и не мешаем сохранению, если не получится
+      const period = openEnd || !dateTo || dateTo === dateFrom
+        ? (dateFrom === todayIso ? "с сегодняшнего дня" : `с ${fmtDateRu(dateFrom)}`)
+        : `с ${fmtDateRu(dateFrom)} по ${fmtDateRu(dateTo)}`;
+      fetch("/api/push/absence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: `${kid.child} — ${reasonLabel(reason).toLowerCase()}, ${period}` }),
+      }).catch(() => {});
+      toast("Отметили. Учитель получит уведомление и увидит в своей сводке");
       setFormOpen(false);
       resetForm();
       load();
