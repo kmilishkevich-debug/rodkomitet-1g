@@ -1086,8 +1086,26 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     <section id="tab-dashboard">
       <div className="greet-date">{todayLine()}</div>
 
-      {/* Быстрые действия: крупные иконки-ярлыки, всё главное — в один тап */}
-      <QuickActions items={quickItems} />
+      {/* Шапка главной: на широких экранах — приветствие слева, быстрые действия
+          справа в своей панели; на телефоне — друг под другом */}
+      <div className="home-hero">
+        <div className="welcome compact reveal d1">
+          <div className="welcome-copy">
+            {/* Приветствие и главная мысль дня — двумя абзацами, с воздухом между ними */}
+            <h1 className="welcome-h1">
+              <span className="welcome-greet">{greetWord()}{greetName}!</span>
+              <span className="blue welcome-headline">{headline}</span>
+            </h1>
+            <p className="welcome-sub">{subline}</p>
+          </div>
+          <div className="welcome-visual">
+            <ClassMascot ref={mascotRef} cues={cues} greetToken={greetToken} />
+          </div>
+        </div>
+        <div className="qa-panel reveal d1">
+          <QuickActions items={quickItems} />
+        </div>
+      </div>
       {urgent && (
         <button className="qa-urgent reveal d1" onClick={urgent.act}>
           <span className="qa-urgent-ico" aria-hidden="true">❗</span>
@@ -1096,13 +1114,33 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         </button>
       )}
 
-      {/* Объявления класса — на самом верху главной: сначала важные, затем обычные */}
+      {/* Порядок секций — как на новом макете: сначала «Важное от учителя»,
+          затем объявления класса и баннеры, а финансовые напоминания — после них. */}
+      <TeacherBoard
+        homework={homework}
+        events={events}
+        notes={notes}
+        onReloadNotes={onReloadNotes}
+        toast={toast}
+        onTab={onTab}
+        postComments={postComments}
+        chatClosed={chatClosed}
+        family={family}
+        onNeedFamily={() => setFamOpen(true)}
+        onReloadComments={onReloadComments}
+      />
+
       <ImportantNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
       <RegularNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
-
       <BdayBanner ev={bdayEv} />
-
-      <ScheduleChangeBanner activeOvs={schedOvs} focusIso={schedIso} focusLabel={schedFocus.label} endTime={schedEnd} toast={toast} onTab={onTab} />
+      <ScheduleChangeBanner
+        activeOvs={schedOvs}
+        focusIso={schedIso}
+        focusLabel={schedFocus.label}
+        endTime={schedEnd}
+        toast={toast}
+        onTab={onTab}
+      />
 
       {/* Яркое напоминание о годовом взносе: видно только семье, которая ещё не сдала.
           «Сдал» = отметка комитета в ведомости (загруженный чек сам по себе не считается). */}
@@ -1145,36 +1183,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         </div>
       ))}
 
-      <div className="welcome compact reveal d1">
-        <div className="welcome-copy">
-          {/* Приветствие и главная мысль дня — двумя абзацами, с воздухом между ними */}
-          <h1 className="welcome-h1">
-            <span className="welcome-greet">{greetWord()}{greetName}!</span>
-            <span className="blue welcome-headline">{headline}</span>
-          </h1>
-          <p className="welcome-sub">{subline}</p>
-        </div>
-        <div className="welcome-visual">
-          <ClassMascot ref={mascotRef} cues={cues} greetToken={greetToken} />
-        </div>
-      </div>
-
       <ActivePolls polls={polls} family={family} onTab={onTab} />
-
-      {/* Персонализация: привязка семьи (для комитета/учителя), сводка семьи, заметки, напоминания семьям */}
-      <TeacherBoard
-        homework={homework}
-        events={events}
-        notes={notes}
-        onReloadNotes={onReloadNotes}
-        toast={toast}
-        onTab={onTab}
-        postComments={postComments}
-        chatClosed={chatClosed}
-        family={family}
-        onNeedFamily={() => setFamOpen(true)}
-        onReloadComments={onReloadComments}
-      />
 
       {/* Личная переписка семьи с учителем — открывается с иконки «Учителю».
           Отдельной карточки на главной больше нет: её заменила сетка сверху. */}
