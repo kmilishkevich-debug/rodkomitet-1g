@@ -235,7 +235,16 @@ export default function AnnouncementsTab({
   committee, canEdit, teacher, author, toast, announcements, reads, onReload, onReloadReads,
   family, setFamily, postComments, chatClosed, onReloadComments,
 }) {
-  const [editorOpen, setEditorOpen] = useState(false);
+  // С главной можно прийти по кнопке «Создать объявление» — тогда сразу
+  // открываем форму создания (флаг кладёт DashboardTab перед переключением вкладки)
+  const [editorOpen, setEditorOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const flag = sessionStorage.getItem("rk1g-open-newann");
+      sessionStorage.removeItem("rk1g-open-newann");
+      return flag === "1" && canEdit;
+    } catch { return false; }
+  });
   const [editing, setEditing] = useState(null);
   const [showArchive, setShowArchive] = useState(false);
   const [famOpen, setFamOpen] = useState(false);

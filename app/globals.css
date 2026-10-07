@@ -2142,3 +2142,54 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .pay-due-card .attn-title{color:#b03a2e}
 .pay-due-card .attn-sub{color:#8d4a41}
 .pay-due-card .pill-btn{background:#e85d4a}
+
+/* ===== Быстрые действия на главной (qa-*) ===== */
+.qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:14px}
+.qa-item{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  gap:7px;background:var(--card);border:1px solid var(--soft-line);border-radius:22px;
+  padding:14px 8px 12px;min-height:112px;cursor:pointer;
+  font:inherit;color:var(--ink);box-shadow:0 8px 24px rgba(23,23,23,.05);
+  transition:transform .18s ease,box-shadow .18s ease;-webkit-tap-highlight-color:transparent}
+@media(hover:hover){
+  .qa-item:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(23,23,23,.1)}
+}
+.qa-item:active{transform:scale(.98)}
+.qa-ico{display:flex;align-items:center;justify-content:center;width:46px;height:46px;flex:none}
+.qa-ico img,.qa-ico svg{width:40px;height:40px;object-fit:contain}
+.qa-label{font-size:13px;font-weight:600;line-height:1.15;text-align:center;color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:30px}
+.qa-badge{position:absolute;top:7px;right:9px;min-width:21px;height:21px;padding:0 5px;border-radius:999px;
+  background:#e85d4a;color:#fff;font-size:11.5px;font-weight:800;display:flex;align-items:center;
+  justify-content:center;border:1.5px solid #fff;box-shadow:0 2px 8px rgba(232,93,74,.4)}
+.qa-urgent{display:flex;align-items:center;gap:10px;width:100%;margin-bottom:14px;
+  background:linear-gradient(120deg,#fff0ee,#ffe2dd);border:1.5px solid #f5a09a;border-radius:16px;
+  padding:11px 14px;cursor:pointer;font:inherit;font-size:13.5px;font-weight:700;color:#b03a2e;
+  text-align:left;box-shadow:0 8px 24px rgba(220,80,60,.1);transition:transform .18s ease}
+.qa-urgent:active{transform:scale(.98)}
+.qa-urgent-ico{flex:none}
+.qa-urgent-arrow{margin-left:auto;font-size:20px;line-height:1;color:#d08177}
+/* Узкие экраны (<390px) — 3 колонки, чтобы карточки не сжимались */
+@media(max-width:389px){
+  .qa-grid{grid-template-columns:repeat(3,1fr);gap:10px}
+  .qa-item{min-height:108px;border-radius:20px}
+}
+/* Широкие экраны — карточки не растягиваются на всю ширину */
+@media(min-width:900px){
+  .qa-grid{grid-template-columns:repeat(auto-fit,minmax(112px,144px));justify-content:center;gap:12px}
+}
+@keyframes qaFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes qaPopIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.qa-overlay{animation:qaFadeIn .2s ease}
+.qa-modal{position:relative;max-width:460px;max-height:86vh;overflow-y:auto;padding:22px 18px 18px;
+  animation:qaPopIn .2s ease}
+.qa-modal .card,.qa-modal .attn-card{box-shadow:none;border:1.5px solid var(--soft-line);margin-bottom:12px}
+.qa-modal .card:last-child,.qa-modal .attn-card:last-child{margin-bottom:0}
+.qa-modal-close{position:absolute;top:8px;right:8px;z-index:5;width:44px;height:44px;border-radius:50%;
+  border:none;background:transparent;color:var(--muted);font-size:16px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center}
+.qa-modal-close::before{content:"";position:absolute;inset:6px;border-radius:50%;background:rgba(23,23,23,.06);z-index:-1}
+.qa-modal-close:active{transform:scale(.92)}
+@media(prefers-reduced-motion:reduce){
+  .qa-item,.qa-urgent,.qa-item:hover,.qa-item:active,.qa-urgent:active{transition:none;transform:none}
+  .qa-overlay,.qa-modal{animation:none}
+}

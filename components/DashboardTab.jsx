@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { fetchCashExtras, fetchFees, fetchFeeCampaigns, fetchPaymentRequisites, addFamilyNote, toggleFamilyNote, deleteFamilyNote, markRead, isLive } from "@/lib/supabase";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
@@ -780,57 +780,70 @@ function CommitteeRemind({ authorName, toast }) {
   );
 }
 
-// ===== Карточка «Личное сообщение учителю» на «Главной» у родителей =====
-// Вход в личную переписку семьи с классным руководителем: открывает то же
-// окно TeacherFamilyChat, что и у учителя в кабинете, но со стороны родителя
-// (side="parent"). Если семья ещё не выбрана — сначала просим выбрать её.
-function TeacherChatCard({ family, onNeedFamily, messages, teacherName, onSent, toast }) {
-  const [open, setOpen] = useState(false);
-  const ns = family ? familyNs(family.n) : [];
-  // Непрочитанные этой семьёй сообщения от учителя — для бейджа на кнопке
-  const unread = family
-    ? (messages || []).filter((m) => ns.includes(m.family_n) && m.from_teacher && !m.read_family).length
-    : 0;
-  const openChat = () => {
-    if (!family) { onNeedFamily?.(); return; }
-    setOpen(true);
-  };
+// ===== Сетка быстрых действий на самом верху главной =====
+// Крупные иконки-ярлыки «как на телефоне»: 4 в ряд, с бейджами-счётчиками.
+// Личные действия (учитель, отсутствие, сводка) открываются в окошке поверх
+// главной; разделы (взносы, голосования, объявления, расписание) — переходом
+// на свою вкладку, потому что это полноценные страницы, а не карточки.
+function QuickActions({ items }) {
   return (
-    <>
-      <div className="card reveal d2 teacher-chat-card">
-        <div className="dash-card-head">
-          <img src="/icons/icon-envelope.webp" className="head-3d" alt="" />
-          <div className="dash-card-titles">
-            <h2 className="sec-title">Личное сообщение учителю</h2>
-            <div className="dash-card-sub">
-              {unread > 0
-                ? `Новых сообщений от учителя: ${unread}`
-                : `Переписку видите только вы и ${teacherName || "классный руководитель"}`}
-            </div>
-          </div>
-        </div>
-        <button className="pill-btn teacher-open" onClick={openChat}>
-          {unread > 0 ? "Прочитать и ответить →" : "Написать учителю →"}
+    <div className="qa-grid reveal d1">
+      {items.map((it) => (
+        <button className="qa-item" key={it.key} onClick={it.act} aria-label={it.aria || it.label}>
+          <span className="qa-ico" aria-hidden="true">{it.ico}</span>
+          {it.badge > 0 && <span className="qa-badge">{it.badge > 99 ? "99+" : it.badge}</span>}
+          <span className="qa-label">{it.label}</span>
         </button>
+      ))}
+    </div>
+  );
+}
+
+// Окошко поверх главной с содержимым карточки (отсутствия, сводка семьи).
+// Доступность: Escape закрывает, фокус не уходит за пределы окна (Tab по кругу),
+// после закрытия фокус возвращается туда, откуда окно открыли.
+function QuickModal({ open, onClose, children, label }) {
+  const boxRef = useRef(null);
+  const lastFocus = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    lastFocus.current = document.activeElement;
+    const onKey = (e) => {
+      if (e.key === "Escape") { onClose(); return; }
+      if (e.key !== "Tab" || !boxRef.current) return;
+      const els = boxRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!els.length) return;
+      const first = els[0], last = els[els.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    boxRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      if (lastFocus.current?.focus) lastFocus.current.focus();
+    };
+  }, [open, onClose]);
+  if (!open) return null;
+  return (
+    <div className="overlay qa-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal qa-modal" role="dialog" aria-modal="true" aria-label={label} ref={boxRef} tabIndex={-1}>
+        <button className="qa-modal-close" onClick={onClose} aria-label="Закрыть">✕</button>
+        {children}
       </div>
-      <TeacherFamilyChat
-        open={open}
-        familyN={family?.n}
-        familyChild={family?.child}
-        messages={messages}
-        teacherName={teacherName}
-        side="parent"
-        onSent={onSent}
-        onClose={() => setOpen(false)}
-        toast={toast}
-      />
-    </>
+    </div>
   );
 }
 
 export default function DashboardTab({ committee, role, toast, onTab, onOpenUpload, liveGroups, liveSchedule, liveBirthdays, overrides, mascotRef, greetToken, authorName, announcements, polls, reads, family, setFamily, notes, onReloadNotes, homework, events, postComments, chatClosed, onReloadComments, familyMessages, onReloadMessages }) {
   // Выбор семьи по требованию (когда пишут в обсуждение, не выбрав семью)
   const [famOpen, setFamOpen] = useState(false);
+  // Окошки быстрых действий: чат с учителем, отсутствия, сводка семьи
+  const [chatOpen, setChatOpen] = useState(false);
+  const [absOpen, setAbsOpen] = useState(false);
+  const [famSumOpen, setFamSumOpen] = useState(false);
   // Персональное приветствие: у комитета/учителя — имя из базы; у семьи — по ребёнку («семья Тимофея»)
   const greetName = authorName
     ? `, ${authorName}`
@@ -993,9 +1006,95 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     top: "Всё под контролем",
     text: "Посмотрим, что завтра?",
   });
+  // ===== Данные для сетки быстрых действий =====
+  // Имя учителя — из подписей к его материалам (как раньше в карточке чата)
+  const teacherName =
+    (homework || []).find((h) => h.author)?.author ||
+    (events || []).find((e) => e.author)?.author ||
+    (notes || []).find((n) => n.from_teacher && n.author)?.author ||
+    null;
+  // Непрочитанные семьёй сообщения от учителя — бейдж на иконке «Учителю»
+  const qaNs = family ? familyNs(family.n) : [];
+  const teacherUnread = family
+    ? (familyMessages || []).filter((m) => qaNs.includes(m.family_n) && m.from_teacher && !m.read_family).length
+    : 0;
+  // Непрочитанные объявления (только при выбранной семье — иначе считать не от кого)
+  const annUnread = family
+    ? (announcements || []).filter((a) => a.status === "active" && !isReadBy(a, reads, family)).length
+    : 0;
+  // Долги семьи: годовой взнос (1, если не сдан) + целевые сборы без заявки на проверке
+  const feesBadge = (myFeeDue ? 1 : 0) + myCollDues.filter((d) => !d.pending).length;
+  // Открыть чат/отсутствия/сводку: без выбранной семьи сначала просим выбрать её
+  const needFamily = (fn) => () => { if (!family) { setFamOpen(true); return; } fn(); };
+  const quickItems = [
+    { key: "teacher", label: "Учителю", aria: "Написать учителю",
+      ico: <img src="/icons/icon-envelope.webp" alt="" />,
+      badge: teacherUnread, act: needFamily(() => setChatOpen(true)) },
+    { key: "absence", label: "Отсутствие", aria: "Отметить отсутствие ребёнка",
+      ico: <img src="/icons/icon-calendar.webp" alt="" />,
+      badge: 0, act: needFamily(() => setAbsOpen(true)) },
+    { key: "family", label: "Моя семья", aria: "Сводка семьи",
+      ico: <img src="/icons/icon-people.webp" alt="" />,
+      badge: 0, act: needFamily(() => setFamSumOpen(true)) },
+    { key: "fees", label: "Взносы", aria: "Взносы и долги",
+      ico: <NavIcon name="fees" uid="qa-fees" size={38} />,
+      badge: feesBadge, act: () => onTab("fees") },
+    { key: "votes", label: "Голосования",
+      ico: <NavIcon name="votes" uid="qa-votes" size={38} />,
+      badge: pollsNoAnswer.length, act: () => onTab("votes") },
+    { key: "ann", label: "Объявления",
+      ico: <NavIcon name="announcements" uid="qa-ann" size={38} />,
+      badge: annUnread, act: () => onTab("announcements") },
+    { key: "sched", label: "Расписание",
+      ico: <img src="/icons/icon-calendar-clock.webp" alt="" />,
+      badge: schedOvs.length, act: () => onTab("schedule") },
+    { key: "pay", label: "Платёж", aria: "Отметить платёж",
+      ico: <img src="/icons/icon-wallet.webp" alt="" />,
+      badge: 0, act: () => onTab("fees") },
+  ];
+  if (committee) {
+    quickItems.push(
+      { key: "newann", label: "Создать объявление", aria: "Создать объявление",
+        ico: <img src="/icons/icon-note-plus.webp" alt="" />,
+        badge: 0, act: () => {
+          try { sessionStorage.setItem("rk1g-open-newann", "1"); } catch {}
+          onTab("announcements");
+        } },
+    );
+  }
+  // Строка-подсказка с самым срочным: ответ учителя → долг → голосование
+  let urgent = null;
+  if (teacherUnread > 0) {
+    urgent = {
+      text: teacherUnread === 1 ? "Ответ учителя не прочитан" : `Непрочитанных сообщений от учителя: ${teacherUnread}`,
+      act: needFamily(() => setChatOpen(true)),
+    };
+  } else if (myFeeDue) {
+    urgent = { text: `Долг по годовому взносу: ${fmt(myFeeDue.due)} BYN`, act: () => onTab("fees") };
+  } else {
+    const firstDue = myCollDues.find((d) => !d.pending);
+    if (firstDue) {
+      urgent = { text: `Долг по сбору «${firstDue.title}»: ${fmt(firstDue.due)} BYN`, act: () => onTab("fees") };
+    } else if (pollsNoAnswer.length) {
+      urgent = {
+        text: `Новое голосование: ${snippet(pollsNoAnswer[0].question, 60)}`,
+        act: () => goFocus("poll", pollsNoAnswer[0].id, "votes", onTab),
+      };
+    }
+  }
   return (
     <section id="tab-dashboard">
       <div className="greet-date">{todayLine()}</div>
+
+      {/* Быстрые действия: крупные иконки-ярлыки, всё главное — в один тап */}
+      <QuickActions items={quickItems} />
+      {urgent && (
+        <button className="qa-urgent reveal d1" onClick={urgent.act}>
+          <span className="qa-urgent-ico" aria-hidden="true">❗</span>
+          <span>{urgent.text}</span>
+          <span className="qa-urgent-arrow" aria-hidden="true">›</span>
+        </button>
+      )}
 
       {/* Объявления класса — на самом верху главной: сначала важные, затем обычные */}
       <ImportantNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
@@ -1077,19 +1176,18 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         onReloadComments={onReloadComments}
       />
 
-      {/* Личная переписка семьи с учителем — у всех, кроме самого учителя */}
+      {/* Личная переписка семьи с учителем — открывается с иконки «Учителю».
+          Отдельной карточки на главной больше нет: её заменила сетка сверху. */}
       {role !== "teacher" && (
-        <TeacherChatCard
-          family={family}
-          onNeedFamily={() => setFamOpen(true)}
+        <TeacherFamilyChat
+          open={chatOpen}
+          familyN={family?.n}
+          familyChild={family?.child}
           messages={familyMessages}
-          teacherName={
-            (homework || []).find((h) => h.author)?.author ||
-            (events || []).find((e) => e.author)?.author ||
-            (notes || []).find((n) => n.from_teacher && n.author)?.author ||
-            null
-          }
+          teacherName={teacherName}
+          side="parent"
           onSent={onReloadMessages}
+          onClose={() => setChatOpen(false)}
           toast={toast}
         />
       )}
@@ -1100,14 +1198,23 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         onPick={(f) => setFamily(f)}
       />
 
-      {/* Отсутствия: семья отмечает, что ребёнка не будет — рядом с карточкой
-          «От учителя». Другие родители чужих отсутствий не видят. */}
-      {family && <AbsenceCard family={family} toast={toast} />}
+      {/* Отсутствия и сводка семьи — в окошках поверх главной (иконки сверху).
+          Другие родители чужих отсутствий по-прежнему не видят. */}
+      <QuickModal open={absOpen && !!family} onClose={() => setAbsOpen(false)} label="Отсутствие ребёнка">
+        {family && <AbsenceCard family={family} toast={toast} />}
+      </QuickModal>
+      <QuickModal open={famSumOpen && !!family} onClose={() => setFamSumOpen(false)} label="Сводка семьи">
+        {family && (
+          <FamilyWidget
+            family={family} polls={polls} bdays={bdays} liveGroups={liveGroups}
+            onTab={(t) => { setFamSumOpen(false); onTab(t); }}
+          />
+        )}
+      </QuickModal>
 
       {/* Привязка семьи — только для комитета: у учителя «Главной» больше нет,
           да и своей семьи в списке класса у него не бывает */}
       {!family && committee && <BindFamilyCard setFamily={setFamily} toast={toast} />}
-      {family && <FamilyWidget family={family} polls={polls} bdays={bdays} onTab={onTab} liveGroups={liveGroups} />}
       {family && <NotesWidget family={family} notes={notes} onReload={onReloadNotes} toast={toast} />}
       {committee && <CommitteeRemind authorName={authorName} toast={toast} />}
 
