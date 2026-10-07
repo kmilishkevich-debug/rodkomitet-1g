@@ -2194,8 +2194,8 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
     padding:16px;box-shadow:0 10px 30px rgba(23,23,23,.05);display:flex;align-items:center}
   .qa-panel .qa-grid{grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:0;width:100%}
   .qa-panel .qa-item{min-height:96px;padding:12px 6px 10px;border-radius:18px;gap:6px}
-  .qa-panel .qa-ico{width:36px;height:36px}
-  .qa-panel .qa-ico img,.qa-panel .qa-ico svg{width:34px;height:34px}
+  .qa-panel .qa-ico{width:52px;height:52px}
+  .qa-panel .qa-ico img,.qa-panel .qa-ico svg{width:50px;height:50px}
   .qa-panel .qa-label{font-size:12.5px;min-height:28px}
 }
 @keyframes qaFadeIn{from{opacity:0}to{opacity:1}}
