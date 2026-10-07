@@ -484,15 +484,15 @@ function FamilyWidget({ family, polls, bdays, onTab, liveGroups }) {
   const src = fees || fallbackFeeData();
   const { columns, rows } = applyAutoFees(src.columns, src.rows, liveGroups);
   const myRows = rows.filter((r) => myNs.includes(r.n));
-  const gpdCol = columns.find((c) => c.kind === "charge" && /гпд/i.test(c.title || ""));
   myRows.forEach((row) => {
     if (paid === null) { paid = 0; rest = 0; }
     columns.forEach((c) => {
       const v = row.values[c.id] || 0;
       if (c.kind === "paid") { paid += v; rest += v; } else rest -= v;
     });
-    // Норма взноса: 200 BYN у ходящих в ГПД (175 + 25 в фонд), 175 — у не ходящих (0 в колонке «ГПД»)
-    target += gpdCol && row.values[gpdCol.id] === 0 ? 175 : 200;
+    // Норма взноса: 200 BYN у ходящих в ГПД (175 + 25 в фонд), 175 — у не ходящих
+    // (признак row.gpdIn ставит applyAutoFees — не зависит от размера доли ГПД)
+    target += row.gpdIn === false ? 175 : 200;
   });
   if (paid !== null) {
     paid = Math.round(paid * 100) / 100;
@@ -882,8 +882,6 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   }, 0) * 100) / 100;
   // Остаток только главного сбора: ведомость + разовые поступления (без целевых сборов)
   const cashMain = Math.round((feesRest + (extras?.oneOff || 0)) * 100) / 100;
-  // Колонка «ГПД» ведомости: по ней понимаем, ходит ли ребёнок в продлёнку (норма 200/175)
-  const feeGpdCol = feeCalc.columns.find((c) => c.kind === "charge" && /гпд/i.test(c.title || ""));
   // Долги своей семьи по целевым сборам: сумма — с семьи, близнецы сдают один раз
   const myCollDues = (() => {
     if (!family || !Array.isArray(feeColls) || !feeColls.length) return [];
@@ -913,7 +911,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     let paid = 0, target = 0;
     myRows.forEach((row) => {
       feeCalc.columns.forEach((c) => { if (c.kind === "paid") paid += row.values[c.id] || 0; });
-      target += feeGpdCol && row.values[feeGpdCol.id] === 0 ? 175 : 200;
+      target += row.gpdIn === false ? 175 : 200;
     });
     paid = Math.round(paid * 100) / 100;
     const due = Math.round((target - paid) * 100) / 100;

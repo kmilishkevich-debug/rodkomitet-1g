@@ -4,7 +4,7 @@ import { Ic } from "./Art";
 import {
   GPD_CHILDREN, fmt,
   GPD_FUND, GPD_FUND_FEE, GPD_FUND_SPENT, groupTotal,
-  applyAutoFees, fallbackFeeData, familyNs,
+  applyAutoFees, fallbackFeeData, familyNs, isWardColumn,
 } from "./data";
 import {
   supabase, isLive, fetchFees, fetchChildNotes, saveFeeValue, saveFeeValuesBulk,
@@ -12,6 +12,7 @@ import {
   fetchGpdFund, saveGpdPaid, addGpdChild, deleteGpdChild,
   renameChildEverywhere, addFamilyEdit,
   fetchFeeCampaigns, createFeeCampaign, updateFeeCampaign, addCampaignPayment,
+  updateCampaignPayment, deleteCampaignPayment,
   fetchPaymentRequisites, savePaymentRequisites, addCampaignClaim, updateCampaignClaim,
   uploadReceipt, saveAnnouncement,
 } from "@/lib/supabase";
@@ -475,18 +476,40 @@ function CollectionModal({ coll, rows, committee, onClose, onSave, saving }) {
   );
 }
 
-// Окошко отметки платежа семьи по целевому сбору
-function CollPayModal({ coll, fam, child, onClose, onSave, saving }) {
+// Окошко отметки платежа семьи по целевому сбору.
+// Ниже формы — все прошлые платежи семьи (у близнецов — обоих детей):
+// карандаш правит сумму/способ/заметку, корзинка удаляет платёж с подтверждением.
+function CollPayModal({ coll, fam, child, onClose, onSave, onDeletePay, saving }) {
   const [amount, setAmount] = useState(fam.due > 0 ? String(fam.due) : "");
   const [method, setMethod] = useState("transfer");
   const [note, setNote] = useState("");
+  const [editPay, setEditPay] = useState(null); // платёж, который сейчас правим
   useRefreshPause(true);
+  // Платежи всей семьи по этому сбору — свежие сверху
+  const famPays = (coll.payments || [])
+    .filter((p) => fam.children.includes(p.child))
+    .slice()
+    .reverse();
+  const startEdit = (p) => {
+    setEditPay(p);
+    setAmount(String(p.amount));
+    setMethod(p.method || "transfer");
+    setNote(p.note || "");
+  };
+  const stopEdit = () => {
+    setEditPay(null);
+    setAmount(fam.due > 0 ? String(fam.due) : "");
+    setMethod("transfer");
+    setNote("");
+  };
   return (
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && onClose()}>
       <div className="modal">
         <h3>{coll.title}</h3>
         <div className="muted">{child} · {fmt(coll.amount)} BYN с семьи · уже сдано {fmt(fam.paid)} BYN</div>
-        <label className="fee-lb">Сумма, BYN</label>
+        <label className="fee-lb">
+          {editPay ? "Правка платежа от " + dateRu(editPay.paid_at) + " — сумма, BYN" : "Сумма, BYN"}
+        </label>
         <input
           className="fee-inp" type="number" step="0.01" inputMode="decimal"
           value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
@@ -496,14 +519,54 @@ function CollPayModal({ coll, fam, child, onClose, onSave, saving }) {
         <label className="fee-lb">Заметка (необязательно)</label>
         <input className="fee-inp" value={note} onChange={(e) => setNote(e.target.value)} />
         <div className="actions">
-          <button className="btn small white" onClick={onClose}>Отмена</button>
+          <button className="btn small white" onClick={editPay ? stopEdit : onClose} disabled={saving}>
+            {editPay ? "Не править" : "Отмена"}
+          </button>
           <button
             className="btn small teal" disabled={saving}
-            onClick={() => onSave(parseFloat(String(amount).replace(",", ".")) || 0, method, note.trim())}
+            onClick={() => onSave(parseFloat(String(amount).replace(",", ".")) || 0, method, note.trim(), editPay)}
           >
-            Сохранить
+            {saving ? "Сохраняем…" : editPay ? "Сохранить правку" : "Сохранить"}
           </button>
         </div>
+        {famPays.length > 0 && (
+          <>
+            <div className="fee-lb" style={{ marginTop: 14 }}>Уже внесённые платежи семьи</div>
+            {famPays.map((p) => (
+              <div
+                key={p.id}
+                className="row"
+                style={{
+                  gap: 8, alignItems: "center", padding: "6px 0",
+                  borderTop: "1px solid rgba(0,0,0,.07)",
+                  opacity: editPay && editPay.id !== p.id ? 0.5 : 1,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <b>{fmt(p.amount)} BYN</b> · {METHOD_LABEL[p.method] || p.method} · {dateRu(p.paid_at)}
+                  {fam.children.length > 1 ? " · " + p.child : ""}
+                  {p.note ? <div className="muted" style={{ fontSize: 12 }}>{p.note}</div> : null}
+                </div>
+                <button
+                  type="button" className="btn small white" title="Исправить платёж"
+                  disabled={saving} onClick={() => startEdit(p)}
+                >✏️</button>
+                <button
+                  type="button" className="btn small white" title="Удалить платёж"
+                  disabled={saving}
+                  onClick={() => {
+                    if (window.confirm("Точно удалить платёж " + fmt(p.amount) + " BYN (" + (METHOD_LABEL[p.method] || p.method) + ")? Сумма исчезнет из кассы, запись об удалении попадёт в журнал правок.")) {
+                      onDeletePay(p);
+                    }
+                  }}
+                >🗑️</button>
+              </div>
+            ))}
+            <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+              Любая правка и удаление записываются в журнал правок — родители видят «было → стало».
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -671,13 +734,13 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
   };
 
   // Единый вид данных: живые из базы или встроенные из data.js.
-  // Авто-списания (хознужды, подарки, тетради) пересчитываются из раздела «Расходы»,
-  // статья «ГПД» — фикс 25 BYN в фонд ГПД; ручной ноль исключает ребёнка из статьи.
+  // Авто-списания (хознужды, подарки, тетради, ГПД) пересчитываются из раздела «Расходы»;
+  // доля ГПД делится только на ходящих детей, ручной ноль исключает ребёнка из статьи.
   const src = live || fallbackFeeData();
   const { columns, rows: autoRows, auto } = applyAutoFees(src.columns, src.rows, liveGroups);
-  // Норма взноса: 200 BYN у ходящих в ГПД (175 + 25 в фонд), 175 — у не ходящих (0 в колонке «ГПД»)
-  const gpdColId = (columns.find((c) => c.kind === "charge" && /гпд/i.test(c.title || "")) || {}).id;
-  const rowTarget = (r) => (gpdColId && r.values[gpdColId] === 0 ? FEE_TARGET - GPD_FUND_FEE : FEE_TARGET);
+  // Норма взноса: 200 BYN у ходящих в ГПД (175 + 25 в фонд), 175 — у не ходящих
+  // (признак r.gpdIn ставит applyAutoFees — он не зависит от размера доли ГПД)
+  const rowTarget = (r) => (r.gpdIn === false ? FEE_TARGET - GPD_FUND_FEE : FEE_TARGET);
   const rows = autoRows.map((r) => {
     const paid = livePaid(r, columns);
     const target = rowTarget(r);
@@ -836,6 +899,13 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
     if (!isLive || !live) return toast("Добавление статей заработает после настройки базы сборов");
     const title = window.prompt("Название новой статьи сбора (списание из взноса):");
     if (!title || !title.trim()) return;
+    // Статью «Гардероб» завести нельзя: вешалки и стеллажи уже входят в группу
+    // «Хознужды» и списываются общей долей хознужд — отдельная колонка задвоила бы
+    // списание. Объясняем сразу, чтобы статья не «исчезала» молча.
+    if (isWardColumn({ title })) {
+      window.alert("Статья «Гардероб» не нужна: вешалки и стеллажи уже учтены в «Хознуждах» и списываются общей долей хознужд. Отдельная колонка списала бы эти деньги с детей второй раз.");
+      return;
+    }
     const maxSort = Math.max(0, ...live.columns.map((c) => c.sort || 0));
     const { error } = await supabase.from("fee_columns").insert({ title: title.trim(), kind: "charge", sort: maxSort + 1 });
     if (error) return toast("Не получилось добавить: " + error.message);
@@ -1060,23 +1130,56 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
     setSaving(false);
   };
 
-  // Отметка платежа по сбору (только комитет)
-  const saveCollPay = async (amount, method, note) => {
+  // Отметка платежа по сбору (только комитет).
+  // editPay передаётся, когда правим уже внесённый платёж: меняем сумму/способ/заметку,
+  // в журнал пишем «старая → новая», казначея повторно НЕ дёргаем.
+  const saveCollPay = async (amount, method, note, editPay) => {
     if (!(amount > 0)) return toast("Укажите сумму платежа");
     const { coll, child } = collPay;
     setSaving(true);
     try {
-      await addCampaignPayment({ campaign_id: coll.id, child, amount, method, note: note || null });
-      await addFeeEdit({
-        target: "Целевые сборы", child, field: coll.title + " (" + METHOD_LABEL[method] + ")",
-        old_amount: null, new_amount: amount, editor,
-      });
-      notifyTreasurer({ type: "contribution", id: "coll:" + coll.id + ":" + Date.now(), child, amount });
-      toast("Платёж записан — он уже учтён в кассе");
+      if (editPay) {
+        await updateCampaignPayment(editPay.id, { amount, method, note: note || null });
+        await addFeeEdit({
+          target: "Целевые сборы", child: editPay.child,
+          field: coll.title + " — исправлен платёж (" + METHOD_LABEL[method] + ")",
+          old_amount: editPay.amount, new_amount: amount, editor,
+        });
+        toast("Платёж исправлен — касса и остатки пересчитаны");
+      } else {
+        await addCampaignPayment({ campaign_id: coll.id, child, amount, method, note: note || null });
+        await addFeeEdit({
+          target: "Целевые сборы", child, field: coll.title + " (" + METHOD_LABEL[method] + ")",
+          old_amount: null, new_amount: amount, editor,
+        });
+        notifyTreasurer({ type: "contribution", id: "coll:" + coll.id + ":" + Date.now(), child, amount });
+        toast("Платёж записан — он уже учтён в кассе");
+      }
       setCollPay(null);
       reloadColls(); reloadLog();
     } catch (e) {
       toast("Не получилось сохранить: " + (e.message || e));
+    }
+    setSaving(false);
+  };
+
+  // Удаление платежа целиком (подтверждение спрашивает модалка).
+  // В журнал пишется «сумма → удалён», казначею пуш не идёт.
+  const deleteCollPay = async (pay) => {
+    const { coll } = collPay;
+    setSaving(true);
+    try {
+      await deleteCampaignPayment(pay.id);
+      await addFeeEdit({
+        target: "Целевые сборы", child: pay.child,
+        field: coll.title + " — платёж удалён (" + (METHOD_LABEL[pay.method] || pay.method) + ")",
+        old_amount: pay.amount, new_amount: null, editor,
+      });
+      toast("Платёж удалён — касса и остатки пересчитаны");
+      setCollPay(null);
+      reloadColls(); reloadLog();
+    } catch (e) {
+      toast("Не получилось удалить: " + (e.message || e));
     }
     setSaving(false);
   };
@@ -1250,8 +1353,8 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
               + {fmt(GPD_FUND_FEE)} в фонд ГПД), не ходящих — {fmt(FEE_TARGET - GPD_FUND_FEE)} BYN. Списания по статьям «хознужды»,
               «подарки» и «рабочие тетради» считаются автоматически из раздела «Расходы»:
               сумма группы трат делится поровну между детьми (гардероб входит в хознужды).
-              Статья «ГПД» — фиксированные {fmt(GPD_FUND_FEE)} BYN с каждого ходящего: это его взнос в фонд ГПД,
-              а сами расходы ГПД оплачиваются только из фонда. Бейджи и магнитные значки проставляются вручную.
+              Статья «ГПД» — тоже авто: расходы группы «ГПД» делятся поровну между ходящими
+              в ГПД детьми, поэтому доля растёт по мере реальных трат. Бейджи и магнитные значки проставляются вручную.
               Разовые поступления плюсуются в кассу. Каждая правка сумм попадает в историю изменений внизу страницы.
             </div>
           )}
@@ -1563,8 +1666,8 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
                             </button>
                           ) : c.title}
                           {auto[c.id] && (
-                            <span className="chip teal" style={{ marginLeft: 4, padding: "1px 6px", fontSize: 9.5 }} title={auto[c.id].fixed != null
-                              ? "Фиксированный взнос " + fmt(auto[c.id].fixed) + " BYN в фонд ГПД с каждого ходящего ребёнка"
+                            <span className="chip teal" style={{ marginLeft: 4, padding: "1px 6px", fontSize: 9.5 }} title={auto[c.id].gpd
+                              ? "Считается автоматически: расходы группы «ГПД» " + fmt(auto[c.id].sum) + " BYN ÷ " + auto[c.id].count + " ходящих детей"
                               : "Считается автоматически из раздела «Расходы»: " + fmt(auto[c.id].sum) + " BYN ÷ " + auto[c.id].count}>авто</span>
                           )}
                           {committee && (
@@ -1646,7 +1749,7 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
           <div>
             <div className="muted" style={{ marginTop: 8 }}>
               «Осталось сдать» — сколько не хватает до нормы: {fmt(FEE_TARGET)} BYN у ходящих в ГПД, {fmt(FEE_TARGET - GPD_FUND_FEE)} BYN у не ходящих (0 в колонке «ГПД») · «Остаток» — сданное минус списания · отрицательный остаток — нужна доплата
-              · статьи «авто» пересчитываются сами при каждой новой трате в разделе «Расходы»; чтобы исключить ребёнка из такой статьи, поставьте ему 0 — его доля разделится между остальными · «ГПД» — фикс {fmt(GPD_FUND_FEE)} BYN в фонд ГПД
+              · статьи «авто» пересчитываются сами при каждой новой трате в разделе «Расходы»; чтобы исключить ребёнка из такой статьи, поставьте ему 0 — его доля разделится между остальными · «ГПД» — расходы группы «ГПД» поровну между ходящими детьми
               {committee ? " · нажмите на сумму, чтобы исправить её, или на название статьи в шапке, чтобы проставить сумму всем детям сразу (изменения попадают в журнал)" : ""}
             </div>
           </div>
@@ -1853,7 +1956,7 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
       {oneOffOpen && <OneOffModal childNames={rows.map((r) => r.child)} onClose={() => setOneOffOpen(false)} onSave={saveOneOff} saving={saving} />}
       {gpdEdit && <GpdPaidModal row={gpdEdit} onClose={() => setGpdEdit(null)} onSave={saveGpdCell} saving={saving} />}
       {collModal && <CollectionModal coll={collModal.coll} rows={rows} committee={committee} onClose={() => setCollModal(null)} onSave={saveColl} saving={saving} />}
-      {collPay && <CollPayModal coll={collPay.coll} fam={collPay.fam} child={collPay.child} onClose={() => setCollPay(null)} onSave={saveCollPay} saving={saving} />}
+      {collPay && <CollPayModal coll={collPay.coll} fam={collPay.fam} child={collPay.child} onClose={() => setCollPay(null)} onSave={saveCollPay} onDeletePay={deleteCollPay} saving={saving} />}
       {reqsOpen && <RequisitesModal reqs={reqs} onClose={() => setReqsOpen(false)} onSave={saveReqs} saving={saving} />}
       {claimModal && <ClaimModal coll={claimModal.coll} fam={claimModal.fam} child={claimModal.child} reqs={reqs} onClose={() => setClaimModal(null)} onSave={submitClaim} saving={saving} />}
     </section>

@@ -83,8 +83,8 @@ export const FEE_COLUMNS = [
 // Взносы 2026–2027 по таблице казначея (актуально на 21.09.2026).
 // Взнос: 200 BYN у ходящих в ГПД (175 класс + 25 в фонд ГПД), 175 — у не ходящих.
 // Доли удержаний заданы точными дробями (итог статьи ÷ число детей); в приложении
-// списания пересчитываются автоматически (applyAutoFees): хознужды · подарки · тетради —
-// доля группы «Расходов», ГПД — фикс 25 в фонд. Бейдж 3,85 — у четверых, вручную.
+// списания пересчитываются автоматически (applyAutoFees): хознужды · подарки · тетради · ГПД —
+// доля группы «Расходов» (ГПД делится только на ходящих). Бейдж 3,85 — у четверых, вручную.
 const HOZ = 1211.32 / 27;    // хозяйственные нужды
 const GIFTS = 921.85 / 27;   // подарки (сентябрь)
 const WARD = 198.45 / 27;    // гардероб (7,35)
@@ -257,14 +257,15 @@ export function groupTotal(g) {
 // Статья ведомости связывается с группой расходов по названию (переименования не ломают связь,
 // пока в названии остаётся ключевое слово). Сумма группы делится на детей-участников статьи.
 // Правило нуля: вручную поставленный 0 исключает ребёнка из статьи — доля делится на остальных.
-// Статья «ГПД» устроена иначе: это не доля расходов, а фиксированный взнос 25 BYN в фонд ГПД
-// с каждого ходящего ребёнка (fixed) — расходы группы «ГПД» списываются только из фонда ГПД.
+// Статья «ГПД» считается по факту трат: сумма группы расходов «ГПД» делится на ходящих
+// детей (members: "gpd") — купили что-то новое для ГПД, доля у всех пересчиталась сама.
+// Блок «Фонд ГПД» (Собрано = 25 × ходящие) живёт отдельно и на это правило не влияет.
 // У Дорошенко, Сиссауи и Тылецкого стоит 0 — они в ГПД не ходят и сдают 175 вместо 200.
 // Бейдж и магнитные значки правил не имеют — они заполняются только вручную.
 export const AUTO_FEE_RULES = [
   { col: /хоз/i,    group: /хозяйств/i },
   { col: /подар/i,  group: /подар/i    },
-  { col: /гпд/i,    fixed: GPD_FUND_FEE },
+  { col: /гпд/i,    group: /гпд/i, members: "gpd" },
   { col: /тетрад/i, group: /тетрад/i   },
 ];
 
@@ -287,17 +288,17 @@ export function fallbackFeeData() {
 }
 
 // Применяет автопересчёт: убирает колонку «Гардероб», для статей с группой расходов
-// подменяет суммы на «итог группы ÷ участники» (нули остаются нулями), для статей
-// с фиксированным взносом (ГПД) ставит фикс каждому участнику.
-// Возвращает { columns, rows, auto }, где auto[columnId] = { sum, count, share, fixed? }.
+// подменяет суммы на «итог группы ÷ участники» (нули остаются нулями). Для ГПД
+// (members: "gpd") участники — ходящие в ГПД дети: расходы группы «ГПД» делятся на них.
+// Возвращает { columns, rows, auto }, где auto[columnId] = { sum, count, share, gpd? }.
 export function applyAutoFees(columns0, rows0, expGroups) {
   const columns = columns0.filter((c) => !isWardColumn(c));
   const groups = expGroups || EXPENSE_GROUPS;
   const auto = {};
-  // Участник фикс-статьи (ГПД): явный 0 — не ходит; пустая ячейка (в базе значение
+  // Участник статьи ГПД: явный 0 — не ходит; пустая ячейка (в базе значение
   // могло не сохраняться) — смотрим встроенный список ходящих, чтобы не ходящим
-  // не начислялись 25 BYN и норма взноса у них была 175
-  const inFixed = (r, cid) => {
+  // не начислялась доля ГПД и норма взноса у них была 175
+  const inGpd = (r, cid) => {
     const v = r.values[cid];
     if (v === 0) return false;
     if (v == null) return GPD_CHILDREN.includes(r.child);
@@ -307,22 +308,23 @@ export function applyAutoFees(columns0, rows0, expGroups) {
     if (c.kind !== "charge") return;
     const rule = AUTO_FEE_RULES.find((a) => a.col.test(c.title || ""));
     if (!rule) return;
-    if (rule.fixed != null) {
-      const count = rows0.filter((r) => inFixed(r, c.id)).length;
-      auto[c.id] = { sum: rule.fixed * count, count, share: rule.fixed, fixed: rule.fixed };
-      return;
-    }
-    const count = rows0.filter((r) => r.values[c.id] !== 0).length;
+    const gpd = rule.members === "gpd";
+    const count = gpd
+      ? rows0.filter((r) => inGpd(r, c.id)).length
+      : rows0.filter((r) => r.values[c.id] !== 0).length;
     const sum = groups.filter((g) => rule.group.test(g.title || "")).reduce((s, g) => s + groupTotal(g), 0);
-    auto[c.id] = { sum, count, share: count ? sum / count : 0 };
+    auto[c.id] = { sum, count, share: count ? sum / count : 0, ...(gpd ? { gpd: true } : {}) };
   });
   const rows = rows0.map((r) => {
     const values = { ...r.values };
+    let gpdIn; // ходит ли ребёнок в ГПД — для нормы взноса 200/175 (не зависит от размера доли)
     Object.keys(auto).forEach((cid) => {
-      if (auto[cid].fixed != null) values[cid] = inFixed(r, cid) ? auto[cid].share : 0;
-      else if (values[cid] !== 0) values[cid] = auto[cid].share;
+      if (auto[cid].gpd) {
+        gpdIn = inGpd(r, cid);
+        values[cid] = gpdIn ? auto[cid].share : 0;
+      } else if (values[cid] !== 0) values[cid] = auto[cid].share;
     });
-    return { ...r, values };
+    return gpdIn === undefined ? { ...r, values } : { ...r, values, gpdIn };
   });
   return { columns, rows, auto };
 }
