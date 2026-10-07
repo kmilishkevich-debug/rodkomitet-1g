@@ -2177,14 +2177,21 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
    панель быстрых действий справа (≈45%) на подложке-карте.
    Высоты колонок выравниваются (align-items:stretch). */
 @media(min-width:900px){
-  .home-hero{display:grid;grid-template-columns:55fr 45fr;gap:20px;align-items:stretch;margin:148px 0 20px}
-  /* Приветствие внутри узкой колонки — текст сверху, сцена с маскотом ниже (как на планшете) */
-  .home-hero .welcome.compact{margin:0;flex-direction:column;align-items:stretch;gap:12px;height:100%}
-  .home-hero .welcome.compact .welcome-visual{width:auto;flex:1;min-height:330px;margin-top:112px}
-  .home-hero .cm-wrap{right:48px}
+  .home-hero{display:grid;grid-template-columns:55fr 45fr;gap:18px;align-items:stretch;margin:10px 0 20px}
+  /* Приветствие внутри узкой колонки — текст сверху, компактная сцена с маскотом ниже.
+     Облачка помещаются внутри карточки, поэтому большой отступ сверху не нужен. */
+  .home-hero .welcome.compact{margin:0;flex-direction:column;align-items:stretch;gap:10px;height:100%;
+    padding:20px 24px;min-height:0}
+  .home-hero .welcome.compact .welcome-visual{width:auto;flex:1;min-height:290px;margin-top:20px}
+  /* Сцена и облачка — уменьшенные, как на телефоне */
+  .home-hero .cm-wrap{right:24px;bottom:-10px;width:225px;height:250px}
+  .home-hero .cm-bubble.cm-main{top:-92px;right:calc(100% - 66px);width:230px;min-height:0;
+    font-size:15.5px;padding:63px 28px 78px 34px}
+  .home-hero .cm-top-bubble{top:-110px;right:2px;width:175px;height:auto;font-size:16.5px;
+    padding:36px 24px 64px 23px}
   /* Панель-карта с компактными карточками в 3 колонки */
   .qa-panel{background:var(--card);border:1px solid var(--soft-line);border-radius:26px;
-    padding:18px;box-shadow:0 10px 30px rgba(23,23,23,.05);display:flex;align-items:center}
+    padding:16px;box-shadow:0 10px 30px rgba(23,23,23,.05);display:flex;align-items:center}
   .qa-panel .qa-grid{grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:0;width:100%}
   .qa-panel .qa-item{min-height:96px;padding:12px 6px 10px;border-radius:18px;gap:6px}
   .qa-panel .qa-ico{width:36px;height:36px}
