@@ -58,6 +58,117 @@ function plural(n, one, few, many) {
   return many;
 }
 
+// ===== Фильтры списка детей (ведомость и целевые сборы) =====
+const FILTER_EMPTY = { status: "all", gpd: "all", method: "all", q: "" };
+
+// Активен ли хоть один фильтр
+const filterOn = (f) => f.status !== "all" || f.gpd !== "all" || f.method !== "all" || !!f.q.trim();
+
+// Подходит ли строка под выбранные фильтры: статус оплаты, ГПД, способ, поиск по имени
+function matchFilter(f, info) {
+  if (f.status !== "all" && info.status !== f.status) return false;
+  if (f.gpd === "gpd" && !info.gpd) return false;
+  if (f.gpd === "nogpd" && info.gpd) return false;
+  if (f.method !== "all" && !info.methods.has(f.method)) return false;
+  const q = f.q.trim().toLowerCase();
+  if (q && !info.name.toLowerCase().includes(q)) return false;
+  return true;
+}
+
+// Короткое описание фильтра для шапки выгрузки: «не сдали, ГПД, наличные»
+function filterLabel(f) {
+  const parts = [];
+  if (f.status === "none") parts.push("не сдали");
+  if (f.status === "partial") parts.push("сдали частично");
+  if (f.status === "done") parts.push("сдали полностью");
+  if (f.gpd === "gpd") parts.push("ГПД");
+  if (f.gpd === "nogpd") parts.push("без ГПД");
+  if (f.method === "cash") parts.push("наличные");
+  if (f.method === "transfer") parts.push("перевод");
+  if (f.q.trim()) parts.push("поиск «" + f.q.trim() + "»");
+  return parts.join(", ");
+}
+
+// Строка поиска + чипы-фильтры со счётчиками детей.
+// Повторный клик по активному чипу снимает фильтр группы.
+function FilterBar({ filter, setFilter, countWith }) {
+  const chip = (group, val, label) => {
+    const act = filter[group] === val;
+    return (
+      <button
+        key={group + ":" + val}
+        type="button"
+        className={"fil-chip" + (act ? " act" : "")}
+        aria-pressed={act}
+        onClick={() => setFilter({ ...filter, [group]: act && val !== "all" ? "all" : val })}
+      >
+        {label} · {countWith({ ...filter, [group]: val })}
+      </button>
+    );
+  };
+  return (
+    <div className="fee-filters">
+      <input
+        className="fil-search"
+        type="search"
+        placeholder="Поиск по имени…"
+        aria-label="Поиск ребёнка по имени"
+        value={filter.q}
+        onChange={(e) => setFilter({ ...filter, q: e.target.value })}
+      />
+      <div className="fil-row">
+        {chip("status", "all", "Все")}
+        {chip("status", "none", "Не сдали")}
+        {chip("status", "partial", "Частично")}
+        {chip("status", "done", "Сдали")}
+      </div>
+      <div className="fil-row">
+        {chip("gpd", "gpd", "ГПД")}
+        {chip("gpd", "nogpd", "Без ГПД")}
+        {chip("method", "cash", "Наличные")}
+        {chip("method", "transfer", "Перевод")}
+        {filterOn(filter) && (
+          <button type="button" className="fil-chip reset" onClick={() => setFilter({ ...FILTER_EMPTY })}>
+            ✕ Сбросить
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Кнопки выгрузки отфильтрованного списка: Excel и два текста для мессенджера
+function ExportBar({ count, onXlsx, onTextSums, onTextNames }) {
+  return (
+    <div className="fil-export">
+      <span className="fil-export-lb">Выгрузить ({count}):</span>
+      <button type="button" className="btn small white" onClick={onXlsx}>Excel</button>
+      <button type="button" className="btn small white" onClick={onTextSums}>Текст с суммами</button>
+      <button type="button" className="btn small white" onClick={onTextNames}>Только имена</button>
+    </div>
+  );
+}
+
+// Генерация Excel-файла: один лист, шапка с датой, аккуратные ширины колонок.
+// Библиотека xlsx подгружается только при нажатии кнопки — вкладка не тяжелеет.
+async function makeXlsx({ title, sub, header, data, totalsRow, widths, filename, sheet }) {
+  const XLSX = await import("xlsx");
+  const aoa = [[title]];
+  if (sub) aoa.push(["Фильтр: " + sub]);
+  aoa.push([]);
+  aoa.push(header);
+  data.forEach((row) => aoa.push(row));
+  if (totalsRow) {
+    aoa.push([]);
+    aoa.push(totalsRow);
+  }
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = widths.map((wch) => ({ wch }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheet);
+  XLSX.writeFile(wb, filename);
+}
+
 // Переключатель «наличные / перевод»
 function MethodPick({ value, onChange }) {
   return (
@@ -690,6 +801,9 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
   const [reqsOpen, setReqsOpen] = useState(false); // модалка правки реквизитов
   const [claimModal, setClaimModal] = useState(null); // { coll, fam, child } — заявка «я перевёл(а)»
 
+  const [feeFilter, setFeeFilter] = useState({ ...FILTER_EMPTY }); // фильтры ведомости взносов
+  const [collFilters, setCollFilters] = useState({}); // фильтры списков «кто сдал» по сборам (coll.id → фильтр)
+
   const editor = author || "Комитет";
   const canManage = committee || teacher; // сборы создают и правят комитет И учитель
 
@@ -1025,6 +1139,167 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
   const visibleColls = Array.isArray(colls) && teacher && !committee
     ? colls.filter((c) => c.status !== "closed" && (c.teacher_visible || (c.created_by && c.created_by === author)))
     : colls;
+
+  // ===== Фильтры списков и выгрузка (ведомость + каждый сбор) =====
+  // Статус, ГПД, способы оплаты и имя строки ведомости — для фильтров и выгрузки
+  const feeRowInfo = (r) => {
+    const methods = new Set();
+    columns.forEach((c) => {
+      if (c.kind !== "paid") return;
+      if (!((r.values[c.id] || 0) > 0)) return;
+      const m = r.meta && r.meta[c.id] && r.meta[c.id].method;
+      methods.add(m === "cash" ? "cash" : "transfer");
+    });
+    return {
+      status: r.due <= 0.005 ? "done" : r.paid > 0.005 ? "partial" : "none",
+      gpd: isGpd(r.child),
+      methods,
+      name: r.child,
+    };
+  };
+  const filteredRows = displayRows.filter((r) => matchFilter(feeFilter, feeRowInfo(r)));
+  const feeCountWith = (f) => displayRows.filter((r) => matchFilter(f, feeRowInfo(r))).length;
+  const feeFilterOn = filterOn(feeFilter);
+  // Итоги по видимым (отфильтрованным) строкам — для строки «Итого» и выгрузок
+  const shownTotals = {};
+  columns.forEach((c) => {
+    shownTotals[c.id] = round2(filteredRows.reduce((s, r) => s + (r.values[c.id] || 0), 0));
+  });
+  const shownPaid = round2(filteredRows.reduce((s, r) => s + r.paid, 0));
+  const shownRest = round2(filteredRows.reduce((s, r) => s + r.rest, 0));
+  const shownDue = round2(filteredRows.reduce((s, r) => s + r.due, 0));
+
+  // Фильтр конкретного сбора и признаки строки «кто сдал» под него
+  const collFilter = (id) => collFilters[id] || FILTER_EMPTY;
+  const setCollFilter = (id, f) => setCollFilters({ ...collFilters, [id]: f });
+  const collRowInfo = (coll, cc, r) => {
+    const fam = cc.fams.get(famOf(r.n));
+    const part = cc.isPart(r.n) || !!(fam && fam.part);
+    const pays = fam && part ? (coll.payments || []).filter((p) => fam.children.includes(p.child)) : [];
+    return {
+      status: !part ? "out" : fam.due <= 0.005 ? "done" : fam.paid > 0.005 ? "partial" : "none",
+      gpd: isGpd(r.child),
+      methods: new Set(pays.map((p) => (p.method === "cash" ? "cash" : "transfer"))),
+      name: r.child,
+      fam, part, pays,
+    };
+  };
+
+  // Копирование текста списка в буфер (для вайбер-чата)
+  const copyText = async (text, okMsg) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(okMsg);
+    } catch {
+      toast("Не получилось скопировать — попробуйте ещё раз");
+    }
+  };
+  // Шапка выгрузки: название + дата + описание фильтра (если задан)
+  const listHeader = (name, f) => {
+    const sub = filterLabel(f);
+    return name + " — " + dateRu(new Date()) + (sub ? "\nФильтр: " + sub : "");
+  };
+  const kidsWord = (n) => n + " " + plural(n, "ребёнок", "ребёнка", "детей");
+
+  // Ведомость → текст «только имена»
+  const copyFeeNames = () => {
+    const lines = filteredRows.map((r, i) => i + 1 + ". " + r.child);
+    copyText(
+      listHeader("Взносы 1 «Г»", feeFilter) + "\n\n" + lines.join("\n") + "\n\nВсего: " + kidsWord(filteredRows.length),
+      "Список скопирован: " + kidsWord(filteredRows.length)
+    );
+  };
+  // Ведомость → текст с суммами
+  const copyFeeSums = () => {
+    const lines = filteredRows.map((r, i) => {
+      const tail = r.due > 0.005
+        ? "сдано " + fmt(r.paid) + ", осталось " + fmt(r.due) + " (из " + fmt(r.target) + ")"
+        : "сдано полностью (" + fmt(r.target) + ")";
+      return i + 1 + ". " + r.child + " — " + tail;
+    });
+    copyText(
+      listHeader("Взносы 1 «Г»", feeFilter) + "\n\n" + lines.join("\n") +
+        "\n\nВсего: " + kidsWord(filteredRows.length) + " · сдано " + fmt(shownPaid) + " BYN · осталось " + fmt(shownDue) + " BYN",
+      "Список с суммами скопирован: " + kidsWord(filteredRows.length)
+    );
+  };
+  // Ведомость → Excel
+  const exportFeeXlsx = async () => {
+    try {
+      await makeXlsx({
+        title: "Взносы 1 «Г» — " + dateRu(new Date()),
+        sub: filterLabel(feeFilter),
+        header: ["№", "Ребёнок", "ГПД", "Семья", "Сдано, BYN", "Осталось, BYN", "Норма, BYN", "Способ оплаты", "Примечания"],
+        data: filteredRows.map((r) => {
+          const info = feeRowInfo(r);
+          const methods = [...info.methods].map((m) => METHOD_LABEL[m]).join(", ");
+          const notes = columns
+            .filter((c) => r.meta && r.meta[c.id] && r.meta[c.id].note)
+            .map((c) => c.title + ": " + r.meta[c.id].note)
+            .join("; ");
+          return [r.n, r.child, info.gpd ? "да" : "нет", "№" + famOf(r.n), r.paid, r.due, r.target, methods || "—", notes];
+        }),
+        totalsRow: ["", "Итого: " + kidsWord(filteredRows.length), "", "", shownPaid, shownDue],
+        widths: [5, 28, 6, 8, 12, 14, 12, 18, 40],
+        filename: "vznosy-1g-" + new Date().toISOString().slice(0, 10) + ".xlsx",
+        sheet: "Взносы",
+      });
+      toast("Файл Excel сохранён: " + kidsWord(filteredRows.length));
+    } catch (e) {
+      toast("Не получилось сделать Excel: " + (e.message || e));
+    }
+  };
+
+  // Сбор → текст «только имена» (list — уже отфильтрованные строки с признаками)
+  const copyCollNames = (coll, list) => {
+    const lines = list.map(({ r }, i) => i + 1 + ". " + r.child);
+    copyText(
+      listHeader("«" + coll.title + "»", collFilter(coll.id)) + "\n\n" + lines.join("\n") + "\n\nВсего: " + kidsWord(list.length),
+      "Список скопирован: " + kidsWord(list.length)
+    );
+  };
+  // Сбор → текст с суммами
+  const copyCollSums = (coll, list) => {
+    const lines = list.map(({ r, info }, i) => {
+      let tail;
+      if (!info.part) tail = "не участвует";
+      else if (info.fam.due <= 0.005) tail = "сдано (" + fmt(info.fam.paid) + ")";
+      else if (info.fam.paid > 0.005) tail = "сдано " + fmt(info.fam.paid) + ", осталось " + fmt(info.fam.due);
+      else tail = "не сдано (" + fmt(info.fam.due) + ")";
+      return i + 1 + ". " + r.child + " — " + tail;
+    });
+    copyText(
+      listHeader("«" + coll.title + "»", collFilter(coll.id)) + "\n\n" + lines.join("\n") + "\n\nВсего: " + kidsWord(list.length),
+      "Список с суммами скопирован: " + kidsWord(list.length)
+    );
+  };
+  // Сбор → Excel (с датами платежей и статусом)
+  const exportCollXlsx = async (coll, list) => {
+    try {
+      await makeXlsx({
+        title: "«" + coll.title + "» — " + dateRu(new Date()),
+        sub: filterLabel(collFilter(coll.id)),
+        header: ["№", "Ребёнок", "ГПД", "Семья", "Сдано, BYN", "Осталось, BYN", "С семьи, BYN", "Способ оплаты", "Даты платежей", "Статус", "Примечания"],
+        data: list.map(({ r, info }) => {
+          const st = !info.part ? "не участвует" : info.fam.due <= 0.005 ? "сдано" : info.fam.paid > 0.005 ? "частично" : "не сдано";
+          return [
+            r.n, r.child, info.gpd ? "да" : "нет", "№" + famOf(r.n),
+            info.part ? info.fam.paid : "", info.part ? info.fam.due : "", info.part ? coll.amount : "",
+            [...info.methods].map((m) => METHOD_LABEL[m]).join(", ") || "—",
+            info.pays.map((p) => dateRu(p.paid_at)).join(", "),
+            st,
+            info.pays.filter((p) => p.note).map((p) => p.note).join("; "),
+          ];
+        }),
+        widths: [5, 28, 6, 8, 12, 14, 13, 16, 22, 14, 30],
+        filename: "sbor-1g-" + new Date().toISOString().slice(0, 10) + ".xlsx",
+        sheet: "Сбор",
+      });
+      toast("Файл Excel сохранён: " + kidsWord(list.length));
+    } catch (e) {
+      toast("Не получилось сделать Excel: " + (e.message || e));
+    }
+  };
 
   const openCollCreate = () => {
     if (colls === null) return toast("Целевые сборы заработают после запуска файла fee-collections-setup.sql в Supabase");
@@ -1559,53 +1834,76 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
                 <span className={"fin-chevron" + (open ? " open" : "")} aria-hidden="true"><Ic id="i-arrow-right" /></span>
                 {open ? "Скрыть список" : "Кто сдал"}
               </button>
-              {open && (
-                <div className="table-scroll" style={{ marginTop: 6 }}>
-                  <table className="fee-table">
-                    <thead>
-                      <tr><th>№</th><th>Ребёнок</th><th>Статус</th></tr>
-                    </thead>
-                    <tbody>
-                      {displayRows.map((r) => {
-                        const fam = cc.fams.get(famOf(r.n));
-                        const mine = myNs.includes(r.n);
-                        let cell;
-                        if (!cc.isPart(r.n) && !(fam && fam.part)) {
-                          cell = <span className="muted">— не участвует</span>;
-                        } else if (fam.due <= 0.005) {
-                          cell = (
-                            <span className="chip green">
-                              сдано{fam.paid > coll.amount + 0.005 ? " · излишек " + fmt(round2(fam.paid - coll.amount)) : ""}
-                            </span>
-                          );
-                        } else if (fam.paid > 0) {
-                          cell = <span style={{ color: "#c0392b" }}>{fmt(fam.paid)} · осталось {fmt(fam.due)}</span>;
-                        } else {
-                          cell = <span style={{ color: "#c0392b" }}>не сдано · {fmt(fam.due)}</span>;
-                        }
-                        const clickable = committee && fam && fam.part;
-                        return (
-                          <tr key={r.n} className={mine ? "fee-my-row" : undefined}>
-                            <td>{r.n}</td>
-                            <td>{r.child}{mine && <> <span className="chip teal">ваш ребёнок</span></>}</td>
-                            <td>
-                              {clickable ? (
-                                <button className="cell-btn" onClick={() => openCollPay(coll, fam, r.child)} title="Отметить платёж семьи">
-                                  {cell}
-                                </button>
-                              ) : cell}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  <div className="muted" style={{ marginTop: 6 }}>
-                    Сумма — с семьи: у близнецов платёж отмечается один раз, на любого из детей.
-                    {committee ? " Нажмите на статус, чтобы отметить платёж." : ""}
+              {open && (() => {
+                // Свои фильтры у каждого сбора: строки с признаками → отфильтрованный список
+                const cf = collFilter(coll.id);
+                const infos = displayRows.map((r) => ({ r, info: collRowInfo(coll, cc, r) }));
+                const list = infos.filter(({ info }) => matchFilter(cf, info));
+                const countWith = (f) => infos.filter(({ info }) => matchFilter(f, info)).length;
+                return (
+                  <div style={{ marginTop: 6 }}>
+                    <FilterBar filter={cf} setFilter={(f) => setCollFilter(coll.id, f)} countWith={countWith} />
+                    <ExportBar
+                      count={list.length}
+                      onXlsx={() => exportCollXlsx(coll, list)}
+                      onTextSums={() => copyCollSums(coll, list)}
+                      onTextNames={() => copyCollNames(coll, list)}
+                    />
+                    <div className="table-scroll" style={{ marginTop: 6 }}>
+                      <table className="fee-table">
+                        <thead>
+                          <tr><th>№</th><th>Ребёнок</th><th>Статус</th></tr>
+                        </thead>
+                        <tbody>
+                          {list.map(({ r, info }) => {
+                            const fam = info.fam;
+                            const mine = myNs.includes(r.n);
+                            let cell;
+                            if (!info.part) {
+                              cell = <span className="muted">— не участвует</span>;
+                            } else if (fam.due <= 0.005) {
+                              cell = (
+                                <span className="chip green">
+                                  сдано{fam.paid > coll.amount + 0.005 ? " · излишек " + fmt(round2(fam.paid - coll.amount)) : ""}
+                                </span>
+                              );
+                            } else if (fam.paid > 0) {
+                              cell = <span style={{ color: "#c0392b" }}>{fmt(fam.paid)} · осталось {fmt(fam.due)}</span>;
+                            } else {
+                              cell = <span style={{ color: "#c0392b" }}>не сдано · {fmt(fam.due)}</span>;
+                            }
+                            const clickable = committee && fam && fam.part;
+                            return (
+                              <tr key={r.n} className={mine ? "fee-my-row" : undefined}>
+                                <td>{r.n}</td>
+                                <td>{r.child}{mine && <> <span className="chip teal">ваш ребёнок</span></>}</td>
+                                <td>
+                                  {clickable ? (
+                                    <button className="cell-btn" onClick={() => openCollPay(coll, fam, r.child)} title="Отметить платёж семьи">
+                                      {cell}
+                                    </button>
+                                  ) : cell}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {filterOn(cf) && list.length === 0 && (
+                            <tr>
+                              <td colSpan={3} className="muted" style={{ textAlign: "center", padding: 14 }}>
+                                Никто не подходит под выбранные фильтры
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                      <div className="muted" style={{ marginTop: 6 }}>
+                        Сумма — с семьи: у близнецов платёж отмечается один раз, на любого из детей.
+                        {committee ? " Нажмите на статус, чтобы отметить платёж." : ""}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           );
         })}
@@ -1633,6 +1931,14 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
               <button className="btn small white" onClick={addColumn}><Ic id="i-plus" />Новая статья</button>
             )}
           </div>
+          {/* Фильтры списка (чипы со счётчиками + поиск) и выгрузка отфильтрованных детей */}
+          <FilterBar filter={feeFilter} setFilter={setFeeFilter} countWith={feeCountWith} />
+          <ExportBar
+            count={filteredRows.length}
+            onXlsx={exportFeeXlsx}
+            onTextSums={copyFeeSums}
+            onTextNames={copyFeeNames}
+          />
           <div className="kids-scroll" style={{ marginTop: 14 }}>
             <table>
               <tbody>
@@ -1682,7 +1988,7 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
                   <th>Остаток</th>
                   <th>Осталось сдать</th>
                 </tr>
-                {displayRows.map((r) => (
+                {filteredRows.map((r) => (
                   <tr key={r.id} className={myNs.includes(r.n) ? "fee-my-row" : undefined}>
                     <td>{r.n}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
@@ -1735,13 +2041,20 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
                     </td>
                   </tr>
                 ))}
+                {feeFilterOn && filteredRows.length === 0 && (
+                  <tr>
+                    <td colSpan={columns.length + 4} className="muted" style={{ textAlign: "center", padding: 14 }}>
+                      Никто не подходит под выбранные фильтры
+                    </td>
+                  </tr>
+                )}
                 <tr>
-                  <td colSpan={2} style={{ textAlign: "right" }}><b>Итого:</b></td>
+                  <td colSpan={2} style={{ textAlign: "right" }}><b>Итого{feeFilterOn ? " (фильтр)" : ""}:</b></td>
                   {columns.map((c) => (
-                    <td key={c.id}><b>{totals[c.id] ? `${c.kind === "paid" ? "" : "−"}${fmt(totals[c.id])}` : "—"}</b></td>
+                    <td key={c.id}><b>{shownTotals[c.id] ? `${c.kind === "paid" ? "" : "−"}${fmt(shownTotals[c.id])}` : "—"}</b></td>
                   ))}
-                  <td><b>{fmt(totalRest)}</b></td>
-                  <td><b>{totalDue > 0.005 ? fmt(totalDue) : "—"}</b></td>
+                  <td><b>{fmt(shownRest)}</b></td>
+                  <td><b>{shownDue > 0.005 ? fmt(shownDue) : "—"}</b></td>
                 </tr>
               </tbody>
             </table>

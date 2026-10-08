@@ -2214,3 +2214,15 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
   .qa-item,.qa-urgent,.qa-item:hover,.qa-item:active,.qa-urgent:active{transition:none;transform:none}
   .qa-overlay,.qa-modal{animation:none}
 }
+
+/* Фильтры и выгрузка (вкладка «Взносы») */
+.fee-filters{margin-top:10px}
+.fil-search{width:100%;padding:10px 15px;border:none;border-radius:999px;background:var(--input);font-size:14px;font-weight:600;color:var(--ink);font-family:'Onest'}
+.fil-search:focus{outline:2px solid var(--blue-soft)}
+.fil-search::placeholder{color:var(--muted);font-weight:500}
+.fil-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.fil-chip{border:none;cursor:pointer;font-family:'Onest';font-weight:700;font-size:12px;padding:6px 12px;border-radius:999px;background:var(--input);color:var(--ink)}
+.fil-chip.act{background:var(--teal);color:#fff}
+.fil-chip.reset{background:var(--red-soft);color:var(--ink)}
+.fil-export{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.fil-export-lb{font-size:12px;font-weight:700;color:var(--muted)}
