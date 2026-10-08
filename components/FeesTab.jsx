@@ -59,50 +59,60 @@ function plural(n, one, few, many) {
 }
 
 // ===== Фильтры списка детей (ведомость и целевые сборы) =====
-const FILTER_EMPTY = { status: "all", gpd: "all", method: "all", q: "" };
+// В каждой группе можно выбрать несколько значений: пустой массив = «все».
+// Внутри группы значения объединяются по ИЛИ, между группами — по И.
+const FILTER_EMPTY = { status: [], gpd: [], method: [], q: "" };
 
 // Активен ли хоть один фильтр
-const filterOn = (f) => f.status !== "all" || f.gpd !== "all" || f.method !== "all" || !!f.q.trim();
+const filterOn = (f) => f.status.length > 0 || f.gpd.length > 0 || f.method.length > 0 || !!f.q.trim();
 
 // Подходит ли строка под выбранные фильтры: статус оплаты, ГПД, способ, поиск по имени
 function matchFilter(f, info) {
-  if (f.status !== "all" && info.status !== f.status) return false;
-  if (f.gpd === "gpd" && !info.gpd) return false;
-  if (f.gpd === "nogpd" && info.gpd) return false;
-  if (f.method !== "all" && !info.methods.has(f.method)) return false;
+  if (f.status.length && !f.status.includes(info.status)) return false;
+  if (f.gpd.length && !f.gpd.includes(info.gpd ? "gpd" : "nogpd")) return false;
+  if (f.method.length && !f.method.some((m) => info.methods.has(m))) return false;
   const q = f.q.trim().toLowerCase();
   if (q && !info.name.toLowerCase().includes(q)) return false;
   return true;
 }
 
-// Короткое описание фильтра для шапки выгрузки: «не сдали, ГПД, наличные»
+const FILTER_WORDS = {
+  status: { none: "не сдали", partial: "сдали частично", done: "сдали полностью" },
+  gpd: { gpd: "ГПД", nogpd: "без ГПД" },
+  method: { cash: "наличные", transfer: "перевод" },
+};
+
+// Короткое описание фильтра для шапки выгрузки: «не сдали или сдали частично, ГПД»
 function filterLabel(f) {
   const parts = [];
-  if (f.status === "none") parts.push("не сдали");
-  if (f.status === "partial") parts.push("сдали частично");
-  if (f.status === "done") parts.push("сдали полностью");
-  if (f.gpd === "gpd") parts.push("ГПД");
-  if (f.gpd === "nogpd") parts.push("без ГПД");
-  if (f.method === "cash") parts.push("наличные");
-  if (f.method === "transfer") parts.push("перевод");
+  ["status", "gpd", "method"].forEach((g) => {
+    if (f[g].length) parts.push(f[g].map((v) => FILTER_WORDS[g][v]).join(" или "));
+  });
   if (f.q.trim()) parts.push("поиск «" + f.q.trim() + "»");
   return parts.join(", ");
 }
 
 // Строка поиска + чипы-фильтры со счётчиками детей.
-// Повторный клик по активному чипу снимает фильтр группы.
+// Клик добавляет признак к выбранным, повторный клик снимает только его.
 function FilterBar({ filter, setFilter, countWith }) {
   const chip = (group, val, label) => {
-    const act = filter[group] === val;
+    const all = val === "all";
+    const act = all ? filter[group].length === 0 : filter[group].includes(val);
+    const next = all
+      ? []
+      : act
+        ? filter[group].filter((v) => v !== val)
+        : [...filter[group], val];
+    const counted = all ? [] : act ? filter[group] : [...filter[group], val];
     return (
       <button
         key={group + ":" + val}
         type="button"
         className={"fil-chip" + (act ? " act" : "")}
         aria-pressed={act}
-        onClick={() => setFilter({ ...filter, [group]: act && val !== "all" ? "all" : val })}
+        onClick={() => setFilter({ ...filter, [group]: next })}
       >
-        {label} · {countWith({ ...filter, [group]: val })}
+        {label} · {countWith({ ...filter, [group]: counted })}
       </button>
     );
   };
