@@ -2308,6 +2308,18 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .ph-view-meta{font-size:12.5px;margin-bottom:6px}
 .ph-view-actions{display:flex;align-items:center;gap:8px}
 
+/* Внешние ссылки: карточка в ленте, миниатюра в альбоме, просмотр */
+.ph-linkcard{display:block;text-decoration:none;position:relative}
+.ph-link-fill{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:4/3;font-size:34px;background:linear-gradient(135deg,#eef1fb,#dfe6f8);color:var(--blue)}
+.ph-link-label{position:absolute;left:0;right:0;bottom:0;padding:6px 8px;font-size:11.5px;font-weight:700;color:#fff;background:linear-gradient(transparent,rgba(10,10,14,.72));display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ph-link-host{font-weight:500;opacity:.85}
+.ph-thumb-link{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:22px;background:linear-gradient(135deg,#eef1fb,#dfe6f8)}
+.ph-view-link{display:flex;flex-direction:column;align-items:center;gap:10px;text-decoration:none;color:#fff;max-width:92%;text-align:center}
+.ph-view-link img{max-width:100%;max-height:50vh;border-radius:14px;object-fit:contain}
+.ph-view-link-name{font-weight:800;font-size:16px}
+.ph-view-link-host{background:rgba(255,255,255,.16);border-radius:12px;padding:10px 16px;font-size:14px;font-weight:700}
+.ph-view-link-host:active{background:rgba(255,255,255,.3)}
+
 /* Мобильные размеры */
 @media (max-width: 430px){
   .ph-hero-mascot img{width:72px;height:72px}

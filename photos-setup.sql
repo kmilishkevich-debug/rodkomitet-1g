@@ -6,7 +6,8 @@
 --      («Экскурсия в музей», «1 сентября»...): название, дата,
 --      описание. По событиям работают фильтры в ленте.
 --   2) Создаёт таблицу photo_items — сами фото и видео:
---      полная версия + миниатюра для быстрой ленты.
+--      полная версия + миниатюра для быстрой ленты. Там же живут
+--      и внешние ссылки (type = 'link') — например, на ролик в YouTube.
 --   3) Создаёт таблицу photo_likes — сердечки под КАЖДЫМ фото.
 --   4) Создаёт таблицу photo_comments — комментарии к КАЖДОМУ
 --      фото, с возможностью исправить свой текст (отметка
@@ -64,10 +65,15 @@ create policy "ph events delete" on photo_events
 -- ============================================================
 -- ШАГ 2. ФОТО И ВИДЕО
 -- ============================================================
--- Одна строка — один файл. path — ключ файла в хранилище,
--- он нужен, чтобы при удалении строки стереть и сам файл.
+-- Одна строка — один файл ИЛИ одна внешняя ссылка.
+-- path — ключ файла в хранилище, он нужен, чтобы при удалении строки
+-- стереть и сам файл (у ссылок path — пустая строка: файла нет).
 -- thumb_url / thumb_path — лёгкая миниатюра для ленты и сеток;
--- у видео миниатюры нет (показываем значок ▶).
+-- у видео миниатюры нет (показываем значок ▶), у ссылок на YouTube
+-- вместо неё обложка ролика.
+-- type: 'image' — фото, 'video' — видео, 'link' — внешняя ссылка
+-- (например, на ролик в YouTube или альбом в облаке); для ссылок
+-- name — необязательная подпись.
 
 create table if not exists photo_items (
   id         uuid primary key default gen_random_uuid(),
@@ -76,8 +82,8 @@ create table if not exists photo_items (
   path       text not null,            -- ключ полной версии в хранилище
   thumb_url  text,                     -- ссылка на миниатюру (для ленты)
   thumb_path text,                     -- ключ миниатюры в хранилище
-  type       text not null default 'image' check (type in ('image', 'video')),
-  name       text,                     -- настоящее имя файла
+  type       text not null default 'image' check (type in ('image', 'video', 'link')),
+  name       text,                     -- настоящее имя файла / подпись ссылки
   size       bigint,
   author     text,                     -- кто загрузил
   family_n   int,                      -- номер семьи загрузившего; null = учитель/комитет
@@ -88,6 +94,12 @@ create table if not exists photo_items (
 alter table photo_items add column if not exists thumb_url  text;
 alter table photo_items add column if not exists thumb_path text;
 alter table photo_items add column if not exists family_n   int;
+
+-- Если таблица создана до появления ссылок — расширяем правило для type,
+-- чтобы оно пропускало и 'link'. Повторный запуск безопасен.
+alter table photo_items drop constraint if exists photo_items_type_check;
+alter table photo_items add constraint photo_items_type_check
+  check (type in ('image', 'video', 'link'));
 
 create index if not exists photo_items_event_idx
   on photo_items (event_id, created_at);
@@ -180,8 +192,9 @@ create policy "ph cmt delete" on photo_comments
 -- ============================================================
 -- Загружают все (родители входят без пароля, поэтому anon тоже).
 -- Файлы лежат под случайными нечитаемыми именами — найти их,
--- не зная ссылку, нельзя. На бесплатном тарифе Supabase:
--- всего 1 ГБ, один файл — до 50 МБ.
+-- не зная ссылку, нельзя. На тарифе Pro: хранилище от 100 ГБ,
+-- лимит на один файл задаётся в настройках
+-- (Storage → Settings → Upload file size limit — поставить 500 MB).
 
 insert into storage.buckets (id, name, public)
 values ('photos', 'photos', true)

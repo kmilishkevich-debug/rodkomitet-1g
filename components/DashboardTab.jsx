@@ -1036,9 +1036,10 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     { key: "family", label: "Моя семья", aria: "Сводка семьи",
       ico: <img src="/icons/icon-people.webp" alt="" />,
       badge: 0, act: needFamily(() => setFamSumOpen(true)) },
-    { key: "fees", label: "Взносы", aria: "Взносы и долги",
-      ico: <NavIcon name="fees" uid="qa-fees" size={38} />,
-      badge: feesBadge, act: () => onTab("fees") },
+    // «Фото» заняли место «Взносов»: до денег всё равно ведут «Платёж» и верхнее меню
+    { key: "photos", label: "Фото", aria: "Фото класса",
+      ico: <NavIcon name="photos" uid="qa-photos" size={38} />,
+      badge: 0, act: () => onTab("photos") },
     { key: "votes", label: "Голосования",
       ico: <NavIcon name="votes" uid="qa-votes" size={38} />,
       badge: pollsNoAnswer.length, act: () => onTab("votes") },

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   supabase, fetchPhotoEvents, createPhotoEvent, deletePhotoEvent,
-  uploadPhotoMedia, deletePhotoItem, togglePhotoLike,
+  uploadPhotoMedia, addPhotoLink, deletePhotoItem, togglePhotoLike,
   sendPhotoComment, editPhotoComment, deletePhotoComment,
 } from "@/lib/supabase";
 import { sendPhotoPush } from "@/lib/push";
@@ -11,10 +11,12 @@ import { useRefreshPause } from "@/lib/formGuard";
 
 // ===== Фото класса =====
 // Лента всех фото (новые сверху, по дате ДОБАВЛЕНИЯ) + альбомы-события.
-// Загружают все родители и учитель: до 30 файлов за раз, фото до 20 МБ
-// (сжимаются на телефоне в две версии — миниатюра и полная), видео до 50 МБ.
-// Сердечки и комментарии — под каждым фото. Комментарий можно исправить
-// (появится отметка «Изменено»). Своё удаляет автор, чужое — комитет и учитель.
+// Загружают все родители и учитель: до 30 файлов за раз, фото до 50 МБ
+// (сжимаются на телефоне в две версии — миниатюра и полная), видео до 500 МБ.
+// К событию можно прикрепить и внешнюю ссылку (YouTube, облако, любой сайт) —
+// она живёт в ленте как карточка, с теми же сердечками и комментариями.
+// Комментарий можно исправить (появится отметка «Изменено»).
+// Своё удаляет автор, чужое — комитет и учитель.
 
 const MAX_FILES = 30;      // файлов за одну загрузку
 const PAGE = 20;           // фото на страницу ленты («Показать ещё»)
@@ -80,6 +82,15 @@ async function downloadFile(url, name) {
 
 const safeName = (s) => String(s || "file").replace(/[\\/:*?"<>|]/g, "_");
 
+// Название сайта из ссылки: «youtube.com», «disk.yandex.by»…
+function linkHost(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "ссылка";
+  }
+}
+
 export default function PhotosTab({ committee, teacher, family, author, toast }) {
   const [events, setEvents] = useState(undefined); // undefined=грузим, null=нет таблиц
   const [view, setView] = useState("feed");        // "feed" | "albums"
@@ -87,6 +98,7 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
   const [shown, setShown] = useState(PAGE);        // сколько фото показано в ленте
   const [createOpen, setCreateOpen] = useState(false);
   const [addTo, setAddTo] = useState(null);        // событие, в которое догружаем файлы
+  const [linkTo, setLinkTo] = useState(null);      // событие, к которому добавляем ссылку
   const [viewer, setViewer] = useState(null);      // { source: "feed"|eventId, index, comments }
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
@@ -228,6 +240,30 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
     }
   };
 
+  // ----- Добавление внешней ссылки в событие -----
+  const handleAddLink = async ({ url, caption }) => {
+    if (!linkTo) return;
+    setBusy(true);
+    try {
+      await addPhotoLink({
+        event_id: linkTo.id,
+        url,
+        caption,
+        author: signature,
+        family_n: myFamilyN,
+      });
+      await reload();
+      sendPhotoPush({ body: `${linkTo.title} — новая ссылка`, url: "/?tab=photos" }).catch(() => {});
+      setLinkTo(null);
+      toast?.("Ссылка добавлена");
+    } catch (e) {
+      console.error(e);
+      toast?.(e?.message || "Не получилось добавить ссылку");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleDeleteEvent = async (ev) => {
     const n = ev.items.length;
     if (!window.confirm(`Удалить событие «${ev.title}»${n ? ` и все файлы (${n} шт.)` : ""}? Вернуть будет нельзя.`)) return;
@@ -243,7 +279,10 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
   };
 
   const handleDeleteItem = async (item) => {
-    if (!window.confirm("Удалить это фото или видео? Вернуть будет нельзя.")) return;
+    const q = item.type === "link"
+      ? "Удалить эту ссылку? Вернуть будет нельзя."
+      : "Удалить это фото или видео? Вернуть будет нельзя.";
+    if (!window.confirm(q)) return;
     try {
       await deletePhotoItem(item);
       await reload();
@@ -304,17 +343,18 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
     catch (e) { console.error(e); toast?.("Не получилось удалить"); }
   };
 
-  // ----- «Скачать всё» одним zip-архивом -----
+  // ----- «Скачать всё» одним zip-архивом (ссылки не скачиваются — пропускаем) -----
   const handleDownloadAll = async (ev) => {
-    if (!ev.items.length || busy) return;
+    const files = ev.items.filter((it) => it.type !== "link");
+    if (!files.length || busy) return;
     setBusy(true);
     try {
       const { default: JSZip } = await import("jszip");
       const zip = new JSZip();
       let i = 0;
-      for (const item of ev.items) {
+      for (const item of files) {
         i++;
-        setProgress(`Собираем архив: ${i} из ${ev.items.length}…`);
+        setProgress(`Собираем архив: ${i} из ${files.length}…`);
         const res = await fetch(item.url);
         if (!res.ok) continue;
         const ext = (item.path || "").split(".").pop() || (item.type === "video" ? "mp4" : "jpg");
@@ -436,7 +476,9 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
                     {cover ? (
                       cover.type === "video"
                         ? <span className="ph-filter-img ph-filter-video">▶</span>
-                        : <img className="ph-filter-img" src={cover.thumb_url || cover.url} alt="" loading="lazy" />
+                        : cover.type === "link" && !cover.thumb_url
+                          ? <span className="ph-filter-img ph-filter-video">🔗</span>
+                          : <img className="ph-filter-img" src={cover.thumb_url || cover.url} alt="" loading="lazy" />
                     ) : (
                       <span className="ph-filter-img ph-filter-video">📷</span>
                     )}
@@ -510,6 +552,15 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
                       <video src={item.url} preload="metadata" muted playsInline />
                       <span className="ph-play">▶</span>
                     </>
+                  ) : item.type === "link" ? (
+                    item.thumb_url ? (
+                      <>
+                        <img src={item.thumb_url} alt={item.name || ""} loading="lazy" />
+                        <span className="ph-play">▶</span>
+                      </>
+                    ) : (
+                      <span className="ph-thumb-link">🔗</span>
+                    )
                   ) : (
                     <img src={item.thumb_url || item.url} alt={item.name || ""} loading="lazy" />
                   )}
@@ -525,16 +576,17 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
 
           <div className="ph-actions">
             <button className="btn small white" onClick={() => setAddTo(ev)}>+ Фото</button>
+            <button className="btn small white" onClick={() => setLinkTo(ev)}>🔗 Ссылка</button>
             {ev.items.length > 0 && (
-              <>
-                <button
-                  className="btn small white"
-                  onClick={() => { setView("feed"); setFilterId(ev.id); setShown(PAGE); }}
-                >Открыть в ленте</button>
-                <button className="btn small white" disabled={busy} onClick={() => handleDownloadAll(ev)}>
-                  ⬇ Скачать всё
-                </button>
-              </>
+              <button
+                className="btn small white"
+                onClick={() => { setView("feed"); setFilterId(ev.id); setShown(PAGE); }}
+              >Открыть в ленте</button>
+            )}
+            {ev.items.some((it) => it.type !== "link") && (
+              <button className="btn small white" disabled={busy} onClick={() => handleDownloadAll(ev)}>
+                ⬇ Скачать всё
+              </button>
             )}
           </div>
           {busy && progress && <p className="muted ph-progress">{progress}</p>}
@@ -562,6 +614,15 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
         />
       )}
 
+      {linkTo && (
+        <LinkModal
+          event={linkTo}
+          busy={busy}
+          onSubmit={handleAddLink}
+          onClose={() => !busy && setLinkTo(null)}
+        />
+      )}
+
       {viewer && viewerItems.length > 0 && (
         <PhotoViewer
           items={viewerItems}
@@ -586,20 +647,44 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
 }
 
 // ===== Карточка фото в ленте =====
+// Ссылка (type='link') — тоже карточка: с обложкой YouTube или аккуратной
+// заглушкой с названием сайта; нажатие открывает ссылку в новой вкладке.
 function FeedCard({ item, who, onOpen, onComments, onLike }) {
   const liked = who && item.likes.some((l) => l.who === who);
   return (
     <div className="ph-card">
-      <button className="ph-card-media" onClick={onOpen} title={item.name || ""}>
-        {item.type === "video" ? (
-          <>
-            <video src={item.url} preload="metadata" muted playsInline />
-            <span className="ph-play">▶</span>
-          </>
-        ) : (
-          <img src={item.thumb_url || item.url} alt={item.name || ""} loading="lazy" />
-        )}
-      </button>
+      {item.type === "link" ? (
+        <a
+          className="ph-card-media ph-linkcard"
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={item.name || item.url}
+        >
+          {item.thumb_url ? (
+            <>
+              <img src={item.thumb_url} alt={item.name || ""} loading="lazy" />
+              <span className="ph-play">▶</span>
+            </>
+          ) : (
+            <span className="ph-link-fill">🔗</span>
+          )}
+          <span className="ph-link-label">
+            {item.name || linkHost(item.url)} <span className="ph-link-host">{linkHost(item.url)} ↗</span>
+          </span>
+        </a>
+      ) : (
+        <button className="ph-card-media" onClick={onOpen} title={item.name || ""}>
+          {item.type === "video" ? (
+            <>
+              <video src={item.url} preload="metadata" muted playsInline />
+              <span className="ph-play">▶</span>
+            </>
+          ) : (
+            <img src={item.thumb_url || item.url} alt={item.name || ""} loading="lazy" />
+          )}
+        </button>
+      )}
       <div className="ph-card-bar">
         <button
           className={"ph-like" + (liked ? " act" : "")}
@@ -778,7 +863,7 @@ function UploadModal({ mode, event, busy, progress, onSubmit, onClose }) {
               : "📷 Выбрать фото и видео"}
         </button>
         <p className="muted ph-hint">
-          До {MAX_FILES} файлов за раз. Фото до 20 МБ (сожмутся сами), видео — до 50 МБ.
+          До {MAX_FILES} файлов за раз. Фото до 50 МБ (сожмутся сами), видео — до 500 МБ.
         </p>
         {busy && progress && <p className="muted ph-progress">{progress}</p>}
         <div className="actions">
@@ -791,6 +876,62 @@ function UploadModal({ mode, event, busy, progress, onSubmit, onClose }) {
             disabled={busy || !files.length || (create && !retryMode && !title.trim())}
           >
             {busy ? "Загружаем…" : retryMode ? "Повторить неудачные" : create ? "Создать" : "Добавить"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===== Модалка «Добавить ссылку»: адрес + необязательная подпись =====
+// Принимаем только http/https. Если это YouTube — в ленте появится
+// обложка ролика, иначе — карточка с названием сайта.
+function LinkModal({ event, busy, onSubmit, onClose }) {
+  const [url, setUrl] = useState("");
+  const [caption, setCaption] = useState("");
+
+  useRefreshPause(true);
+
+  const clean = url.trim();
+  const valid = /^https?:\/\/\S+\.\S+/i.test(clean);
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h3>Ссылка в «{event.title}»</h3>
+        <label>Адрес ссылки</label>
+        <input
+          type="url"
+          inputMode="url"
+          placeholder="https://…"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+        />
+        {clean && !valid && (
+          <p className="muted ph-hint">
+            Нужна полная ссылка, начиная с https:// — проще всего нажать
+            «Поделиться» → «Копировать ссылку» и вставить сюда.
+          </p>
+        )}
+        <label>Подпись (необязательно)</label>
+        <input
+          placeholder="Например: Видео с утренника"
+          maxLength={120}
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+        />
+        <p className="muted ph-hint">
+          Подойдёт ссылка на YouTube (покажем обложку ролика), облако или любой
+          сайт. Без подписи покажем название сайта.
+        </p>
+        <div className="actions">
+          <button className="btn small white" onClick={onClose} disabled={busy}>Отмена</button>
+          <button
+            className="btn small teal"
+            onClick={() => onSubmit({ url: clean, caption: caption.trim() })}
+            disabled={busy || !valid}
+          >
+            {busy ? "Добавляем…" : "Добавить"}
           </button>
         </div>
       </div>
@@ -865,7 +1006,9 @@ function PhotoViewer({
       <div className="ph-view-top" onClick={(e) => e.stopPropagation()}>
         <span className="ph-view-count">{i + 1} / {items.length}</span>
         <span className="ph-view-btns">
-          <button className="ph-vbtn" title="Скачать" disabled={downloading} onClick={download}>⬇</button>
+          {item.type !== "link" && (
+            <button className="ph-vbtn" title="Скачать" disabled={downloading} onClick={download}>⬇</button>
+          )}
           {canDeleteItem(item) && (
             <button className="ph-vbtn" title="Удалить" onClick={() => onDeleteItem(item)}>🗑</button>
           )}
@@ -874,7 +1017,19 @@ function PhotoViewer({
       </div>
 
       <div className="ph-view-body" onClick={(e) => e.stopPropagation()}>
-        {item.type === "video" ? (
+        {item.type === "link" ? (
+          <a
+            key={item.id}
+            className="ph-view-link"
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {item.thumb_url && <img src={item.thumb_url} alt="" />}
+            <span className="ph-view-link-name">{item.name || linkHost(item.url)}</span>
+            <span className="ph-view-link-host">Открыть: {linkHost(item.url)} ↗</span>
+          </a>
+        ) : item.type === "video" ? (
           <video key={item.id} src={item.url} controls autoPlay playsInline />
         ) : (
           <img key={item.id} src={item.url} alt={item.name || ""} />
