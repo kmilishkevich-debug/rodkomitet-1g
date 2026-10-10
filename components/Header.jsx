@@ -12,13 +12,15 @@ const TOP_TABS = [
   { id: "expenses", icon: "i-receipt", label: "Расходы" },
   { id: "votes", icon: "i-vote", label: "Голосования" },
   { id: "class", icon: "i-users", label: "Класс" },
+  { id: "photos", icon: "i-users", label: "Фото" },
   { id: "history", icon: "i-book", label: "История" },
 ];
 
-// Нижняя панель (мобильная): 4 основные иконки + кнопка-каталог «Ещё»
+// Нижняя панель (мобильная): 4 основные иконки + кнопка-каталог «Ещё».
+// «Фото» заняли место «Голосов» — голосования переехали в каталог «Ещё».
 const BOTTOM_TABS = [
   { id: "dashboard", icon: "i-home", label: "Главная" },
-  { id: "votes", icon: "i-vote", label: "Голоса" },
+  { id: "photos", icon: "i-users", label: "Фото" },
   { id: "schedule", icon: "i-clock", label: "Уроки" },
   { id: "class", icon: "i-users", label: "Класс" },
 ];
@@ -26,6 +28,7 @@ const BOTTOM_TABS = [
 // Разделы, которые не попали в иконки нижней панели — живут в каталоге «Ещё»
 const MORE_ITEMS = [
   { id: "announcements", label: "Объявления" },
+  { id: "votes", label: "Голосования" },
   { id: "fees", label: "Сборы" },
   { id: "expenses", label: "Расходы" },
   { id: "history", label: "История" },
@@ -44,6 +47,7 @@ const TEACHER_TOP_TABS = [
   { id: "schedule", icon: "i-clock", label: "Расписание" },
   { id: "votes", icon: "i-vote", label: "Голосования" },
   { id: "class", icon: "i-users", label: "Класс" },
+  { id: "photos", icon: "i-users", label: "Фото" },
 ];
 
 const TEACHER_BOTTOM_TABS = [
@@ -55,6 +59,7 @@ const TEACHER_BOTTOM_TABS = [
 
 const TEACHER_MORE_ITEMS = [
   { id: "votes", label: "Голосования" },
+  { id: "photos", label: "Фото класса" },
 ];
 
 const isTeacher = (role) => role === "teacher";
@@ -193,8 +198,10 @@ export function BottomNav({ tab, role, moneySub, onTab, newsBadge = 0, pollsBadg
         >
           <BurgerIcon open={moreOpen} />Ещё
           {/* На кнопке «Ещё» — бейдж того, что спрятано внутри: у родителей это
-              объявления, у учителя объявления вынесены в панель, внутри — голосования */}
-          {!teacher && newsBadge > 0 && <span className="nav-badge">{newsBadge > 9 ? "9+" : newsBadge}</span>}
+              объявления и голосования, у учителя объявления вынесены в панель, внутри — голосования */}
+          {!teacher && newsBadge + pollsBadge > 0 && (
+            <span className="nav-badge">{newsBadge + pollsBadge > 9 ? "9+" : newsBadge + pollsBadge}</span>
+          )}
           {teacher && pollsBadge > 0 && <span className="nav-badge">{pollsBadge > 9 ? "9+" : pollsBadge}</span>}
         </button>
         {moreOpen && (

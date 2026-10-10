@@ -10,6 +10,7 @@ import AnnouncementsTab from "@/components/AnnouncementsTab";
 import ClassTab from "@/components/ClassTab";
 import ScheduleTab from "@/components/ScheduleTab";
 import TeacherTab from "@/components/TeacherTab";
+import PhotosTab from "@/components/PhotosTab";
 import UploadModal from "@/components/UploadModal";
 import LogoutModal from "@/components/LogoutModal";
 import { useFamily, loadSeen, saveSeen } from "@/components/FamilyPicker";
@@ -469,7 +470,7 @@ export default function Page() {
       setTab("money");
       if (t === "money") setMoneySub((s) => s || "fees");
       else setMoneySub(t === "shopping" ? "expenses" : t);
-    } else if (["dashboard", "schedule", "announcements", "votes", "class", "teacher"].includes(t)) {
+    } else if (["dashboard", "schedule", "announcements", "votes", "class", "photos", "teacher"].includes(t)) {
       if (t === "teacher" && !noMoney) { setTab("dashboard"); return; }
       // У учителя нет «Главной» — старые ссылки и пуши молча ведут в кабинет
       if (t === "dashboard" && noMoney) { setTab("teacher"); return; }
@@ -701,6 +702,7 @@ export default function Page() {
             {tab === "schedule" && <ScheduleTab committee={committee} canEditSchedule={canEditSchedule} author={author} toast={toast} liveSchedule={liveSchedule} onReload={reloadSchedule} overrides={liveOverrides} onReloadOverrides={reloadOverrides} />}
             {tab === "announcements" && <AnnouncementsTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} announcements={shownAnnouncements} reads={liveReads} onReload={reloadAnnouncements} onReloadReads={reloadReads} family={family} setFamily={setFamily} postComments={livePostComments} chatClosed={liveChatClosed} onReloadComments={reloadPostComments} />}
             {tab === "votes" && <VotesTab committee={committee} canEdit={committee || teacher} teacher={teacher} author={author} toast={toast} polls={shownPolls} onReload={reloadPolls} family={family} setFamily={setFamily} />}
+            {tab === "photos" && <PhotosTab committee={committee} teacher={teacher} family={family} author={author} toast={toast} />}
             {tab === "class" && <ClassTab committee={committee} teacher={teacher} toast={toast} liveBirthdays={liveBirthdays} families={liveFamilies} onReloadFamilies={reloadFamilies} />}
             {tab === "money" && <MoneyTab sub={moneySub} onSub={showMoneySub} committee={committee} teacher={teacher} toast={toast} onOpenUpload={openUpload} liveGroups={liveGroups} onReload={reloadExpenses} author={author} family={family} onReloadFamilies={reloadFamilies} />}
           </main>

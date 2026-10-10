@@ -2226,3 +2226,101 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .fil-chip.reset{background:var(--red-soft);color:var(--ink)}
 .fil-export{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
 .fil-export-lb{font-size:12px;font-weight:700;color:var(--muted)}
+
+/* ===== Вкладка «Фото класса» ===== */
+
+/* Шапка с маскотом и облачком */
+.ph-hero{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.ph-hero-mascot{flex:0 0 auto;position:relative}
+.ph-hero-mascot img{width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--gold-soft);box-shadow:0 6px 18px rgba(23,23,23,.12)}
+.ph-hero-main{flex:1;min-width:180px}
+.ph-hero-bubble{display:inline-block;background:var(--gold-soft);border:1px solid var(--gold);border-radius:14px;padding:6px 12px;font-size:13px;font-weight:700;margin-bottom:6px;position:relative}
+.ph-hero-bubble::before{content:"";position:absolute;left:-7px;top:50%;transform:translateY(-50%);border:7px solid transparent;border-right-color:var(--gold-soft)}
+.ph-hero h3{margin:0 0 2px}
+.ph-hero-add{flex:0 0 auto}
+
+/* Переключатель «Лента фото / Альбомы» */
+.ph-switch{display:flex;gap:6px;background:var(--input);border-radius:999px;padding:4px;width:fit-content;margin:14px 0}
+.ph-switch button{border:none;cursor:pointer;font-family:'Onest';font-weight:800;font-size:13px;padding:8px 18px;border-radius:999px;background:transparent;color:var(--muted)}
+.ph-switch button.act{background:var(--card);color:var(--ink);box-shadow:0 2px 8px rgba(23,23,23,.1)}
+
+/* Фильтры-карточки событий (горизонтальный скролл) */
+.ph-filters{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.ph-filter{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;border:2px solid var(--soft-line);border-radius:18px;background:var(--card);cursor:pointer;padding:8px;width:96px;font-family:'Onest'}
+.ph-filter.act{border-color:var(--teal);background:var(--teal-soft)}
+.ph-filter-img{width:76px;height:56px;border-radius:12px;object-fit:cover;background:var(--input);display:flex;align-items:center;justify-content:center;font-size:22px}
+.ph-filter-video{color:var(--muted)}
+.ph-filter-title{font-size:11.5px;font-weight:800;line-height:1.2;max-width:84px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ph-filter-n{font-size:11px;color:var(--muted);font-weight:700}
+.ph-filter-all .ph-filter-img{font-size:26px}
+
+/* Лента: 2 колонки + разделители дней */
+.ph-feed{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.ph-day{grid-column:1 / -1;display:flex;align-items:center;gap:10px;font-size:12.5px;font-weight:800;color:var(--muted);margin-top:6px}
+.ph-day::before,.ph-day::after{content:"";flex:1;height:1px;background:var(--soft-line)}
+.ph-card{background:var(--card);border:1px solid var(--soft-line);border-radius:18px;overflow:hidden;box-shadow:0 4px 14px rgba(23,23,23,.06)}
+.ph-card-media{position:relative;display:block;width:100%;border:none;padding:0;cursor:pointer;background:var(--input);aspect-ratio:1/1}
+.ph-card-media img,.ph-card-media video{width:100%;height:100%;object-fit:cover;display:block}
+.ph-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;color:#fff;background:rgba(23,23,23,.25);pointer-events:none}
+.ph-card-bar{display:flex;align-items:center;gap:6px;padding:7px 10px 2px}
+.ph-like,.ph-cmt-btn{border:none;background:transparent;cursor:pointer;font-family:'Onest';font-weight:800;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:4px;padding:4px 6px;border-radius:10px}
+.ph-like.act{color:var(--pink)}
+.ph-like:active{transform:scale(1.15)}
+.ph-card-meta{padding:0 12px 10px;font-size:11.5px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ph-more{grid-column:1 / -1;justify-self:center;margin-top:6px}
+
+/* Альбомы */
+.ph-event{margin-top:14px}
+.ph-ev-top{display:flex;align-items:flex-start;gap:10px}
+.ph-ev-title{font-weight:800;font-size:16px;flex:1}
+.ph-ev-meta{font-size:12.5px;margin:2px 0 6px}
+.ph-ev-descr{font-size:13.5px;margin:0 0 8px;white-space:pre-wrap}
+.ph-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
+.ph-thumb{position:relative;border:none;padding:0;cursor:pointer;border-radius:12px;overflow:hidden;background:var(--input);aspect-ratio:1/1}
+.ph-thumb img,.ph-thumb video{width:100%;height:100%;object-fit:cover;display:block}
+.ph-rest{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(23,23,23,.5);color:#fff;font-weight:800;font-size:15px}
+.ph-x{border:none;background:var(--red-soft);color:var(--ink);cursor:pointer;border-radius:10px;width:28px;height:28px;font-size:13px;flex:0 0 auto}
+.ph-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.ph-progress{margin:8px 0 0;font-weight:700}
+.ph-hint{font-size:12px;margin-top:8px}
+
+/* Комментарии под фото */
+.ph-comments{border-top:1px solid var(--soft-line);margin-top:4px;padding-top:8px}
+.ph-cmt{padding:6px 0;display:flex;gap:8px;align-items:flex-start}
+.ph-cmt-text{flex:1;font-size:13.5px;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.ph-cmt-meta{font-size:11px;margin-top:2px}
+.ph-edited{font-style:italic}
+.ph-cmt .pc-del{flex:0 0 auto}
+
+/* Полноэкранный просмотр */
+.ph-viewer{background:rgba(10,10,14,.93);padding:0;flex-direction:column;align-items:stretch}
+.ph-view-top{display:flex;align-items:center;gap:10px;padding:12px 14px;color:#fff}
+.ph-view-count{font-weight:800;font-size:14px}
+.ph-view-btns{margin-left:auto;display:flex;gap:8px}
+.ph-vbtn{border:none;cursor:pointer;background:rgba(255,255,255,.14);color:#fff;border-radius:12px;width:38px;height:38px;font-size:16px}
+.ph-vbtn:active{background:rgba(255,255,255,.28)}
+.ph-view-body{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;position:relative;touch-action:pan-y}
+.ph-view-body img,.ph-view-body video{max-width:100%;max-height:100%;object-fit:contain}
+.ph-nav{position:absolute;top:50%;transform:translateY(-50%);border:none;cursor:pointer;background:rgba(255,255,255,.14);color:#fff;border-radius:50%;width:42px;height:42px;font-size:20px}
+.ph-nav-l{left:10px}
+.ph-nav-r{right:10px}
+.ph-view-social{background:var(--card);border-radius:20px 20px 0 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));max-height:45vh;overflow-y:auto}
+.ph-view-meta{font-size:12.5px;margin-bottom:6px}
+.ph-view-actions{display:flex;align-items:center;gap:8px}
+
+/* Мобильные размеры */
+@media (max-width: 430px){
+  .ph-hero-mascot img{width:72px;height:72px}
+  .ph-filter{width:88px}
+  .ph-filter-img{width:70px;height:52px}
+  .ph-grid{grid-template-columns:repeat(4,1fr)}
+}
+@media (max-width: 390px){
+  .ph-feed{gap:10px}
+  .ph-hero-add{width:100%}
+}
+@media (max-width: 360px){
+  .ph-hero-mascot img{width:62px;height:62px}
+  .ph-card-meta{font-size:11px}
+  .ph-grid{grid-template-columns:repeat(3,1fr)}
+}
