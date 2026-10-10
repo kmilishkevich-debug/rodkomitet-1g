@@ -44,7 +44,9 @@ create policy "expenses read" on expenses for select using (true);
 drop policy if exists "expenses write" on expenses;
 create policy "expenses write" on expenses for all to authenticated using (true) with check (true);
 
--- 4. Хранилище фото чеков: смотреть могут все, загружать — только комитет
+-- 4. Хранилище фото чеков: смотреть и загружать могут все пользователи приложения
+-- (родители входят по семейному коду без аккаунта в базе, поэтому загрузка открыта всем;
+-- менять и удалять уже загруженные чеки могут только комитет/учитель).
 insert into storage.buckets (id, name, public)
 values ('receipts', 'receipts', true)
 on conflict (id) do nothing;
@@ -52,7 +54,7 @@ on conflict (id) do nothing;
 drop policy if exists "receipts read" on storage.objects;
 create policy "receipts read" on storage.objects for select using (bucket_id = 'receipts');
 drop policy if exists "receipts write" on storage.objects;
-create policy "receipts write" on storage.objects for insert to authenticated with check (bucket_id = 'receipts');
+create policy "receipts write" on storage.objects for insert with check (bucket_id = 'receipts');
 drop policy if exists "receipts update" on storage.objects;
 create policy "receipts update" on storage.objects for update to authenticated using (bucket_id = 'receipts');
 drop policy if exists "receipts delete" on storage.objects;

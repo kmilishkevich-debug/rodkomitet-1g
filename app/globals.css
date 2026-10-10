@@ -2144,7 +2144,7 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .pay-due-card .pill-btn{background:#e85d4a}
 
 /* ===== Быстрые действия на главной (qa-*) ===== */
-.qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:14px}
+.qa-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:14px}
 .qa-item{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
   gap:7px;background:var(--card);border:1px solid var(--soft-line);border-radius:22px;
   padding:14px 8px 12px;min-height:112px;cursor:pointer;
@@ -2157,7 +2157,8 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .qa-ico{display:flex;align-items:center;justify-content:center;width:46px;height:46px;flex:none}
 .qa-ico img,.qa-ico svg{width:40px;height:40px;object-fit:contain}
 .qa-label{font-size:13px;font-weight:600;line-height:1.15;text-align:center;color:var(--ink);
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:30px}
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:30px;
+  overflow-wrap:anywhere}
 .qa-badge{position:absolute;top:7px;right:9px;min-width:21px;height:21px;padding:0 5px;border-radius:999px;
   background:#e85d4a;color:#fff;font-size:11.5px;font-weight:800;display:flex;align-items:center;
   justify-content:center;border:1.5px solid #fff;box-shadow:0 2px 8px rgba(232,93,74,.4)}
@@ -2168,9 +2169,9 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .qa-urgent:active{transform:scale(.98)}
 .qa-urgent-ico{flex:none}
 .qa-urgent-arrow{margin-left:auto;font-size:20px;line-height:1;color:#d08177}
-/* Узкие экраны (<390px) — 3 колонки, чтобы карточки не сжимались */
-@media(max-width:389px){
-  .qa-grid{grid-template-columns:repeat(3,1fr);gap:10px}
+/* Телефоны (до 520px) — 3 колонки, чтобы подписи не распирали сетку за край экрана */
+@media(max-width:520px){
+  .qa-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   .qa-item{min-height:108px;border-radius:20px}
 }
 /* Широкие экраны — шапка в две колонки: приветствие слева (≈55%),
@@ -2320,6 +2321,32 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .ph-view-link-host{background:rgba(255,255,255,.16);border-radius:12px;padding:10px 16px;font-size:14px;font-weight:700}
 .ph-view-link-host:active{background:rgba(255,255,255,.3)}
 
+/* Формы в модалках «Фото»: подписи над полями, поля на всю ширину */
+.ph-form label{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin:12px 0 6px}
+.ph-form input,.ph-form select,.ph-form textarea{width:100%;padding:12px 15px;border:none;border-radius:14px;background:var(--input);font-size:15px;font-weight:600;color:var(--ink);font-family:'Onest'}
+.ph-form select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%234B4945' stroke-width='2' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 15px center;padding-right:38px}
+
+/* Строка адреса + кнопка «Вставить» */
+.ph-url-row{display:flex;gap:8px;align-items:stretch}
+.ph-url-row input{flex:1;min-width:0}
+.ph-paste{flex:0 0 auto;white-space:nowrap}
+
+/* Живое превью ссылки */
+.ph-link-preview{display:flex;align-items:center;gap:10px;margin-top:12px;background:var(--input);border-radius:14px;padding:10px;overflow:hidden}
+.ph-link-preview img{width:96px;height:62px;object-fit:cover;border-radius:10px;flex:0 0 auto}
+.ph-link-preview-fill{width:96px;height:62px;display:flex;align-items:center;justify-content:center;font-size:24px;border-radius:10px;background:linear-gradient(135deg,#eef1fb,#dfe6f8);flex:0 0 auto}
+.ph-link-preview-text{min-width:0;display:flex;flex-direction:column;gap:2px}
+.ph-link-preview-text b{font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ph-link-preview-text span{font-size:12px;color:#7a766e;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+
+/* Вкладки «Файлы / Ссылка» в окне «Загрузить» */
+.ph-hub-tabs{display:flex;gap:8px;margin-top:16px}
+.ph-hub-tabs button{flex:1;border:none;cursor:pointer;border-radius:999px;padding:10px 12px;font-size:14px;font-weight:700;font-family:'Onest';background:var(--input);color:var(--ink)}
+.ph-hub-tabs button.act{background:var(--blue);color:#fff}
+
+/* Две кнопки в шапке «Фото класса» */
+.ph-hero-btns{display:flex;gap:8px;flex:0 0 auto;flex-wrap:wrap}
+
 /* Мобильные размеры */
 @media (max-width: 430px){
   .ph-hero-mascot img{width:72px;height:72px}
@@ -2329,7 +2356,8 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 }
 @media (max-width: 390px){
   .ph-feed{gap:10px}
-  .ph-hero-add{width:100%}
+  .ph-hero-btns{width:100%}
+  .ph-hero-btns .ph-hero-add{flex:1}
 }
 @media (max-width: 360px){
   .ph-hero-mascot img{width:62px;height:62px}

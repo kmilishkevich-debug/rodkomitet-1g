@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   supabase, fetchPhotoEvents, createPhotoEvent, deletePhotoEvent,
   uploadPhotoMedia, addPhotoLink, deletePhotoItem, togglePhotoLike,
-  sendPhotoComment, editPhotoComment, deletePhotoComment,
+  sendPhotoComment, editPhotoComment, deletePhotoComment, youtubeId,
 } from "@/lib/supabase";
 import { sendPhotoPush } from "@/lib/push";
 import { familyLabel } from "./data";
@@ -97,12 +97,14 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
   const [filterId, setFilterId] = useState(null);  // фильтр ленты по событию
   const [shown, setShown] = useState(PAGE);        // сколько фото показано в ленте
   const [createOpen, setCreateOpen] = useState(false);
+  const [hubOpen, setHubOpen] = useState(false);   // окно «Загрузить»: файлы или ссылка
   const [addTo, setAddTo] = useState(null);        // событие, в которое догружаем файлы
   const [linkTo, setLinkTo] = useState(null);      // событие, к которому добавляем ссылку
   const [viewer, setViewer] = useState(null);      // { source: "feed"|eventId, index, comments }
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const createdEvent = useRef(null);               // чтобы повтор неудачных не создавал событие заново
+  const hubCreatedEvent = useRef(null);            // то же для окна «Загрузить»
 
   const isParent = !committee && !teacher;
   // Подпись и «кто» для сердечек
@@ -255,6 +257,63 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
       await reload();
       sendPhotoPush({ body: `${linkTo.title} — новая ссылка`, url: "/?tab=photos" }).catch(() => {});
       setLinkTo(null);
+      toast?.("Ссылка добавлена");
+    } catch (e) {
+      console.error(e);
+      toast?.(e?.message || "Не получилось добавить ссылку");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ----- Окно «Загрузить»: выбранное событие или новое (создаём один раз) -----
+  const resolveHubEvent = async (sel, title, date) => {
+    if (sel !== "__new__") return (events || []).find((e) => e.id === sel) || null;
+    let ev = hubCreatedEvent.current;
+    if (!ev) {
+      ev = await createPhotoEvent({
+        title, event_date: date, descr: "", author: signature, family_n: myFamilyN,
+      });
+      hubCreatedEvent.current = ev;
+    }
+    return ev;
+  };
+
+  const handleHubFiles = async ({ sel, title, date, files }) => {
+    setBusy(true);
+    try {
+      const ev = await resolveHubEvent(sel, title, date);
+      if (!ev) { toast?.("Выберите событие"); return files; }
+      const { done, failed } = await uploadFiles(ev.id, files);
+      await reload();
+      if (done) pushAbout(ev.title, done);
+      if (!failed.length) {
+        hubCreatedEvent.current = null;
+        setHubOpen(false);
+        if (done) toast?.(done === 1 ? "Файл добавлен" : `Добавлено файлов: ${done}`);
+      }
+      return failed;
+    } catch (e) {
+      console.error(e);
+      toast?.(e?.message || "Не получилось загрузить");
+      return files;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleHubLink = async ({ sel, title, date, url, caption }) => {
+    setBusy(true);
+    try {
+      const ev = await resolveHubEvent(sel, title, date);
+      if (!ev) { toast?.("Выберите событие"); return; }
+      await addPhotoLink({
+        event_id: ev.id, url, caption, author: signature, family_n: myFamilyN,
+      });
+      await reload();
+      sendPhotoPush({ body: `${ev.title} — новая ссылка`, url: "/?tab=photos" }).catch(() => {});
+      hubCreatedEvent.current = null;
+      setHubOpen(false);
       toast?.("Ссылка добавлена");
     } catch (e) {
       console.error(e);
@@ -424,7 +483,10 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
           <h3>Фото класса</h3>
           <p className="muted">Фото и видео с событий 1 «Г». Загружать могут все.</p>
         </div>
-        <button className="btn teal ph-hero-add" onClick={() => setCreateOpen(true)}>+ Событие</button>
+        <div className="ph-hero-btns">
+          <button className="btn white ph-hero-add" onClick={() => setHubOpen(true)}>⬆️ Загрузить</button>
+          <button className="btn teal ph-hero-add" onClick={() => setCreateOpen(true)}>+ Событие</button>
+        </div>
       </div>
 
       {/* Переключатель Лента / Альбомы */}
@@ -600,6 +662,17 @@ export default function PhotosTab({ committee, teacher, family, author, toast })
           progress={progress}
           onSubmit={handleCreate}
           onClose={() => { if (!busy) { createdEvent.current = null; setCreateOpen(false); } }}
+        />
+      )}
+
+      {hubOpen && (
+        <UploadHubModal
+          events={events || []}
+          busy={busy}
+          progress={progress}
+          onFiles={handleHubFiles}
+          onLink={handleHubLink}
+          onClose={() => { if (!busy) { hubCreatedEvent.current = null; setHubOpen(false); } }}
         />
       )}
 
@@ -823,7 +896,7 @@ function UploadModal({ mode, event, busy, progress, onSubmit, onClose }) {
 
   return (
     <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal ph-form" onClick={(e) => e.stopPropagation()}>
         <h3>{create ? "Новое событие" : `Добавить в «${event.title}»`}</h3>
         {create && (
           <>
@@ -883,9 +956,76 @@ function UploadModal({ mode, event, busy, progress, onSubmit, onClose }) {
   );
 }
 
-// ===== Модалка «Добавить ссылку»: адрес + необязательная подпись =====
-// Принимаем только http/https. Если это YouTube — в ленте появится
-// обложка ролика, иначе — карточка с названием сайта.
+// ===== Поля ссылки: адрес + «Вставить» из буфера + подпись + живое превью =====
+// Принимаем только http/https. YouTube — покажем обложку ролика,
+// любой другой сайт — аккуратную карточку с его названием.
+function LinkFields({ url, setUrl, caption, setCaption, busy }) {
+  const clean = url.trim();
+  const valid = /^https?:\/\/\S+\.\S+/i.test(clean);
+  const yt = valid ? youtubeId(clean) : null;
+
+  const paste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) setUrl(text.trim());
+    } catch {
+      /* буфер недоступен — вставят вручную долгим нажатием */
+    }
+  };
+
+  return (
+    <>
+      <label>Адрес ссылки</label>
+      <div className="ph-url-row">
+        <input
+          type="url"
+          inputMode="url"
+          placeholder="https://…"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          disabled={busy}
+        />
+        <button type="button" className="btn small white ph-paste" onClick={paste} disabled={busy}>
+          Вставить
+        </button>
+      </div>
+      {clean && !valid && (
+        <p className="muted ph-hint">
+          Нужна полная ссылка, начиная с https:// — проще всего нажать
+          «Поделиться» → «Копировать ссылку» и вставить сюда.
+        </p>
+      )}
+      <label>Подпись (необязательно)</label>
+      <input
+        placeholder="Например: Видео с утренника"
+        maxLength={120}
+        value={caption}
+        onChange={(e) => setCaption(e.target.value)}
+        disabled={busy}
+      />
+      {valid ? (
+        <div className="ph-link-preview">
+          {yt ? (
+            <img src={`https://img.youtube.com/vi/${yt}/hqdefault.jpg`} alt="" loading="lazy" />
+          ) : (
+            <div className="ph-link-preview-fill">🔗</div>
+          )}
+          <div className="ph-link-preview-text">
+            <b>{caption.trim() || linkHost(clean)}</b>
+            <span>{linkHost(clean)}</span>
+          </div>
+        </div>
+      ) : (
+        <p className="muted ph-hint">
+          Подойдёт ссылка на YouTube (покажем обложку ролика), облако или любой
+          сайт. Без подписи покажем название сайта.
+        </p>
+      )}
+    </>
+  );
+}
+
+// ===== Модалка «Добавить ссылку» в конкретное событие =====
 function LinkModal({ event, busy, onSubmit, onClose }) {
   const [url, setUrl] = useState("");
   const [caption, setCaption] = useState("");
@@ -897,33 +1037,9 @@ function LinkModal({ event, busy, onSubmit, onClose }) {
 
   return (
     <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal ph-form" onClick={(e) => e.stopPropagation()}>
         <h3>Ссылка в «{event.title}»</h3>
-        <label>Адрес ссылки</label>
-        <input
-          type="url"
-          inputMode="url"
-          placeholder="https://…"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
-        {clean && !valid && (
-          <p className="muted ph-hint">
-            Нужна полная ссылка, начиная с https:// — проще всего нажать
-            «Поделиться» → «Копировать ссылку» и вставить сюда.
-          </p>
-        )}
-        <label>Подпись (необязательно)</label>
-        <input
-          placeholder="Например: Видео с утренника"
-          maxLength={120}
-          value={caption}
-          onChange={(e) => setCaption(e.target.value)}
-        />
-        <p className="muted ph-hint">
-          Подойдёт ссылка на YouTube (покажем обложку ролика), облако или любой
-          сайт. Без подписи покажем название сайта.
-        </p>
+        <LinkFields url={url} setUrl={setUrl} caption={caption} setCaption={setCaption} busy={busy} />
         <div className="actions">
           <button className="btn small white" onClick={onClose} disabled={busy}>Отмена</button>
           <button
@@ -934,6 +1050,159 @@ function LinkModal({ event, busy, onSubmit, onClose }) {
             {busy ? "Добавляем…" : "Добавить"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ===== Окно «Загрузить»: выбор события (или новое) + вкладки «Файлы / Ссылка» =====
+// По умолчанию выбрано самое свежее событие; если событий нет — сразу
+// режим нового события, без тупиков.
+function UploadHubModal({ events, busy, progress, onFiles, onLink, onClose }) {
+  const hasEvents = events.length > 0;
+  const [sel, setSel] = useState(hasEvents ? events[0].id : "__new__");
+  const [tab, setTab] = useState("files"); // "files" | "link"
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [files, setFiles] = useState([]);
+  const [retryMode, setRetryMode] = useState(false);
+  const [url, setUrl] = useState("");
+  const [caption, setCaption] = useState("");
+  const inputRef = useRef(null);
+
+  useRefreshPause(true);
+
+  const isNew = sel === "__new__";
+  const clean = url.trim();
+  const validUrl = /^https?:\/\/\S+\.\S+/i.test(clean);
+  // При повторе неудачных событие уже создано — название больше не требуем
+  const eventOk = retryMode || !isNew || !!title.trim();
+
+  const pick = (list) => {
+    let arr = Array.from(list || []);
+    if (arr.length > MAX_FILES) {
+      arr = arr.slice(0, MAX_FILES);
+      alert(`За один раз можно загрузить до ${MAX_FILES} файлов — взяли первые ${MAX_FILES}.`);
+    }
+    setFiles(arr);
+    setRetryMode(false);
+  };
+
+  const submitFiles = async () => {
+    if (!files.length || !eventOk) return;
+    const failed = await onFiles({ sel, title: title.trim(), date: date || null, files });
+    if (failed && failed.length) {
+      setFiles(failed);
+      setRetryMode(true);
+    }
+  };
+
+  const submitLink = () => {
+    if (!validUrl || !eventOk) return;
+    onLink({ sel, title: title.trim(), date: date || null, url: clean, caption: caption.trim() });
+  };
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal ph-form" onClick={(e) => e.stopPropagation()}>
+        <h3>Загрузить</h3>
+        <label>Событие</label>
+        <select
+          value={sel}
+          onChange={(e) => setSel(e.target.value)}
+          disabled={busy || retryMode}
+        >
+          {events.map((e) => (
+            <option key={e.id} value={e.id}>{e.title}</option>
+          ))}
+          <option value="__new__">➕ Создать новое событие</option>
+        </select>
+        {isNew && (
+          <>
+            <label>Название нового события</label>
+            <input
+              placeholder="Например: Экскурсия в музей"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={80}
+              disabled={busy || retryMode}
+            />
+            <label>Дата события</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              disabled={busy || retryMode}
+            />
+          </>
+        )}
+
+        <div className="ph-hub-tabs" role="tablist">
+          <button
+            role="tab"
+            aria-selected={tab === "files"}
+            className={tab === "files" ? "act" : ""}
+            onClick={() => setTab("files")}
+            disabled={busy}
+          >📷 Файлы</button>
+          <button
+            role="tab"
+            aria-selected={tab === "link"}
+            className={tab === "link" ? "act" : ""}
+            onClick={() => setTab("link")}
+            disabled={busy}
+          >🔗 Ссылка</button>
+        </div>
+
+        {tab === "files" ? (
+          <>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              hidden
+              onChange={(e) => pick(e.target.files)}
+            />
+            <button className="upload-zone" onClick={() => inputRef.current?.click()} disabled={busy}>
+              {retryMode
+                ? `Не загрузилось файлов: ${files.length}`
+                : files.length
+                  ? `Выбрано файлов: ${files.length}`
+                  : "📷 Выбрать фото и видео"}
+            </button>
+            <p className="muted ph-hint">
+              До {MAX_FILES} файлов за раз. Фото до 50 МБ (сожмутся сами), видео — до 500 МБ.
+            </p>
+            {busy && progress && <p className="muted ph-progress">{progress}</p>}
+            <div className="actions">
+              <button className="btn small white" onClick={onClose} disabled={busy}>
+                {retryMode ? "Закрыть" : "Отмена"}
+              </button>
+              <button
+                className="btn small teal"
+                onClick={submitFiles}
+                disabled={busy || !files.length || !eventOk}
+              >
+                {busy ? "Загружаем…" : retryMode ? "Повторить неудачные" : "Загрузить"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <LinkFields url={url} setUrl={setUrl} caption={caption} setCaption={setCaption} busy={busy} />
+            <div className="actions">
+              <button className="btn small white" onClick={onClose} disabled={busy}>Отмена</button>
+              <button
+                className="btn small teal"
+                onClick={submitLink}
+                disabled={busy || !validUrl || !eventOk}
+              >
+                {busy ? "Добавляем…" : "Добавить"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
