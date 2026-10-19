@@ -257,46 +257,47 @@ function ActivePolls({ polls, family, onTab }) {
   );
 }
 
-// ===== Обычные объявления внизу главной (ТЗ §11): без дублирования важных =====
-function RegularNews({ announcements, reads, family, onTab }) {
-  const active = (announcements || []).filter((a) => a.status === "active");
-  const regular = active.filter((a) => !a.important).slice(0, 3);
-  // Если все объявления важные — карточки уже показаны вверху,
-  // но путь в ленту оставляем: одна кнопка без заголовка и списка.
-  if (!regular.length) {
-    if (!active.length) return null;
-    return (
-      <button className="pill-btn news-all-link reveal d3" onClick={() => onTab("announcements")}>
-        Все объявления →
-      </button>
-    );
-  }
+// ===== «Новости класса» — карточка справа от расписания (ТЗ редизайна) =====
+// Последние обычные (не важные) объявления: важные показаны отдельной
+// карточкой выше, поэтому здесь не дублируются.
+function DashNews({ announcements, reads, family, onTab }) {
+  const regular = (announcements || [])
+    .filter((a) => a.status === "active" && !a.important)
+    .slice(0, 3);
   return (
-    <>
-      <div className="sec-head reveal d3">
-        <span className="sec-dot blue"><Ic id="i-bell" /></span>
-        <h2 className="sec-title">Объявления класса</h2>
+    <div className="card dash-news reveal d3">
+      <div className="dash-card-head">
+        <img src="/icons/icon-envelope.webp" className="head-3d" alt="" />
+        <div className="dash-card-titles">
+          <h2 className="sec-title">Новости класса</h2>
+          <div className="dash-card-sub">Объявления комитета</div>
+        </div>
       </div>
+      {!regular.length && <div className="bday-empty muted">Новых объявлений пока нет</div>}
       {regular.map((a) => {
         const read = isReadBy(a, reads, family);
         return (
-          <div className="card homenews-card reveal d3" key={a.id}>
-            <div className="homenews-body">
-              <div className="homenews-title">{a.pinned && <span title="Закреплено">📌 </span>}{a.title}</div>
-              {a.body && <div className="homenews-sub">{snippet(a.body)}</div>}
-              <div className="homenews-meta">
+          <button className="dash-news-row" key={a.id} onClick={() => readAndGo(a, reads, family, onTab)}>
+            {/* Объёмная иконка строки (как на референсе); у непрочитанного — синяя точка-метка */}
+            <span className={"dash-news-ico" + (read ? "" : " unread")} aria-hidden="true">
+              <img src="/icons/icon-envelope.webp" alt="" />
+            </span>
+            <span className="dash-news-body">
+              <span className="dash-news-title">{a.pinned && <span title="Закреплено">📌 </span>}{a.title}</span>
+              {a.body && <span className="dash-news-sub">{snippet(a.body, 90)}</span>}
+              <span className="dash-news-meta">
                 {a.author || "Комитет"} · {fmtNewsDate(a.created_at)}
-                {read && <span style={{ color: "var(--green, #2e7d32)", fontWeight: 600 }}> · ✓ Прочитано</span>}
-              </div>
-            </div>
-            <button className="pill-btn blue" onClick={() => readAndGo(a, reads, family, onTab)}>Читать</button>
-          </div>
+                {read && <span className="dash-news-read"> · ✓ Прочитано</span>}
+              </span>
+            </span>
+            <span className="dash-news-arrow" aria-hidden="true">›</span>
+          </button>
         );
       })}
-      <button className="pill-btn news-all-link reveal d3" onClick={() => onTab("announcements")}>
+      <button className="pill-btn blue dash-news-all" onClick={() => onTab("announcements")}>
         Все объявления →
       </button>
-    </>
+    </div>
   );
 }
 
@@ -625,6 +626,303 @@ function HolidaysWidget({ committee, role, events, authorName, toast, onTab }) {
             </button>
           </div>
         )}
+      </div>
+    </>
+  );
+}
+
+// ===== Календарь класса (встроенный, ТЗ редизайна главной) =====
+// Слева — сетка месяца (неделя с понедельника), справа — ближайшие события
+// или события выбранного дня. Источники: события класса (class_events),
+// праздники и каникулы (class_holidays), дни рождения, личные напоминания
+// своей семьи. Объявления в события автоматически не превращаются.
+
+const CCAL_MONTHS_NOM = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+const CCAL_MON_ABBR = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+const CCAL_DOW = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const CCAL_TYPE_LABEL = {
+  event: "Событие класса", holiday: "Праздник", vacation: "Каникулы",
+  bday: "День рождения", note: "Напоминание семьи",
+};
+
+// Цвет точки по типу записи: жёлтая — события/праздники, розовая — ДР, синяя — напоминания
+function ccalTone(type) {
+  return type === "bday" ? "pink" : type === "note" ? "blue" : "gold";
+}
+
+// ISO-дата из года/месяца/дня
+function ccalIso(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+// «одно событие / 2 события / нет событий» — для aria-подписей дней
+function ccalCountWord(n) {
+  if (!n) return "нет событий";
+  if (n === 1) return "одно событие";
+  return `${n} ${pluralRu(n, "событие", "события", "событий")}`;
+}
+
+// Время «10:00» из свободного текста («в 10:00», «10.00–11.30») — для сортировки
+function ccalTimeKey(t) {
+  const m = /(\d{1,2})[:.](\d{2})/.exec(t || "");
+  return m ? `${m[1].padStart(2, "0")}:${m[2]}` : null;
+}
+
+// Строка события в правой колонке календаря
+function CcalEvent({ it, onTab, onPick }) {
+  const d = new Date(it.date + "T00:00:00");
+  const days = daysUntil(it.date);
+  const meta = [
+    it.time || null,
+    it.place || null,
+    CCAL_TYPE_LABEL[it.type] || null,
+    days === 0 ? "сегодня" : days > 0 ? inDaysWord(days) : null,
+  ].filter(Boolean).join(" · ");
+  return (
+    <div className="ccal-ev">
+      <span className={"ccal-ev-date " + ccalTone(it.type)} aria-hidden="true">
+        <b>{d.getDate()}</b>
+        <small>{CCAL_MON_ABBR[d.getMonth()]}</small>
+      </span>
+      <span className="ccal-ev-body">
+        <span className="ccal-ev-title">
+          {it.emoji ? <span aria-hidden="true">{it.emoji} </span> : null}
+          {it.title}
+          {it.turns != null ? ` — исполнится ${it.turns}` : ""}
+        </span>
+        {meta && <span className="ccal-ev-meta">{meta}</span>}
+        {it.note && <span className="ccal-ev-meta">{it.note}</span>}
+      </span>
+      {it.feeLink
+        ? <button className="pill-btn pink ccal-ev-btn" onClick={() => onTab("fees")}>К сбору →</button>
+        : onPick && <button className="pill-btn ccal-ev-btn" onClick={() => onPick(it.date)}>Подробнее</button>}
+    </div>
+  );
+}
+
+function ClassCalendar({ committee, role, events, notes, bdays, family, authorName, toast, onTab }) {
+  const canEdit = committee || role === "teacher";
+  const now = minskNow();
+  const todayIso = minskIso();
+  const [view, setView] = useState({ y: now.getFullYear(), m: now.getMonth() });
+  const [selected, setSelected] = useState(null); // ISO выбранного дня или null
+  const [formOpen, setFormOpen] = useState(false);
+  const [reload, setReload] = useState(0);
+  // Праздники и каникулы комитета — календарь сам ходит в базу (как HolidaysWidget)
+  const [hols, setHols] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let dead = false;
+    fetchHolidays()
+      .then((d) => { if (!dead) { setHols(d); setLoading(false); } })
+      .catch(() => { if (!dead) setLoading(false); });
+    return () => { dead = true; };
+  }, [reload]);
+
+  // --- Записи с датами из всех источников (кроме дней рождения — они годовые) ---
+  const baseItems = [];
+  (events || []).forEach((e) => {
+    if (e.on_date) baseItems.push({
+      id: "ev-" + e.id, type: "event", date: e.on_date, title: e.title,
+      time: e.time_text || null, place: e.place || null,
+    });
+  });
+  (hols || []).forEach((h) => {
+    if (h.on_date) baseItems.push({
+      id: "hol-" + h.id, type: h.kind === "vacation" ? "vacation" : "holiday",
+      date: h.on_date, title: h.title, emoji: h.emoji || null,
+      note: h.note || null, feeLink: !!h.fee_link,
+    });
+  });
+  // Личные напоминания видит только своя семья: массив notes и так загружен
+  // для выбранной семьи, но на всякий случай требуем выбранную семью
+  if (family) (notes || []).forEach((n) => {
+    if (!n.from_teacher && !n.done && n.remind_date) baseItems.push({
+      id: "note-" + n.id, type: "note", date: n.remind_date, title: n.text,
+    });
+  });
+
+  // Дни рождения месяца (y, m): дата — в этом году просмотра
+  const bdayItemsFor = (y, m) => (bdays || [])
+    .filter((k) => Number(k.born.split("-")[1]) - 1 === m)
+    .map((k) => {
+      const day = Number(k.born.split("-")[2]);
+      const bornYear = Number(k.born.slice(0, 4));
+      return {
+        id: `bd-${k.id}-${y}`, type: "bday", date: ccalIso(y, m, day),
+        title: `День рождения: ${bdName(k)}`, name: bdName(k),
+        turns: bornYear >= 2000 && bornYear <= y ? y - bornYear : null,
+      };
+    });
+
+  // --- Сетка месяца: карта «дата → события» ---
+  const monthItems = [
+    ...baseItems.filter((it) => {
+      const [y, m] = it.date.split("-").map(Number);
+      return y === view.y && m - 1 === view.m;
+    }),
+    ...bdayItemsFor(view.y, view.m),
+  ];
+  const byDate = {};
+  monthItems.forEach((it) => { (byDate[it.date] = byDate[it.date] || []).push(it); });
+
+  const firstDow = (new Date(view.y, view.m, 1).getDay() + 6) % 7; // 0 = понедельник
+  const dim = new Date(view.y, view.m + 1, 0).getDate();
+  const prevDim = new Date(view.y, view.m, 0).getDate();
+  const cellCount = Math.ceil((firstDow + dim) / 7) * 7;
+  const cells = Array.from({ length: cellCount }, (_, i) => {
+    const d = i - firstDow + 1;
+    if (d < 1) return { out: true, d: prevDim + d };
+    if (d > dim) return { out: true, d: d - dim };
+    const iso = ccalIso(view.y, view.m, d);
+    return { d, iso, items: byDate[iso] || [], dow: i % 7 };
+  });
+
+  const shiftMonth = (dir) => {
+    const nd = new Date(view.y, view.m + dir, 1);
+    setView({ y: nd.getFullYear(), m: nd.getMonth() });
+  };
+  const goToday = () => {
+    setView({ y: now.getFullYear(), m: now.getMonth() });
+    setSelected(null);
+  };
+
+  // --- Правая колонка: ближайшие события или события выбранного дня ---
+  let sideTitle, sideItems, sideEmpty = null;
+  if (selected) {
+    const [sy, sm] = selected.split("-").map(Number);
+    const dayItems = [
+      ...baseItems.filter((it) => it.date === selected),
+      ...bdayItemsFor(sy, sm - 1).filter((it) => it.date === selected),
+    ].sort((a, b) => (ccalTimeKey(a.time) || "") < (ccalTimeKey(b.time) || "") ? -1 : 1);
+    const sd = new Date(selected + "T00:00:00");
+    sideTitle = `${sd.getDate()} ${MONTHS[sd.getMonth()]} · ${DAYS[sd.getDay()].toLowerCase()}`;
+    sideItems = dayItems;
+    if (!dayItems.length) sideEmpty = "На этот день событий нет";
+  } else {
+    sideTitle = "Ближайшие события";
+    // ДР: ближайшее наступление (в этом или следующем году), сгруппированное по датам
+    const nextBd = (bdays || []).map((k) => {
+      const [, mm, dd] = k.born.split("-").map(Number);
+      let y = now.getFullYear();
+      if (ccalIso(y, mm - 1, dd) < todayIso) y += 1;
+      const bornYear = Number(k.born.slice(0, 4));
+      return {
+        id: `bd-${k.id}`, type: "bday", date: ccalIso(y, mm - 1, dd), name: bdName(k),
+        turns: bornYear >= 2000 && bornYear <= y ? y - bornYear : null,
+      };
+    });
+    const bdByDate = {};
+    nextBd.forEach((b) => { (bdByDate[b.date] = bdByDate[b.date] || []).push(b); });
+    // Все дети одной даты — в одной строке, никаких «и ещё 2»
+    const bdGrouped = Object.entries(bdByDate).map(([date, kids]) => ({
+      id: "bd-" + date, type: "bday", date,
+      title: `${kids.length > 1 ? "Дни рождения" : "День рождения"}: ${kids.map((k) => k.name).join(", ")}`,
+      turns: kids.length === 1 ? kids[0].turns : null,
+    }));
+    sideItems = [...baseItems.filter((it) => it.date >= todayIso), ...bdGrouped]
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 6);
+    if (!sideItems.length) sideEmpty = "Ближайших событий пока нет";
+  }
+
+  return (
+    <>
+      <div className="sec-head reveal d2">
+        {/* Объёмная иконка календаря в заголовке — как на референсе */}
+        <img src="/icons/icon-calendar.webp" className="sec-ico-3d" alt="" />
+        {/* Заголовок получает фокус при переходе с плитки «Календарь» */}
+        <h2 className="sec-title" id="class-calendar-title" tabIndex={-1}>Календарь класса</h2>
+        {canEdit && !formOpen && (
+          <button className="pill-btn blue" style={{ marginLeft: "auto" }} onClick={() => setFormOpen(true)}>+ Добавить</button>
+        )}
+      </div>
+      <div className="card ccal-card reveal d2">
+        {formOpen && (
+          <HolidayForm
+            authorName={authorName}
+            toast={toast}
+            onCancel={() => setFormOpen(false)}
+            onDone={() => { setFormOpen(false); setReload((r) => r + 1); }}
+          />
+        )}
+        <div className="ccal-cols">
+          {/* Левая колонка: сетка месяца */}
+          <div className="ccal-left">
+            <div className="ccal-head">
+              <div className="ccal-month">{CCAL_MONTHS_NOM[view.m]} {view.y}</div>
+              <span className="bd-nav" role="group" aria-label="Переключение месяца">
+                <button className="bd-nav-btn" aria-label="Предыдущий месяц" onClick={() => shiftMonth(-1)}>‹</button>
+                <button className="bd-nav-btn" aria-label="Следующий месяц" onClick={() => shiftMonth(1)}>›</button>
+              </span>
+              <button className="pill-btn ccal-today-btn" onClick={goToday}>Сегодня</button>
+            </div>
+            <div className="ccal-grid" role="grid" aria-label={`Календарь: ${CCAL_MONTHS_NOM[view.m]} ${view.y}`}>
+              {CCAL_DOW.map((d) => (
+                <span className="ccal-dow" key={d} aria-hidden="true">{d}</span>
+              ))}
+              {cells.map((c, i) =>
+                c.out ? (
+                  <span className="ccal-day out" key={"o" + i} aria-hidden="true">
+                    <span className="ccal-num">{c.d}</span>
+                  </span>
+                ) : (
+                  <button
+                    key={c.iso}
+                    className={
+                      "ccal-day" +
+                      (c.iso === todayIso ? " today" : "") +
+                      (c.iso === selected ? " sel" : "") +
+                      (c.dow >= 5 ? " wkend" : "")
+                    }
+                    aria-label={`${c.d} ${MONTHS[view.m]} ${view.y}, ${DAYS[new Date(c.iso + "T00:00:00").getDay()].toLowerCase()}, ${ccalCountWord(c.items.length)}`}
+                    aria-pressed={c.iso === selected}
+                    onClick={() => setSelected(c.iso === selected ? null : c.iso)}
+                  >
+                    <span className="ccal-num">{c.d}</span>
+                    <span className="ccal-dots" aria-hidden="true">
+                      {c.items.slice(0, 3).map((it, j) => (
+                        <span className={"ccal-dot " + ccalTone(it.type)} key={j} />
+                      ))}
+                      {c.items.length > 3 && <span className="ccal-more">+{c.items.length - 3}</span>}
+                    </span>
+                  </button>
+                )
+              )}
+            </div>
+            <div className="ccal-legend" aria-hidden="true">
+              <span><i className="ccal-dot gold" /> События и праздники</span>
+              <span><i className="ccal-dot pink" /> Дни рождения</span>
+              <span><i className="ccal-dot blue" /> Напоминания</span>
+            </div>
+          </div>
+          {/* Правая колонка: ближайшие события или выбранный день */}
+          <div className="ccal-side">
+            <div className="ccal-side-title">{sideTitle}</div>
+            {loading && !sideItems.length ? (
+              <div className="ccal-empty muted">События загружаются…</div>
+            ) : sideEmpty ? (
+              <div className="ccal-empty">
+                <div className="muted">{sideEmpty}</div>
+                {selected && (
+                  <button className="pill-btn blue" onClick={() => setSelected(null)}>К ближайшим событиям</button>
+                )}
+              </div>
+            ) : (
+              sideItems.map((it) => (
+                <CcalEvent
+                  key={it.id} it={it} onTab={onTab}
+                  onPick={selected ? null : (d) => {
+                    // «Подробнее» показывает день в сетке — вместе с его месяцем
+                    const [y, m] = d.split("-").map(Number);
+                    setView({ y, m: m - 1 });
+                    setSelected(d);
+                  }}
+                />
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </>
   );
@@ -980,7 +1278,7 @@ function CommitteeRemind({ authorName, toast }) {
 // Личные действия (учитель, отсутствие, сводка) открываются в окошке поверх
 // главной; разделы (взносы, голосования, объявления, расписание) — переходом
 // на свою вкладку, потому что это полноценные страницы, а не карточки.
-function QuickActions({ items }) {
+function QuickActions({ items, wide }) {
   return (
     <div className="qa-grid reveal d1">
       {items.map((it) => (
@@ -990,6 +1288,13 @@ function QuickActions({ items }) {
           <span className="qa-label">{it.label}</span>
         </button>
       ))}
+      {/* Широкая кнопка под сеткой 3×3 — отдельной строкой (ТЗ §9) */}
+      {wide && (
+        <button className="qa-item qa-wide" onClick={wide.act} aria-label={wide.aria || wide.label}>
+          <span className="qa-ico" aria-hidden="true">{wide.ico}</span>
+          <span className="qa-label">{wide.label}</span>
+        </button>
+      )}
     </div>
   );
 }
@@ -1159,9 +1464,9 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     subline = "Сегодня несколько событий: посмотрите блоки ниже — там объявления, голосования и напоминания.";
   } else if (impUnread.length) {
     headline = "Есть важная информация для родителей";
-    subline = "Комитет опубликовал важное объявление — карточка с ним в самом верху страницы.";
+    subline = "Есть новое объявление — посмотрите ниже.";
   } else if (pollsNoAnswer.length) {
-    headline = "Нужно ваше мнение";
+    headline = "Нужно ваше мнение в голосовании";
     subline = "Идёт голосование, где ваша семья ещё не ответила, — карточка ниже ведёт прямо к нему.";
   } else if (focusNotes.length) {
     headline = schedFocus.label === "сегодня" ? "Сегодня есть что взять с собой" : "На завтра нужно собрать вещи";
@@ -1173,8 +1478,9 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     headline = "В расписании есть изменения";
     subline = `Проверьте уроки ${schedFocus.label} — подробности в баннере выше и в расписании.`;
   } else {
-    headline = "Сейчас нет задач, требующих вашего действия";
-    subline = "Всё важное собрано ниже: расписание, касса класса и дни рождения.";
+    // Нейтральное состояние (ТЗ §7): спокойная подпись без выдуманных событий
+    headline = "Всё важное — под рукой";
+    subline = "Все важные дела выполнены. Ниже — календарь, расписание и новости класса.";
   }
   // Реплики облачков маскота (ТЗ §6): только реальные события, по приоритету.
   // Несколько событий — реплики чередуются, первой идёт самая важная.
@@ -1201,7 +1507,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   });
   if (!cues.length) cues.push({
     top: "Всё под контролем",
-    text: "Посмотрим, что завтра?",
+    text: "Всё важное — под рукой!",
   });
   // ===== Данные для сетки быстрых действий =====
   // Имя учителя — из подписей к его материалам (как раньше в карточке чата)
@@ -1246,20 +1552,30 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     { key: "sched", label: "Расписание",
       ico: <img src="/icons/icon-calendar-clock.webp" alt="" />,
       badge: schedOvs.length, act: () => onTab("schedule") },
+    // «Календарь» прокручивает к встроенному календарю класса и переводит фокус
+    // к его заголовку (ТЗ §9). Иконка — календарь, а не хлопушка.
+    { key: "calendar", label: "Календарь", aria: "Календарь класса",
+      ico: <img src="/icons/icon-calendar.webp" alt="" />,
+      badge: 0, act: () => {
+        const el = document.getElementById("class-calendar-title");
+        // При prefers-reduced-motion прокручиваем без анимации
+        const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        el?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+        el?.focus({ preventScroll: true });
+      } },
     { key: "pay", label: "Платёж", aria: "Отметить платёж",
       ico: <img src="/icons/icon-wallet.webp" alt="" />,
       badge: 0, act: () => onTab("fees") },
   ];
-  if (committee) {
-    quickItems.push(
-      { key: "newann", label: "Создать объявление", aria: "Создать объявление",
+  // «Создать объявление» — отдельной широкой строкой под сеткой, только комитету
+  const quickWide = committee
+    ? { key: "newann", label: "Создать объявление", aria: "Создать объявление",
         ico: <img src="/icons/icon-note-plus.webp" alt="" />,
-        badge: 0, act: () => {
+        act: () => {
           try { sessionStorage.setItem("rk1g-open-newann", "1"); } catch {}
           onTab("announcements");
-        } },
-    );
-  }
+        } }
+    : null;
   // Строка-подсказка с самым срочным: ответ учителя → долг → голосование
   let urgent = null;
   if (teacherUnread > 0) {
@@ -1301,7 +1617,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           </div>
         </div>
         <div className="qa-panel reveal d1">
-          <QuickActions items={quickItems} />
+          <QuickActions items={quickItems} wide={quickWide} />
         </div>
       </div>
       {urgent && (
@@ -1329,7 +1645,6 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       />
 
       <ImportantNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
-      <RegularNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
       <BdayBanner ev={bdayEv} />
       <ScheduleChangeBanner
         activeOvs={schedOvs}
@@ -1383,6 +1698,13 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
 
       <ActivePolls polls={polls} family={family} onTab={onTab} />
 
+      {/* Встроенный календарь класса: события, праздники, дни рождения
+          и личные напоминания семьи — к нему ведёт плитка «Календарь» */}
+      <ClassCalendar
+        committee={committee} role={role} events={events} notes={notes}
+        bdays={bdays} family={family} authorName={authorName} toast={toast} onTab={onTab}
+      />
+
       {/* Личная переписка семьи с учителем — открывается с иконки «Учителю».
           Отдельной карточки на главной больше нет: её заменила сетка сверху. */}
       {role !== "teacher" && (
@@ -1418,7 +1740,6 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           />
         )}
       </QuickModal>
-
       {/* Привязка семьи — только для комитета: у учителя «Главной» больше нет,
           да и своей семьи в списке класса у него не бывает */}
       {!family && committee && <BindFamilyCard setFamily={setFamily} toast={toast} />}
@@ -1430,6 +1751,8 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
         </div>
         <div className="dash-col-side">
+          {/* Новости класса — справа от расписания (ТЗ): последние обычные объявления */}
+          <DashNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
           <div className="card cash-card reveal d3">
             <div className="dash-card-head">
               <img src="/icons/icon-piggy.webp" className="head-3d" alt="" />

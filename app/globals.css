@@ -120,7 +120,7 @@ button:hover>.icb,.attn-card:hover .icb{transform:scale(1.06)}
 
 /* ---------- SHELL ---------- */
 header{background:var(--cream);position:sticky;top:0;z-index:50;border-bottom:1px solid var(--soft-line)}
-.header-inner{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:13px 18px}
+.header-inner{max-width:1320px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:13px 24px}
 .logo{display:flex;align-items:center;gap:10px;font-family:'Comfortaa','Trebuchet MS',sans-serif;font-weight:700;font-size:18px;white-space:nowrap}
 .logo .logo-badge{width:38px;height:38px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex:none}
 .spacer{flex:1}
@@ -136,7 +136,10 @@ header{background:var(--cream);position:sticky;top:0;z-index:50;border-bottom:1p
 .exit-label{font-family:'Onest';font-weight:800;font-size:12.5px}
 
 /* top nav (desktop) */
-nav.topnav{max-width:1080px;margin:0 auto;display:flex;gap:5px;padding:10px 16px;flex-wrap:wrap;overflow-x:visible}
+/* Меню одной строкой: при нехватке места — горизонтальная прокрутка,
+   чтобы «История» не переносилась одиноко на второй ряд */
+nav.topnav{max-width:1320px;margin:0 auto;display:flex;gap:5px;padding:10px 24px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+nav.topnav::-webkit-scrollbar{display:none}
 nav.topnav button{border:none;background:#fff;padding:9px 17px;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer;border-radius:999px;white-space:nowrap;font-family:'Onest';transition:.15s;display:inline-flex;align-items:center;gap:7px}
 nav.topnav button:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(23,23,23,.1)}
 nav.topnav button.active{background:var(--ink);color:#fff}
@@ -163,7 +166,8 @@ nav.bottomnav button.active{color:#fff;background:var(--ink);padding:8px 11px}
   body:has(.pwa-install-overlay) nav.bottomnav,
   body.kb-open nav.bottomnav{display:none}
 }
-main{max-width:1080px;margin:0 auto;padding:22px 18px 60px}
+main{max-width:1320px;margin:0 auto;padding:22px 24px 60px}
+@media(max-width:760px){main{padding-left:16px;padding-right:16px}}
 
 /* ---------- COMPONENTS ---------- */
 .grid{display:grid;gap:14px}
@@ -413,7 +417,7 @@ button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-off
 .dstat .note{font-size:13px;font-weight:600;opacity:.85}
 
 /* section headings */
-.sec-head{display:flex;align-items:center;gap:10px;margin:26px 0 14px}
+.sec-head{display:flex;align-items:center;gap:10px;margin:32px 0 16px}
 .sec-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex:none}
 .sec-dot.gold{background:#F6D96F}
 .sec-title{font-size:20px;margin:0}
@@ -458,7 +462,7 @@ button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-off
 }
 
 /* ── Двухколонник: расписание + касса ── */
-.dash-cols{display:grid;grid-template-columns:58fr 42fr;gap:22px;align-items:start}
+.dash-cols{display:grid;grid-template-columns:58fr 42fr;gap:26px;align-items:start}
 .dash-col-main{min-width:0}
 .dash-col-side{min-width:0}
 
@@ -600,7 +604,7 @@ button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-off
 .sched-day.bells .sched-time{width:36px}
 
 /* Мини-расписание на главной */
-.dash-sched{margin-bottom:16px}
+.dash-sched{margin-bottom:28px}
 .dash-sched-row{display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px dashed var(--soft-line)}
 .dash-sched-row:last-of-type{border-bottom:none}
 .dash-sched-time{flex:none;width:96px;font-size:12.5px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
@@ -617,7 +621,7 @@ button.cm-bubble.cm-main:focus-visible{outline:3px solid var(--blue);outline-off
 .attn-ico.gold{background:var(--gold-soft);color:#8A6D1B}
 
 /* Праздничный баннер в сам день рождения / День летних детей */
-.bday-banner{display:flex;align-items:center;gap:14px;background:linear-gradient(105deg,var(--pink-soft),var(--gold-soft));border:2px solid #F3B7CF;border-radius:20px;padding:14px 18px;margin-bottom:14px}
+.bday-banner{display:flex;align-items:center;gap:14px;background:linear-gradient(105deg,var(--pink-soft),var(--gold-soft));border:2px solid #F3B7CF;border-radius:20px;padding:14px 18px;margin-bottom:28px}
 .bday-banner.summer{background:linear-gradient(105deg,var(--gold-soft),#E7EFD6);border-color:#E8CD7A}
 .bday-banner-ico{width:52px;height:52px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;color:var(--pink)}
 .bday-banner.summer .bday-banner-ico{color:#C99A1E}
@@ -1087,7 +1091,7 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .vote-who-missing{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
 
 /* ===== Главная: важные объявления (ТЗ §7) — светло-жёлтая подложка, золотистая обводка ===== */
-.imp-card{display:flex;align-items:center;gap:28px;width:100%;background:linear-gradient(180deg,#FFF9D9 0%,#FFF3BA 100%);border:2.5px solid #FFD329;border-radius:30px;padding:26px 30px;margin-bottom:18px;box-shadow:0 12px 28px rgba(255,178,36,.22)}
+.imp-card{display:flex;align-items:center;gap:28px;width:100%;background:linear-gradient(180deg,#FFF9D9 0%,#FFF3BA 100%);border:2.5px solid #FFD329;border-radius:30px;padding:26px 30px;margin-bottom:28px;box-shadow:0 12px 28px rgba(255,178,36,.22)}
 .imp-ico{flex:none;width:128px;height:auto;filter:drop-shadow(0 10px 14px rgba(176,118,18,.30));animation:imp-wiggle 1s ease .25s 1 both}
 @keyframes imp-wiggle{0%{transform:rotate(0)}20%{transform:rotate(-7deg)}45%{transform:rotate(6deg)}70%{transform:rotate(-3deg)}100%{transform:rotate(0)}}
 @media (prefers-reduced-motion:reduce){.imp-ico{animation:none}}
@@ -1105,7 +1109,7 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .imp-btn.pill-btn:focus-visible{outline:3px solid #17234D;outline-offset:3px}
 
 /* ===== Главная: активные голосования (ТЗ §8) — светло-сиреневая подложка, фиолетовая обводка ===== */
-.pollhome-card{display:flex;align-items:center;gap:18px;width:100%;background:#F1EDFB;border:2px solid #A78BDF;border-radius:26px;padding:20px 24px;margin-bottom:18px}
+.pollhome-card{display:flex;align-items:center;gap:18px;width:100%;background:#F1EDFB;border:2px solid #A78BDF;border-radius:26px;padding:20px 24px;margin-bottom:28px}
 .pollhome-ico{flex:none;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:28px;background:#E3DAF6;border-radius:18px}
 .pollhome-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .pollhome-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -1126,7 +1130,7 @@ nav.bottomnav .nav-badge{top:0;right:8px}
 .news-all-link{display:inline-flex;margin-bottom:18px}
 
 /* ===== Главная: личная сводка семьи, заметки и напоминания ===== */
-.fam-widget,.notes-widget,.remind-card{margin-bottom:16px}
+.fam-widget,.notes-widget,.remind-card{margin-bottom:28px}
 .fam-rows{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .fam-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--cream);
   border:none;border-radius:18px;padding:12px 14px;cursor:pointer;font:inherit;color:var(--ink);transition:background .15s}
@@ -2144,7 +2148,8 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .pay-due-card .pill-btn{background:#e85d4a}
 
 /* ===== Быстрые действия на главной (qa-*) ===== */
-.qa-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:14px}
+/* Строгая сетка 3×3 на всех ширинах (ТЗ редизайна §9) */
+.qa-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin-bottom:14px}
 .qa-item{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
   gap:7px;background:var(--card);border:1px solid var(--soft-line);border-radius:22px;
   padding:14px 8px 12px;min-height:112px;cursor:pointer;
@@ -2178,7 +2183,7 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
    панель быстрых действий справа (≈45%) на подложке-карте.
    Высоты колонок выравниваются (align-items:stretch). */
 @media(min-width:900px){
-  .home-hero{display:grid;grid-template-columns:55fr 45fr;gap:18px;align-items:stretch;margin:10px 0 20px}
+  .home-hero{display:grid;grid-template-columns:55fr 45fr;gap:18px;align-items:stretch;margin:10px 0 28px}
   /* Приветствие внутри узкой колонки — текст сверху, компактная сцена с маскотом ниже.
      Облачка помещаются внутри карточки, поэтому большой отступ сверху не нужен. */
   .home-hero .welcome.compact{margin:0;flex-direction:column;align-items:stretch;gap:10px;height:100%;
@@ -2363,4 +2368,138 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
   .ph-hero-mascot img{width:62px;height:62px}
   .ph-card-meta{font-size:11px}
   .ph-grid{grid-template-columns:repeat(3,1fr)}
+}
+
+/* ============================================================
+   Редизайн главной: широкая кнопка «Создать объявление»,
+   календарь класса (ccal-*) и карточка «Новости класса»
+   ============================================================ */
+
+/* Широкая строка под сеткой 3×3 — только для комитета */
+.qa-wide{grid-column:1/-1;flex-direction:row;justify-content:center;gap:10px;
+  min-height:54px;padding:10px 14px}
+/* У файла иконки большие прозрачные поля, поэтому размер крупнее номинала */
+.qa-wide .qa-ico{width:48px;height:48px}
+.qa-wide .qa-ico img{width:48px;height:48px}
+.qa-wide .qa-label{min-height:0;text-align:left;font-size:13.5px}
+@media(min-width:900px){
+  .qa-panel .qa-item.qa-wide{min-height:52px;padding:8px 12px;flex-direction:row;gap:10px}
+  .qa-panel .qa-wide .qa-ico{width:48px;height:48px}
+  .qa-panel .qa-wide .qa-ico img{width:48px;height:48px}
+  .qa-panel .qa-wide .qa-label{min-height:0}
+}
+
+/* ===== Календарь класса ===== */
+.ccal-card{padding:20px;margin-bottom:28px}
+.ccal-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+@media(max-width:1023px){.ccal-cols{grid-template-columns:1fr;gap:16px}}
+
+.ccal-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.ccal-month{font-size:16.5px;font-weight:800;margin-right:auto}
+.ccal-today-btn{margin-left:2px}
+
+.ccal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.ccal-dow{font-size:11px;font-weight:800;color:var(--muted);text-align:center;
+  text-transform:uppercase;letter-spacing:.02em;padding:4px 0}
+.ccal-day{position:relative;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;min-height:44px;border-radius:12px;border:1.5px solid transparent;
+  background:none;cursor:pointer;padding:5px 2px 4px;font:inherit;font-size:13.5px;
+  font-weight:600;color:var(--ink);transition:background .15s ease}
+@media(hover:hover){.ccal-day:not(.out):hover{background:var(--blue-soft)}}
+.ccal-day:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.ccal-day.out{color:#C9C4B8;pointer-events:none}
+.ccal-day.wkend{color:var(--muted)}
+.ccal-num{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;line-height:1}
+/* Сегодня — синий круг с белой цифрой; выбранный день — контур и светлый фон
+   (два РАЗНЫХ состояния, различимых одновременно) */
+.ccal-day.today .ccal-num{background:var(--blue);color:#fff;font-weight:800}
+.ccal-day.sel{border-color:var(--blue);background:var(--blue-soft)}
+.ccal-dots{display:flex;gap:3px;align-items:center;justify-content:center;min-height:8px;margin-top:2px}
+.ccal-dot{display:inline-block;width:6px;height:6px;border-radius:50%;flex:none}
+.ccal-dot.gold{background:#F5CA45}
+.ccal-dot.pink{background:#EA539B}
+.ccal-dot.blue{background:#4964DA}
+.ccal-more{font-size:9px;font-weight:800;color:var(--muted);line-height:1}
+
+.ccal-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;
+  font-size:12px;font-weight:600;color:var(--muted)}
+.ccal-legend span{display:inline-flex;align-items:center;gap:6px}
+.ccal-legend .ccal-dot{font-style:normal}
+
+/* Правая колонка: ближайшие события / выбранный день */
+.ccal-side{background:#FBF7EE;border-radius:18px;padding:14px 16px;min-height:100%}
+.ccal-side-title{font-size:14.5px;font-weight:800;margin-bottom:8px}
+.ccal-ev{display:flex;align-items:flex-start;gap:11px;padding:9px 0;border-bottom:1px dashed var(--soft-line)}
+.ccal-ev:last-of-type{border-bottom:none;padding-bottom:2px}
+.ccal-ev-date{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-width:44px;min-height:44px;border-radius:13px;padding:5px 4px;flex:none;background:#fff}
+.ccal-ev-date.gold{background:var(--gold-soft)}
+.ccal-ev-date.pink{background:var(--pink-soft)}
+.ccal-ev-date.blue{background:var(--blue-soft)}
+.ccal-ev-date b{font-size:17px;line-height:1.05}
+.ccal-ev-date small{font-size:10.5px;font-weight:700;color:var(--muted)}
+.ccal-ev-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ccal-ev-title{font-size:13.5px;font-weight:700;overflow-wrap:anywhere}
+.ccal-ev-meta{font-size:12px;font-weight:600;color:var(--muted)}
+.ccal-ev-btn{flex:none;align-self:center}
+.ccal-empty{display:flex;flex-direction:column;align-items:flex-start;gap:10px;
+  padding:14px 2px;font-size:13.5px;font-weight:600}
+
+/* ===== «Новости класса» справа от расписания ===== */
+.dash-news{margin-bottom:28px}
+.dash-news-row{display:flex;align-items:flex-start;gap:10px;width:100%;min-height:44px;
+  border:none;background:none;cursor:pointer;font:inherit;text-align:left;color:var(--ink);
+  padding:9px 2px;border-bottom:1px dashed var(--soft-line);border-radius:10px}
+.dash-news-row:last-of-type{border-bottom:none}
+@media(hover:hover){.dash-news-row:hover{background:rgba(72,101,214,.05)}}
+.dash-news-row:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.dash-news-dot{width:9px;height:9px;border-radius:50%;background:var(--blue);flex:none;margin-top:5px}
+.dash-news-dot.read{background:var(--soft-line)}
+.dash-news-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.dash-news-title{font-size:13.5px;font-weight:700;overflow-wrap:anywhere}
+.dash-news-sub{font-size:12.5px;color:var(--muted)}
+.dash-news-meta{font-size:11.5px;font-weight:600;color:var(--muted)}
+.dash-news-read{color:#2e7d32}
+.dash-news-arrow{font-size:19px;line-height:1;color:var(--muted);margin-top:2px}
+.dash-news-all{margin-top:10px}
+
+/* Телефоны: календарь компактнее, кнопки месяца не выпирают */
+@media(max-width:520px){
+  .ccal-card{padding:16px 14px}
+  .ccal-grid{gap:2px}
+  .ccal-day{min-height:44px;border-radius:10px;font-size:13px}
+  .ccal-side{padding:12px 12px}
+  .ccal-ev{gap:9px}
+}
+
+/* Спокойный режим: без плавной прокрутки и ховер-эффектов календаря */
+@media(prefers-reduced-motion:reduce){
+  .ccal-day{transition:none}
+}
+
+/* Прокрутка к заголовку календаря с плитки «Календарь»: отступ под липкую шапку */
+#class-calendar-title{scroll-margin-top:160px;outline:none}
+#class-calendar-title:focus-visible{outline:2px solid var(--blue);outline-offset:4px;border-radius:6px}
+
+/* Кнопка «Подробнее» на кремовой подложке — белая с синим текстом, чтобы читалась */
+.ccal-ev-btn{background:#fff;color:var(--blue);border:1px solid var(--soft-line)}
+.ccal-today-btn{background:#fff;color:var(--blue);border:1px solid var(--soft-line)}
+
+/* ===== Объёмные иконки заголовков и строк (как на референсе) ===== */
+/* Иконка-3D в заголовке секции («Календарь класса») */
+.sec-ico-3d{width:42px;height:42px;object-fit:contain;flex:none;
+  filter:drop-shadow(0 3px 6px rgba(39,65,114,.18))}
+/* Иконка строки в «Новостях класса»: мягкая подложка + метка непрочитанного */
+.dash-news-ico{position:relative;flex:none;width:38px;height:38px;border-radius:12px;
+  background:var(--blue-soft);display:grid;place-items:center}
+.dash-news-ico img{width:26px;height:26px;object-fit:contain}
+.dash-news-ico.unread::after{content:"";position:absolute;top:-3px;right:-3px;
+  width:11px;height:11px;border-radius:50%;background:var(--blue);border:2px solid #fff}
+
+/* На телефонах воздух между блоками чуть меньше, чтобы не растягивать страницу */
+@media(max-width:640px){
+  .imp-card,.pollhome-card,.bday-banner,.ccal-card,.dash-sched,.dash-news,
+  .fam-widget,.notes-widget,.remind-card{margin-bottom:18px}
+  .sec-head{margin:24px 0 12px}
+  .sec-ico-3d{width:36px;height:36px}
 }
