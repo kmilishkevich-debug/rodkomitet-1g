@@ -858,8 +858,8 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
   };
 
   // Единый вид данных: живые из базы или встроенные из data.js.
-  // Авто-списания (хознужды, подарки, тетради, ГПД) пересчитываются из раздела «Расходы»;
-  // доля ГПД делится только на ходящих детей, ручной ноль исключает ребёнка из статьи.
+  // Авто-списания (хознужды, подарки, тетради) пересчитываются из раздела «Расходы»;
+  // статья «ГПД» в ведомости всегда 0 — деньги ГПД считаются отдельно в фонде ГПД.
   const src = live || fallbackFeeData();
   const { columns, rows: autoRows, auto } = applyAutoFees(src.columns, src.rows, liveGroups);
   // Норма взноса: 200 BYN у ходящих в ГПД (175 + 25 в фонд), 175 — у не ходящих
@@ -881,10 +881,10 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
     totals[c.id] = round2(rows.reduce((s, r) => s + (r.values[c.id] || 0), 0));
   });
   const totalPaid = columns.filter((c) => c.kind === "paid").reduce((s, c) => s + totals[c.id], 0);
-  // Цель банки казначея: только классная часть взноса — 175 BYN с каждой семьи,
-  // без 25 BYN фонда ГПД (фонд ГПД считается отдельным блоком ниже).
+  // Цель банки казначея: сумма годовых норм всех детей (200 BYN у ходящих
+  // в ГПД, 175 — у не ходящих). В банке — всё сданное семьями, как в таблице.
   // Пересчитывается сама при изменении списка детей — без захардкоженных чисел.
-  const mascotGoal = round2(rows.length * (FEE_TARGET - GPD_FUND_FEE));
+  const mascotGoal = round2(rows.reduce((s, r) => s + r.target, 0));
   const totalRest = round2(rows.reduce((s, r) => s + r.rest, 0));
   const totalDue = round2(rows.reduce((s, r) => s + r.due, 0));
   const doneCount = rows.filter((r) => r.due <= 0.005).length;
@@ -1613,14 +1613,15 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
     setSaving(false);
   };
 
-  // ===== Общая касса класса: собрано / потрачено / осталось (деньги фонда ГПД сюда не входят) =====
+  // ===== Общая касса класса: собрано / потрачено / осталось =====
+  // Траты ГПД в списания не входят: статья «ГПД» в ведомости всегда 0,
+  // расходы ГПД оплачиваются из отдельного фонда ГПД (блок ниже).
   const totalCharges = round2(columns.filter((c) => c.kind === "charge").reduce((s, c) => s + (totals[c.id] || 0), 0));
-  // Классная часть взносов: из сданного семьями вычитаем фактические взносы фонда ГПД
-  // (они проставлены в таблице фонда ГПД и считаются там отдельно)
-  const classPaid = round2(totalPaid - gpdPaidTotal);
-  const cashCollected = round2(classPaid + oneOffTotal); // взносы семей без ГПД + разовые поступления (без ГПД)
-  const cashSpent = totalCharges; // все списания из взносов
-  // «Осталось» — только главный сбор: взносы семей (без ГПД и без разовых) минус списания
+  // Собрано классом — всё сданное семьями по ведомости (как в таблице, 5 312,40)
+  const classPaid = round2(totalPaid);
+  const cashCollected = round2(classPaid + oneOffTotal); // взносы семей + разовые поступления (без ГПД)
+  const cashSpent = totalCharges; // все списания из взносов (без трат ГПД)
+  // «Осталось» — только главный сбор: взносы семей (без разовых) минус списания
   const cashLeft = round2(classPaid - cashSpent);
 
   return (
@@ -1644,22 +1645,22 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
           </button>
           {howOpen && (
             <div className="fin-how muted">
-              Семьи детей, ходящих в ГПД, сдают {fmt(FEE_TARGET)} BYN за учебный год ({fmt(FEE_TARGET - GPD_FUND_FEE)} классу
-              + {fmt(GPD_FUND_FEE)} в фонд ГПД), не ходящих — {fmt(FEE_TARGET - GPD_FUND_FEE)} BYN. Списания по статьям «хознужды»,
+              Семьи детей, ходящих в ГПД, сдают {fmt(FEE_TARGET)} BYN за учебный год, не ходящих — {fmt(FEE_TARGET - GPD_FUND_FEE)} BYN.
+              «Собрано» — всё сданное семьями по ведомости. Списания по статьям «хознужды»,
               «подарки» и «рабочие тетради» считаются автоматически из раздела «Расходы»:
               сумма группы трат делится поровну между детьми (гардероб входит в хознужды).
-              Статья «ГПД» — тоже авто: расходы группы «ГПД» делятся поровну между ходящими
-              в ГПД детьми, поэтому доля растёт по мере реальных трат. Бейджи и магнитные значки проставляются вручную.
-              Деньги фонда ГПД ({fmt(GPD_FUND_FEE)} BYN с ходящего ребёнка) в общую кассу не входят — они
-              считаются отдельно, в блоке «Фонд ГПД» ниже. Разовые поступления (кроме поступлений на ГПД)
-              плюсуются в «Собрано», а «Осталось» показывает остаток только главного сбора: взносы семей минус
+              Бейджи и магнитные значки проставляются вручную. Траты ГПД из общей кассы
+              не списываются: они оплачиваются из отдельного фонда ГПД ({fmt(GPD_FUND_FEE)} BYN с ходящего
+              ребёнка, включая детей других классов) — его считает блок «Фонд ГПД» ниже.
+              Разовые поступления (кроме поступлений на ГПД) плюсуются в «Собрано»,
+              а «Осталось» показывает остаток только главного сбора: взносы семей минус
               списания. Каждая правка сумм попадает в историю изменений внизу страницы.
             </div>
           )}
         </div>
         {/* Пушистый казначей с банкой «Общее дело 1Г» — как и раньше, живёт в кассе.
-            В банке — только классная часть взносов семей (без фонда ГПД и без разовых поступлений),
-            цель — 175 BYN с каждой семьи. */}
+            В банке — всё сданное семьями по ведомости (без разовых поступлений),
+            цель — сумма годовых норм детей (200/175 BYN). */}
         <div className="fin-mascot">
           <TreasurerMascot collected={classPaid} goal={mascotGoal} />
         </div>
@@ -1677,6 +1678,10 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
             <div className="fin-tile-head"><Ic id="i-check" />Осталось</div>
             <Sum value={cashLeft} />
           </div>
+        </div>
+        {/* ГПД — отдельный карман: короткая расшифровка, подробности в блоке «Фонд ГПД» ниже */}
+        <div className="muted" style={{ marginTop: 8, fontSize: 12.5 }}>
+          ГПД считается отдельно: собрано {fmt(gpdCollected)} · потрачено {fmt(gpdSpent)} · остаток {fmt(gpdRest)} BYN — блок «Фонд ГПД» ниже
         </div>
         {/* Поделиться ссылкой на сборы в вайбер-чате */}
         <button
@@ -1997,7 +2002,7 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
                           ) : c.title}
                           {auto[c.id] && (
                             <span className="chip teal" style={{ marginLeft: 4, padding: "1px 6px", fontSize: 9.5 }} title={auto[c.id].gpd
-                              ? "Считается автоматически: расходы группы «ГПД» " + fmt(auto[c.id].sum) + " BYN ÷ " + auto[c.id].count + " ходящих детей"
+                              ? "ГПД считается отдельно в блоке «Фонд ГПД» — в ведомости класса у всех 0, колонка показывает только, кто ходит в ГПД (норма 200/175)"
                               : "Считается автоматически из раздела «Расходы»: " + fmt(auto[c.id].sum) + " BYN ÷ " + auto[c.id].count}>авто</span>
                           )}
                           {committee && (
@@ -2086,7 +2091,7 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
           <div>
             <div className="muted" style={{ marginTop: 8 }}>
               «Осталось сдать» — сколько не хватает до нормы: {fmt(FEE_TARGET)} BYN у ходящих в ГПД, {fmt(FEE_TARGET - GPD_FUND_FEE)} BYN у не ходящих (0 в колонке «ГПД») · «Остаток» — сданное минус списания · отрицательный остаток — нужна доплата
-              · статьи «авто» пересчитываются сами при каждой новой трате в разделе «Расходы»; чтобы исключить ребёнка из такой статьи, поставьте ему 0 — его доля разделится между остальными · «ГПД» — расходы группы «ГПД» поровну между ходящими детьми
+              · статьи «авто» пересчитываются сами при каждой новой трате в разделе «Расходы»; чтобы исключить ребёнка из такой статьи, поставьте ему 0 — его доля разделится между остальными · колонка «ГПД» у всех 0: траты ГПД считаются отдельно в блоке «Фонд ГПД»
               {committee ? " · нажмите на сумму, чтобы исправить её, или на название статьи в шапке, чтобы проставить сумму всем детям сразу (изменения попадают в журнал)" : ""}
             </div>
           </div>
@@ -2200,7 +2205,10 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
           <div className="fin-oneoff-title">
             <span className="fin-ic-circle" aria-hidden="true"><Ic id="i-coin" /></span>
             <div>
-              <h3 style={{ margin: 0 }}>Разовые поступления {oneOffs && oneOffs.length > 0 && <span className="chip green">+{fmt(oneOffAll)} BYN</span>}</h3>
+              <h3 style={{ margin: 0 }}>Разовые поступления
+                {oneOffs && oneOffTotal > 0 && <span className="chip green" style={{ marginLeft: 6 }}>+{fmt(oneOffTotal)} BYN</span>}
+                {oneOffs && oneOffGpd > 0 && <span className="chip violet" style={{ marginLeft: 6 }} title="Взносы на ГПД детей из других классов — идут в фонд ГПД, а не в кассу класса">ГПД другие классы +{fmt(oneOffGpd)} BYN</span>}
+              </h3>
               <div className="fee-meta">Пополнения общей кассы вне сборов</div>
             </div>
           </div>

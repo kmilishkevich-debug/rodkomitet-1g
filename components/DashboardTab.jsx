@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { fetchCashExtras, fetchFees, fetchFeeCampaigns, fetchPaymentRequisites, addFamilyNote, toggleFamilyNote, deleteFamilyNote, markRead, isLive } from "@/lib/supabase";
+import { fetchCashExtras, fetchFees, fetchFeeCampaigns, fetchPaymentRequisites, addFamilyNote, toggleFamilyNote, deleteFamilyNote, markRead, isLive, fetchHolidays, saveHoliday, deleteHoliday } from "@/lib/supabase";
 import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
@@ -435,6 +435,201 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
   );
 }
 
+// ===== Календарь предстоящих праздников =====
+
+// Иконка по типу записи, если своя не задана
+const HOLIDAY_EMOJI = { holiday: "🎉", vacation: "🏖️", class: "🎒" };
+
+// Сколько дней осталось до даты (по Минску); 0 = сегодня, отрицательное = прошло
+function daysUntil(iso) {
+  if (!iso) return null;
+  const now = minskNow();
+  const a = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const d = new Date(iso + "T00:00:00");
+  const b = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.round((b - a) / 86400000);
+}
+
+function fmtHolidayDate(iso) {
+  if (!iso) return "даты уточняются";
+  const d = new Date(iso + "T00:00:00");
+  const year = d.getFullYear() !== minskNow().getFullYear() ? ` ${d.getFullYear()}` : "";
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}${year}`;
+}
+
+// Форма добавления/правки праздника (комитет и учитель)
+function HolidayForm({ initial, authorName, onDone, onCancel, toast }) {
+  const [title, setTitle] = useState(initial?.title || "");
+  const [date, setDate] = useState(initial?.on_date || "");
+  const [kind, setKind] = useState(initial?.kind || "holiday");
+  const [emoji, setEmoji] = useState(initial?.emoji || "");
+  const [note, setNote] = useState(initial?.note || "");
+  const [feeLink, setFeeLink] = useState(!!initial?.fee_link);
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    const t = title.trim();
+    if (!t) { toast("Напишите название праздника"); return; }
+    setSaving(true);
+    try {
+      await saveHoliday({
+        ...(initial?.id ? { id: initial.id } : {}),
+        title: t,
+        on_date: date || null,
+        kind,
+        emoji: emoji.trim() || null,
+        note: note.trim() || null,
+        fee_link: feeLink,
+        author: authorName || "Комитет",
+      });
+      toast(initial?.id ? "Праздник обновлён" : "Праздник добавлен в календарь");
+      onDone();
+    } catch (e) {
+      console.error(e);
+      toast("Не получилось сохранить — попробуйте ещё раз");
+    }
+    setSaving(false);
+  };
+  return (
+    <div className="note-form" style={{ alignItems: "stretch" }}>
+      <input
+        className="note-input" type="text" placeholder="Название: Осенний бал"
+        value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)}
+      />
+      <input className="note-date" type="date" value={date} onChange={(e) => setDate(e.target.value)}
+        aria-label="Дата (можно оставить пустой — покажем «даты уточняются»)" />
+      <select className="note-date" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Тип записи">
+        <option value="holiday">Праздник</option>
+        <option value="vacation">Каникулы</option>
+      </select>
+      <input className="note-date" type="text" placeholder="Эмодзи" value={emoji} maxLength={4}
+        style={{ width: 80 }} onChange={(e) => setEmoji(e.target.value)} />
+      <input
+        className="note-input" type="text" placeholder="Заметка: утренник в 10:00, нарядная форма"
+        value={note} maxLength={200} onChange={(e) => setNote(e.target.value)}
+      />
+      <label className="note-check" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+        <input type="checkbox" checked={feeLink} onChange={(e) => setFeeLink(e.target.checked)} />
+        показать кнопку «К сбору» (идёт сбор денег на этот праздник)
+      </label>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button className="pill-btn blue" disabled={saving} onClick={save}>
+          {saving ? "Сохраняю…" : initial?.id ? "Сохранить" : "Добавить"}
+        </button>
+        <button className="pill-btn" onClick={onCancel}>Отмена</button>
+      </div>
+    </div>
+  );
+}
+
+// Карточка «Предстоящие праздники»: праздники и каникулы из class_holidays
+// плюс события класса от учителя (class_events) — одной лентой.
+// Сама ходит в базу: fetchHolidays вернёт null, пока не запущен holidays-setup.sql.
+function HolidaysWidget({ committee, role, events, authorName, toast, onTab }) {
+  const canEdit = committee || role === "teacher";
+  const [rows, setRows] = useState(null);     // записи class_holidays (null = нет таблицы)
+  const [showAll, setShowAll] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editRow, setEditRow] = useState(null);
+  const [reload, setReload] = useState(0);
+  useEffect(() => {
+    let dead = false;
+    fetchHolidays().then((d) => { if (!dead) setRows(d); });
+    return () => { dead = true; };
+  }, [reload]);
+
+  // Общая лента: праздники/каникулы + события класса (их правят в кабинете учителя)
+  const list = [
+    ...(rows || []).map((h) => ({ ...h, src: "holiday" })),
+    ...(events || []).map((e) => ({
+      id: "ev-" + e.id, src: "event", kind: "class", title: e.title,
+      on_date: e.on_date, emoji: null,
+      note: [e.time_text, e.place].filter(Boolean).join(" · ") || null,
+    })),
+  ].filter((x) => {
+    const d = daysUntil(x.on_date);
+    return d === null || d >= 0; // прошедшие не показываем
+  });
+  const dated = list.filter((x) => x.on_date).sort((a, b) => a.on_date.localeCompare(b.on_date));
+  const undated = list.filter((x) => !x.on_date);
+  const visible = showAll ? [...dated, ...undated] : dated.slice(0, 4);
+  const hiddenCount = dated.length + undated.length - (showAll ? 0 : visible.length);
+
+  const del = async (h) => {
+    if (!confirm(`Удалить «${h.title}» из календаря?`)) return;
+    try { await deleteHoliday(h.id); setReload((r) => r + 1); toast("Запись удалена"); }
+    catch (e) { console.error(e); toast("Не получилось удалить — попробуйте ещё раз"); }
+  };
+
+  // Таблицы ещё нет и событий класса тоже — карточку не показываем,
+  // чтобы не висела пустая до запуска holidays-setup.sql
+  if (rows === null && !(events || []).length && !canEdit) return null;
+
+  return (
+    <>
+      <div className="sec-head reveal d3">
+        <span className="sec-dot gold"><Ic id="i-spark" /></span>
+        <h2 className="sec-title">Предстоящие праздники</h2>
+        {canEdit && !formOpen && !editRow && (
+          <button className="pill-btn blue" style={{ marginLeft: "auto" }} onClick={() => setFormOpen(true)}>+ Добавить</button>
+        )}
+      </div>
+      <div className="card reveal d3">
+        {(formOpen || editRow) && (
+          <HolidayForm
+            initial={editRow}
+            authorName={authorName}
+            toast={toast}
+            onCancel={() => { setFormOpen(false); setEditRow(null); }}
+            onDone={() => { setFormOpen(false); setEditRow(null); setReload((r) => r + 1); }}
+          />
+        )}
+        {rows === null && canEdit && (
+          <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
+            Таблица календаря ещё не создана — запустите holidays-setup.sql в Supabase
+          </div>
+        )}
+        {visible.length === 0 && <div className="bday-empty muted">Ближайших праздников пока нет</div>}
+        {visible.map((h) => {
+          const d = daysUntil(h.on_date);
+          return (
+            <div className={"bday-row" + (d === 0 ? " today" : "")} key={h.id}>
+              <span className="bday-date">{fmtHolidayDate(h.on_date)}</span>
+              <span className="bday-name">
+                <span aria-hidden="true" style={{ marginRight: 4 }}>{h.emoji || HOLIDAY_EMOJI[h.kind] || "🎉"}</span>
+                {h.title}
+                {h.note && <span className="muted" style={{ fontWeight: 400, fontSize: 12.5 }}> · {h.note}</span>}
+              </span>
+              <span className={"bday-when" + (d !== null && d >= 0 && d <= 5 ? " close" : "")}>
+                {d === null ? "" : d === 0 ? "сегодня!" : inDaysWord(d)}
+              </span>
+              {h.fee_link && (
+                <button className="pill-btn pink" onClick={() => onTab("fees")}>К сбору →</button>
+              )}
+              {canEdit && h.src === "holiday" && (
+                <span style={{ display: "flex", gap: 4 }}>
+                  <button className="note-del" title="Изменить" aria-label="Изменить"
+                    onClick={() => { setEditRow(h); setFormOpen(false); }}>✎</button>
+                  <button className="note-del" title="Удалить" aria-label="Удалить" onClick={() => del(h)}>✕</button>
+                </span>
+              )}
+            </div>
+          );
+        })}
+        {(hiddenCount > 0 || showAll) && (
+          <div className="dash-sched-foot">
+            <span className="muted" style={{ fontSize: 12 }}>
+              Праздники, каникулы и события класса — одной лентой
+            </span>
+            <button className="pill-btn blue" onClick={() => setShowAll((v) => !v)}>
+              {showAll ? "Свернуть" : `Показать все (${dated.length + undated.length})`}
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 // ===== Персонализация (заметки, виджет семьи) =====
 
 // Имя ребёнка в родительном падеже: Тимофей → Тимофея, Арина → Арины, Соня → Сони, Кирилл → Кирилла
@@ -859,11 +1054,11 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       if (data) setExtras(data);
     });
   }, []);
-  // Касса класса = остаток по ведомости взносов + разовые поступления.
+  // Касса класса = остаток по ведомости взносов + разовые поступления (без ГПД).
   // Ведомость строится так же, как на вкладке «Взносы»: авто-статьи
-  // пересчитываются из раздела «Расходы» (гардероб входит в хознужды).
-  // Не считаем через «собрано − потрачено»: в «потрачено» входят расходы
-  // фонда ГПД, который собирается отдельно и классную кассу не уменьшает.
+  // пересчитываются из раздела «Расходы» (гардероб входит в хознужды),
+  // статья «ГПД» всегда 0 — траты ГПД оплачиваются из отдельного фонда ГПД
+  // и классную кассу не уменьшают.
   const [feesData, setFeesData] = useState(null);
   useEffect(() => {
     fetchFees().then((data) => { if (data) setFeesData(data); });
@@ -1261,6 +1456,8 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       </div>
 
       <BirthdaysWidget committee={committee} ev={bdayEv} list={bdays} onTab={onTab} />
+
+      <HolidaysWidget committee={committee} role={role} events={events} authorName={authorName} toast={toast} onTab={onTab} />
 
       <PushSettings committee={committee} role={role} familyN={family?.n} toast={toast} />
     </section>

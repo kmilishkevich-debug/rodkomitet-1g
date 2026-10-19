@@ -257,9 +257,9 @@ export function groupTotal(g) {
 // Статья ведомости связывается с группой расходов по названию (переименования не ломают связь,
 // пока в названии остаётся ключевое слово). Сумма группы делится на детей-участников статьи.
 // Правило нуля: вручную поставленный 0 исключает ребёнка из статьи — доля делится на остальных.
-// Статья «ГПД» считается по факту трат: сумма группы расходов «ГПД» делится на ходящих
-// детей (members: "gpd") — купили что-то новое для ГПД, доля у всех пересчиталась сама.
-// Блок «Фонд ГПД» (Собрано = 25 × ходящие) живёт отдельно и на это правило не влияет.
+// Статья «ГПД» в ведомости класса всегда 0: деньги и траты ГПД живут в отдельном блоке
+// «Фонд ГПД» и из классной кассы не списываются. Правило (members: "gpd") оставлено,
+// чтобы по ячейкам колонки определять, кто ходит в ГПД (норма взноса 200/175).
 // У Дорошенко, Сиссауи и Тылецкого стоит 0 — они в ГПД не ходят и сдают 175 вместо 200.
 // Бейдж и магнитные значки правил не имеют — они заполняются только вручную.
 export const AUTO_FEE_RULES = [
@@ -288,8 +288,9 @@ export function fallbackFeeData() {
 }
 
 // Применяет автопересчёт: убирает колонку «Гардероб», для статей с группой расходов
-// подменяет суммы на «итог группы ÷ участники» (нули остаются нулями). Для ГПД
-// (members: "gpd") участники — ходящие в ГПД дети: расходы группы «ГПД» делятся на них.
+// подменяет суммы на «итог группы ÷ участники» (нули остаются нулями). Статья «ГПД»
+// (members: "gpd") обнуляется у всех: расходы ГПД считаются отдельно в фонде ГПД,
+// а по ячейкам колонки ставится признак gpdIn (норма взноса 200/175).
 // Возвращает { columns, rows, auto }, где auto[columnId] = { sum, count, share, gpd? }.
 export function applyAutoFees(columns0, rows0, expGroups) {
   const columns = columns0.filter((c) => !isWardColumn(c));
@@ -313,7 +314,10 @@ export function applyAutoFees(columns0, rows0, expGroups) {
       ? rows0.filter((r) => inGpd(r, c.id)).length
       : rows0.filter((r) => r.values[c.id] !== 0).length;
     const sum = groups.filter((g) => rule.group.test(g.title || "")).reduce((s, g) => s + groupTotal(g), 0);
-    auto[c.id] = { sum, count, share: count ? sum / count : 0, ...(gpd ? { gpd: true } : {}) };
+    // Для ГПД доля в ведомости всегда 0 — траты ГПД оплачиваются из фонда ГПД
+    auto[c.id] = gpd
+      ? { sum, count, share: 0, gpd: true }
+      : { sum, count, share: count ? sum / count : 0 };
   });
   const rows = rows0.map((r) => {
     const values = { ...r.values };
@@ -321,7 +325,7 @@ export function applyAutoFees(columns0, rows0, expGroups) {
     Object.keys(auto).forEach((cid) => {
       if (auto[cid].gpd) {
         gpdIn = inGpd(r, cid);
-        values[cid] = gpdIn ? auto[cid].share : 0;
+        values[cid] = 0; // траты ГПД в ведомость класса не входят — они списываются из фонда ГПД
       } else if (values[cid] !== 0) values[cid] = auto[cid].share;
     });
     return gpdIn === undefined ? { ...r, values } : { ...r, values, gpdIn };
