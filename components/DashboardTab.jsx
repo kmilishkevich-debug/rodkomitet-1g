@@ -1088,8 +1088,10 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     });
     return s + rest;
   }, 0) * 100) / 100;
-  // Остаток только главного сбора: ведомость + разовые поступления (без целевых сборов)
-  const cashMain = Math.round((feesRest + (extras?.oneOff || 0)) * 100) / 100;
+  // Остаток только главного сбора: ведомость + разовые поступления (без целевых сборов),
+  // минус взносы фонда ГПД, сданные детьми класса внутри классного сбора (gpdOwn) —
+  // эти деньги принадлежат фонду ГПД и в кассе класса не остаются.
+  const cashMain = Math.round((feesRest + (extras?.oneOff || 0) - (extras?.gpdOwn || 0)) * 100) / 100;
   // Долги своей семьи по целевым сборам: сумма — с семьи, близнецы сдают один раз
   const myCollDues = (() => {
     if (!family || !Array.isArray(feeColls) || !feeColls.length) return [];

@@ -1621,8 +1621,13 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
   const classPaid = round2(totalPaid);
   const cashCollected = round2(classPaid + oneOffTotal); // взносы семей + разовые поступления (без ГПД)
   const cashSpent = totalCharges; // все списания из взносов (без трат ГПД)
-  // «Осталось» — только главный сбор: взносы семей (без разовых) минус списания
-  const cashLeft = round2(classPaid - cashSpent);
+  // Взносы фонда ГПД, пришедшие внутри классного сбора (дети нашего класса):
+  // всё проставленное в фонде минус разовые поступления «ГПД» (дети других классов).
+  // Эти деньги принадлежат фонду ГПД, поэтому из остатка класса вычитаются —
+  // иначе они считались бы дважды (и в кассе, и в остатке фонда ГПД).
+  const gpdOwnPaid = Math.max(0, round2(gpdPaidTotal - oneOffGpd));
+  // «Осталось» — только главный сбор: взносы семей (без разовых) минус списания и минус доля фонда ГПД
+  const cashLeft = round2(classPaid - gpdOwnPaid - cashSpent);
 
   return (
     <section id="tab-fees" className="fin">
@@ -1654,7 +1659,9 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
               ребёнка, включая детей других классов) — его считает блок «Фонд ГПД» ниже.
               Разовые поступления (кроме поступлений на ГПД) плюсуются в «Собрано»,
               а «Осталось» показывает остаток только главного сбора: взносы семей минус
-              списания. Каждая правка сумм попадает в историю изменений внизу страницы.
+              списания и минус {fmt(GPD_FUND_FEE)} BYN с каждого ходящего в ГПД ребёнка класса —
+              эти деньги отложены в фонд ГПД и видны в его остатке ниже.
+              Каждая правка сумм попадает в историю изменений внизу страницы.
             </div>
           )}
         </div>
@@ -1681,7 +1688,8 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
         </div>
         {/* ГПД — отдельный карман: короткая расшифровка, подробности в блоке «Фонд ГПД» ниже */}
         <div className="muted" style={{ marginTop: 8, fontSize: 12.5 }}>
-          ГПД считается отдельно: собрано {fmt(gpdCollected)} · потрачено {fmt(gpdSpent)} · остаток {fmt(gpdRest)} BYN — блок «Фонд ГПД» ниже
+          ГПД считается отдельно: собрано {fmt(gpdCollected)} · потрачено {fmt(gpdSpent)} · остаток {fmt(gpdRest)} BYN — блок «Фонд ГПД» ниже.
+          {gpdOwnPaid > 0 && <> Из «Осталось» вычтено {fmt(gpdOwnPaid)} BYN — взносы фонда ГПД, сданные детьми класса в составе {fmt(FEE_TARGET)} BYN.</>}
         </div>
         {/* Поделиться ссылкой на сборы в вайбер-чате */}
         <button
