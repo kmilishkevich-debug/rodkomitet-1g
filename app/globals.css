@@ -2503,3 +2503,15 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
   .sec-head{margin:24px 0 12px}
   .sec-ico-3d{width:36px;height:36px}
 }
+
+/* ===== Календарь: подсветка дат с событиями и строки дней рождения (референс) ===== */
+/* Число даты с событиями — в мягком круге цвета типа события */
+.ccal-day.ev-gold .ccal-num{background:var(--gold-soft)}
+.ccal-day.ev-pink .ccal-num{background:var(--pink-soft)}
+.ccal-day.ev-blue .ccal-num{background:var(--blue-soft)}
+/* Розовая плашка «Поздравляем всем классом» и тортик в строке ДР */
+.ccal-ev-greet{display:inline-block;align-self:flex-start;margin-top:4px;
+  background:var(--pink-soft);color:#B4316E;border-radius:999px;
+  padding:4px 10px;font-size:12px;font-weight:700}
+.ccal-ev-cake{flex:none;align-self:center;font-size:26px;line-height:1;
+  filter:drop-shadow(0 2px 3px rgba(180,49,110,.25))}

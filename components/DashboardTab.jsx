@@ -688,12 +688,17 @@ function CcalEvent({ it, onTab, onPick }) {
         <span className="ccal-ev-title">
           {it.emoji ? <span aria-hidden="true">{it.emoji} </span> : null}
           {it.title}
-          {it.turns != null ? ` — исполнится ${it.turns}` : ""}
+          {/* Сегодняшний ДР — «исполняется», будущий — «исполнится» */}
+          {it.turns != null ? ` — ${days === 0 ? "исполняется" : "исполнится"} ${it.turns}` : ""}
         </span>
         {meta && <span className="ccal-ev-meta">{meta}</span>}
         {it.note && <span className="ccal-ev-meta">{it.note}</span>}
+        {/* Дни рождения — с розовой плашкой, как на референсе */}
+        {it.type === "bday" && <span className="ccal-ev-greet">Поздравляем всем классом!</span>}
       </span>
-      {it.feeLink
+      {it.type === "bday" ? (
+        <span className="ccal-ev-cake" aria-hidden="true">🎂</span>
+      ) : it.feeLink
         ? <button className="pill-btn pink ccal-ev-btn" onClick={() => onTab("fees")}>К сбору →</button>
         : onPick && <button className="pill-btn ccal-ev-btn" onClick={() => onPick(it.date)}>Подробнее</button>}
     </div>
@@ -873,7 +878,10 @@ function ClassCalendar({ committee, role, events, notes, bdays, family, authorNa
                       "ccal-day" +
                       (c.iso === todayIso ? " today" : "") +
                       (c.iso === selected ? " sel" : "") +
-                      (c.dow >= 5 ? " wkend" : "")
+                      (c.dow >= 5 ? " wkend" : "") +
+                      // Дата с событиями подсвечена мягким кругом в цвет типа (как на референсе);
+                      // «сегодня» остаётся синим кругом и не перекрашивается
+                      (c.items.length && c.iso !== todayIso ? " ev-" + ccalTone(c.items[0].type) : "")
                     }
                     aria-label={`${c.d} ${MONTHS[view.m]} ${view.y}, ${DAYS[new Date(c.iso + "T00:00:00").getDay()].toLowerCase()}, ${ccalCountWord(c.items.length)}`}
                     aria-pressed={c.iso === selected}
