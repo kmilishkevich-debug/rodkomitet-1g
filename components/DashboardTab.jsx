@@ -850,7 +850,7 @@ function CcalEventCard({ it, onTab, onPick }) {
 // события выбранного дня. Источники: события класса, праздники/каникулы,
 // дни рождения и личные напоминания семьи. Проп demo — фиксированное
 // состояние только для визуальной приёмки (страница /calendar-demo).
-export function ClassCalendar({ events, notes, bdays, family, onTab, demo }) {
+export function ClassCalendar({ events, notes, bdays, family, onTab, demo, fullLink = true }) {
   const now = demo ? new Date(demo.today + "T12:00:00") : minskNow();
   const todayIso = demo ? demo.today : minskIso();
   const [view, setView] = useState({ y: now.getFullYear(), m: now.getMonth() });
@@ -994,7 +994,8 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo }) {
         {/* Заголовок получает фокус при переходе с плитки «Календарь» */}
         <h2 className="ccal2-title" id="class-calendar-title" tabIndex={-1}>Календарь класса</h2>
         <button className="ccal2-today" onClick={goToday}>Сегодня</button>
-        <button className="ccal2-link" onClick={goFull}>Весь календарь <CcalArrow /></button>
+        {/* В кабинете учителя ленты «Предстоящие праздники» нет — ссылку прячем */}
+        {fullLink && <button className="ccal2-link" onClick={goFull}>Весь календарь <CcalArrow /></button>}
       </div>
       <div className="ccal2-cols">
         {/* Левая панель: навигация по месяцам, сетка, легенда */}

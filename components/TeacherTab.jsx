@@ -17,6 +17,7 @@ import TeacherFamilyChat from "./TeacherFamilyChat";
 import { PostChatModal, commentsFor, unreadFor } from "./PostChat";
 import { fmtDayWord } from "./TeacherBoard";
 import { TeacherAbsenceCard } from "./Absences";
+import { ClassCalendar } from "./DashboardTab";
 import { BIRTHDAYS_FALLBACK, bdInfo, bdName, fmtBd, inDaysWord } from "./birthdaysData";
 
 // ===== Кабинет классного руководителя =====
@@ -777,6 +778,19 @@ export default function TeacherTab({
               самодостаточная: сама грузит данные и обновляется раз в минуту. */}
           <TeacherAbsenceCard />
       </div>
+
+      {/* Календарь класса — тот же, что у родителей на «Главной»:
+          события, праздники/каникулы и дни рождения. Личных напоминаний
+          у учителя нет (family=null), ссылки «Весь календарь» тоже —
+          лента «Предстоящие праздники» живёт только на родительской главной. */}
+      <ClassCalendar
+        events={events}
+        notes={[]}
+        bdays={bdays}
+        family={null}
+        onTab={onTab}
+        fullLink={false}
+      />
 
       {form === "ann" && (
         <Modal title="Объявление классу" sub="Увидят все родители, придёт уведомление" onClose={close}>
