@@ -824,22 +824,23 @@ function CcalEventCard({ it, onTab, onPick }) {
           </>
         ) : (
           <>
-            <span className="ccal2-ev-title">
-              <EventIcon rec={it} size={20} />
-              {it.title}
-            </span>
+            <span className="ccal2-ev-title">{it.title}</span>
             {meta && <span className="ccal2-ev-meta">{meta}</span>}
+            {/* Ссылка-действие — в теле карточки, справа место занято иконкой */}
+            {it.feeLink ? (
+              <button className="ccal2-ev-link pink" onClick={() => onTab("fees")}>К сбору <CcalArrow /></button>
+            ) : onPick ? (
+              <button className="ccal2-ev-link" onClick={() => onPick(it.date)}>Подробнее <CcalArrow /></button>
+            ) : null}
           </>
         )}
       </span>
-      {/* Справа: ссылка-действие (как на референсе) или тортик у дней рождения */}
+      {/* Справа — большая 3D-иконка события, как тортик у дней рождения */}
       {it.type === "bday" ? (
         <img src="/icons/icon-cake.webp" className="ccal2-cake" alt="" />
-      ) : it.feeLink ? (
-        <button className="ccal2-ev-link pink ccal2-ev-side" onClick={() => onTab("fees")}>К сбору <CcalArrow /></button>
-      ) : onPick ? (
-        <button className="ccal2-ev-link ccal2-ev-side" onClick={() => onPick(it.date)}>Подробнее <CcalArrow /></button>
-      ) : null}
+      ) : (
+        <img src={`/icons/icon-${eventIcon(it)}.webp`} className="ccal2-cake" alt="" />
+      )}
     </div>
   );
 }
