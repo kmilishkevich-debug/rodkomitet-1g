@@ -569,7 +569,8 @@ function HolidaysWidget({ committee, role, events, authorName, toast, onTab }) {
     <>
       <div className="sec-head reveal d3">
         <span className="sec-dot gold"><Ic id="i-spark" /></span>
-        <h2 className="sec-title">Предстоящие праздники</h2>
+        {/* Якорь для ссылки «Весь календарь» из блока календаря */}
+        <h2 className="sec-title" id="holidays-full-title" tabIndex={-1}>Предстоящие праздники</h2>
         {canEdit && !formOpen && !editRow && (
           <button className="pill-btn blue" style={{ marginLeft: "auto" }} onClick={() => setFormOpen(true)}>+ Добавить</button>
         )}
@@ -668,61 +669,127 @@ function ccalTimeKey(t) {
   return m ? `${m[1].padStart(2, "0")}:${m[2]}` : null;
 }
 
-// Строка события в правой колонке календаря
-function CcalEvent({ it, onTab, onPick }) {
-  const d = new Date(it.date + "T00:00:00");
-  const days = daysUntil(it.date);
-  const meta = [
-    it.time || null,
-    it.place || null,
-    CCAL_TYPE_LABEL[it.type] || null,
-    days === 0 ? "сегодня" : days > 0 ? inDaysWord(days) : null,
-  ].filter(Boolean).join(" · ");
+// Аббревиатуры месяцев для белой плашки даты («ОКТ», как на референсе)
+const CCAL_MON_UP = ["ЯНВ", "ФЕВ", "МАР", "АПР", "МАЙ", "ИЮН", "ИЮЛ", "АВГ", "СЕН", "ОКТ", "НОЯ", "ДЕК"];
+
+// Имена через запятую, последние два — через «и»: «Ева Милишкевич и Ольга Белоус»
+function ccalJoin(names) {
+  if (!names || !names.length) return "";
+  if (names.length === 1) return names[0];
+  return names.slice(0, -1).join(", ") + " и " + names[names.length - 1];
+}
+
+// ===== SVG-иконки блока (по ТЗ: никаких текстовых «‹ ›» и эмодзи) =====
+
+// Шеврон переключения месяца — тёмно-синий, на белой кнопке
+function CcalChevron({ dir }) {
   return (
-    <div className="ccal-ev">
-      <span className={"ccal-ev-date " + ccalTone(it.type)} aria-hidden="true">
-        <b>{d.getDate()}</b>
-        <small>{CCAL_MON_ABBR[d.getMonth()]}</small>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d={dir === "left" ? "M9.8 3.4 5.4 8l4.4 4.6" : "M6.2 3.4 10.6 8l-4.4 4.6"}
+        stroke="#1B2A5C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Стрелка «→» для текстовых ссылок («Весь календарь», «Подробнее»)
+function CcalArrow() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path d="M1.8 6h7.6M6.2 2.6 9.6 6 6.2 9.4" stroke="currentColor" strokeWidth="1.6"
+        strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Кружок «i» у подсказки внизу правой панели
+function CcalInfo() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true" className="ccal2-hint-ico">
+      <circle cx="9" cy="9" r="7.4" stroke="#C2C6D1" strokeWidth="1.4" />
+      <circle cx="9" cy="5.8" r="1" fill="#8A8FA0" />
+      <path d="M9 8.2v4.2" stroke="#8A8FA0" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Белая плашка даты 54×64 в карточке события: число, месяц и точка типа
+function CcalPlaque({ date, tone }) {
+  const d = new Date(date + "T00:00:00");
+  return (
+    <span className={"ccal2-plq " + tone} aria-hidden="true">
+      <b>{d.getDate()}</b>
+      <small>{CCAL_MON_UP[d.getMonth()]}</small>
+      <i className={"ccal2-dot " + tone} />
+    </span>
+  );
+}
+
+// Карточка события в правой панели: жёлтая — события/праздники,
+// розовая — дни рождения (с тортиком и плашкой), голубая — напоминания семьи
+function CcalEventCard({ it, onTab, onPick }) {
+  const tone = ccalTone(it.type);
+  const days = daysUntil(it.date);
+  const meta = [it.time || null, it.place || null].filter(Boolean).join(" · ") || it.note || null;
+  const names = it.names || (it.name ? [it.name] : []);
+  return (
+    <div className={"ccal2-ev " + tone}>
+      <CcalPlaque date={it.date} tone={tone} />
+      <span className="ccal2-ev-body">
+        {it.type === "bday" ? (
+          <>
+            <span className="ccal2-ev-title">{names.length > 1 ? "Дни рождения" : "День рождения"}</span>
+            <span className="ccal2-ev-meta">
+              {ccalJoin(names)}
+              {/* Сегодняшний ДР — «исполняется», будущий — «исполнится» */}
+              {it.turns != null ? ` — ${days === 0 ? "исполняется" : "исполнится"} ${it.turns}` : ""}
+            </span>
+            <span className="ccal2-badge">Поздравляем всем классом</span>
+          </>
+        ) : (
+          <>
+            <span className="ccal2-ev-title">
+              {it.emoji ? <span aria-hidden="true">{it.emoji} </span> : null}
+              {it.title}
+            </span>
+            {meta && <span className="ccal2-ev-meta">{meta}</span>}
+          </>
+        )}
       </span>
-      <span className="ccal-ev-body">
-        <span className="ccal-ev-title">
-          {it.emoji ? <span aria-hidden="true">{it.emoji} </span> : null}
-          {it.title}
-          {/* Сегодняшний ДР — «исполняется», будущий — «исполнится» */}
-          {it.turns != null ? ` — ${days === 0 ? "исполняется" : "исполнится"} ${it.turns}` : ""}
-        </span>
-        {meta && <span className="ccal-ev-meta">{meta}</span>}
-        {it.note && <span className="ccal-ev-meta">{it.note}</span>}
-        {/* Дни рождения — с розовой плашкой, как на референсе */}
-        {it.type === "bday" && <span className="ccal-ev-greet">Поздравляем всем классом!</span>}
-      </span>
+      {/* Справа: ссылка-действие (как на референсе) или тортик у дней рождения */}
       {it.type === "bday" ? (
-        <span className="ccal-ev-cake" aria-hidden="true">🎂</span>
-      ) : it.feeLink
-        ? <button className="pill-btn pink ccal-ev-btn" onClick={() => onTab("fees")}>К сбору →</button>
-        : onPick && <button className="pill-btn ccal-ev-btn" onClick={() => onPick(it.date)}>Подробнее</button>}
+        <img src="/icons/icon-cake.webp" className="ccal2-cake" alt="" />
+      ) : it.feeLink ? (
+        <button className="ccal2-ev-link pink ccal2-ev-side" onClick={() => onTab("fees")}>К сбору <CcalArrow /></button>
+      ) : onPick ? (
+        <button className="ccal2-ev-link ccal2-ev-side" onClick={() => onPick(it.date)}>Подробнее <CcalArrow /></button>
+      ) : null}
     </div>
   );
 }
 
-function ClassCalendar({ committee, role, events, notes, bdays, family, authorName, toast, onTab }) {
-  const canEdit = committee || role === "teacher";
-  const now = minskNow();
-  const todayIso = minskIso();
+// Встроенный календарь класса по референсу: шапка и обе панели внутри одной
+// белой карточки. Слева — сетка месяца, справа — ближайшие события или
+// события выбранного дня. Источники: события класса, праздники/каникулы,
+// дни рождения и личные напоминания семьи. Проп demo — фиксированное
+// состояние только для визуальной приёмки (страница /calendar-demo).
+export function ClassCalendar({ events, notes, bdays, family, onTab, demo }) {
+  const now = demo ? new Date(demo.today + "T12:00:00") : minskNow();
+  const todayIso = demo ? demo.today : minskIso();
   const [view, setView] = useState({ y: now.getFullYear(), m: now.getMonth() });
   const [selected, setSelected] = useState(null); // ISO выбранного дня или null
-  const [formOpen, setFormOpen] = useState(false);
-  const [reload, setReload] = useState(0);
   // Праздники и каникулы комитета — календарь сам ходит в базу (как HolidaysWidget)
-  const [hols, setHols] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [hols, setHols] = useState(demo ? demo.hols : null);
+  const [loading, setLoading] = useState(!demo);
   useEffect(() => {
+    if (demo) return;
     let dead = false;
     fetchHolidays()
       .then((d) => { if (!dead) { setHols(d); setLoading(false); } })
       .catch(() => { if (!dead) setLoading(false); });
     return () => { dead = true; };
-  }, [reload]);
+  }, [demo]);
 
   // --- Записи с датами из всех источников (кроме дней рождения — они годовые) ---
   const baseItems = [];
@@ -739,8 +806,7 @@ function ClassCalendar({ committee, role, events, notes, bdays, family, authorNa
       note: h.note || null, feeLink: !!h.fee_link,
     });
   });
-  // Личные напоминания видит только своя семья: массив notes и так загружен
-  // для выбранной семьи, но на всякий случай требуем выбранную семью
+  // Личные напоминания видит только своя семья
   if (family) (notes || []).forEach((n) => {
     if (!n.from_teacher && !n.done && n.remind_date) baseItems.push({
       id: "note-" + n.id, type: "note", date: n.remind_date, title: n.text,
@@ -754,8 +820,7 @@ function ClassCalendar({ committee, role, events, notes, bdays, family, authorNa
       const day = Number(k.born.split("-")[2]);
       const bornYear = Number(k.born.slice(0, 4));
       return {
-        id: `bd-${k.id}-${y}`, type: "bday", date: ccalIso(y, m, day),
-        title: `День рождения: ${bdName(k)}`, name: bdName(k),
+        id: `bd-${k.id}-${y}`, type: "bday", date: ccalIso(y, m, day), name: bdName(k),
         turns: bornYear >= 2000 && bornYear <= y ? y - bornYear : null,
       };
     });
@@ -773,40 +838,56 @@ function ClassCalendar({ committee, role, events, notes, bdays, family, authorNa
 
   const firstDow = (new Date(view.y, view.m, 1).getDay() + 6) % 7; // 0 = понедельник
   const dim = new Date(view.y, view.m + 1, 0).getDate();
-  const prevDim = new Date(view.y, view.m, 0).getDate();
   const cellCount = Math.ceil((firstDow + dim) / 7) * 7;
   const cells = Array.from({ length: cellCount }, (_, i) => {
     const d = i - firstDow + 1;
-    if (d < 1) return { out: true, d: prevDim + d };
-    if (d > dim) return { out: true, d: d - dim };
+    // Дни соседних месяцев — пустые клетки без чисел (по ТЗ)
+    if (d < 1 || d > dim) return { out: true };
     const iso = ccalIso(view.y, view.m, d);
     return { d, iso, items: byDate[iso] || [], dow: i % 7 };
   });
 
-  const shiftMonth = (dir) => {
-    const nd = new Date(view.y, view.m + dir, 1);
-    setView({ y: nd.getFullYear(), m: nd.getMonth() });
-  };
+  // Функциональное обновление: быстрые повторные клики не теряются
+  const shiftMonth = (dir) => setView((v) => {
+    const nd = new Date(v.y, v.m + dir, 1);
+    return { y: nd.getFullYear(), m: nd.getMonth() };
+  });
   const goToday = () => {
     setView({ y: now.getFullYear(), m: now.getMonth() });
     setSelected(null);
   };
+  // «Весь календарь» ведёт к полной ленте «Предстоящие праздники» ниже
+  const goFull = () => {
+    const el = document.getElementById("holidays-full-title");
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); el.focus({ preventScroll: true }); }
+  };
 
-  // --- Правая колонка: ближайшие события или события выбранного дня ---
+  // Дни рождения одной даты показываем одной карточкой со всеми именами
+  const groupBd = (list) => {
+    const byD = {};
+    list.forEach((b) => { (byD[b.date] = byD[b.date] || []).push(b); });
+    return Object.entries(byD).map(([date, kids]) => ({
+      id: "bd-" + date, type: "bday", date,
+      names: kids.map((k) => k.name),
+      turns: kids.length === 1 ? kids[0].turns : null,
+    }));
+  };
+
+  // --- Правая панель: ближайшие события или события выбранного дня ---
   let sideTitle, sideItems, sideEmpty = null;
   if (selected) {
     const [sy, sm] = selected.split("-").map(Number);
     const dayItems = [
       ...baseItems.filter((it) => it.date === selected),
-      ...bdayItemsFor(sy, sm - 1).filter((it) => it.date === selected),
+      ...groupBd(bdayItemsFor(sy, sm - 1).filter((it) => it.date === selected)),
     ].sort((a, b) => (ccalTimeKey(a.time) || "") < (ccalTimeKey(b.time) || "") ? -1 : 1);
     const sd = new Date(selected + "T00:00:00");
-    sideTitle = `${sd.getDate()} ${MONTHS[sd.getMonth()]} · ${DAYS[sd.getDay()].toLowerCase()}`;
+    sideTitle = `${sd.getDate()} ${MONTHS[sd.getMonth()]}, ${DAYS[sd.getDay()].toLowerCase()}`;
     sideItems = dayItems;
     if (!dayItems.length) sideEmpty = "На этот день событий нет";
   } else {
     sideTitle = "Ближайшие события";
-    // ДР: ближайшее наступление (в этом или следующем году), сгруппированное по датам
+    // ДР: ближайшее наступление (в этом или следующем году)
     const nextBd = (bdays || []).map((k) => {
       const [, mm, dd] = k.born.split("-").map(Number);
       let y = now.getFullYear();
@@ -817,122 +898,108 @@ function ClassCalendar({ committee, role, events, notes, bdays, family, authorNa
         turns: bornYear >= 2000 && bornYear <= y ? y - bornYear : null,
       };
     });
-    const bdByDate = {};
-    nextBd.forEach((b) => { (bdByDate[b.date] = bdByDate[b.date] || []).push(b); });
-    // Все дети одной даты — в одной строке, никаких «и ещё 2»
-    const bdGrouped = Object.entries(bdByDate).map(([date, kids]) => ({
-      id: "bd-" + date, type: "bday", date,
-      title: `${kids.length > 1 ? "Дни рождения" : "День рождения"}: ${kids.map((k) => k.name).join(", ")}`,
-      turns: kids.length === 1 ? kids[0].turns : null,
-    }));
-    sideItems = [...baseItems.filter((it) => it.date >= todayIso), ...bdGrouped]
+    sideItems = [...baseItems.filter((it) => it.date >= todayIso), ...groupBd(nextBd)]
       .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(0, 6);
+      .slice(0, 4);
     if (!sideItems.length) sideEmpty = "Ближайших событий пока нет";
   }
 
   return (
-    <>
-      <div className="sec-head reveal d2">
-        {/* Объёмная иконка календаря в заголовке — как на референсе */}
-        <img src="/icons/icon-calendar.webp" className="sec-ico-3d" alt="" />
+    <div className="card ccal2 reveal d2">
+      {/* Шапка внутри карточки: 3D-иконка, заголовок, «Сегодня», «Весь календарь» */}
+      <div className="ccal2-head">
+        <img src="/icons/icon-calendar.webp" className="ccal2-ico" alt="" />
         {/* Заголовок получает фокус при переходе с плитки «Календарь» */}
-        <h2 className="sec-title" id="class-calendar-title" tabIndex={-1}>Календарь класса</h2>
-        {canEdit && !formOpen && (
-          <button className="pill-btn blue" style={{ marginLeft: "auto" }} onClick={() => setFormOpen(true)}>+ Добавить</button>
-        )}
+        <h2 className="ccal2-title" id="class-calendar-title" tabIndex={-1}>Календарь класса</h2>
+        <button className="ccal2-today" onClick={goToday}>Сегодня</button>
+        <button className="ccal2-link" onClick={goFull}>Весь календарь <CcalArrow /></button>
       </div>
-      <div className="card ccal-card reveal d2">
-        {formOpen && (
-          <HolidayForm
-            authorName={authorName}
-            toast={toast}
-            onCancel={() => setFormOpen(false)}
-            onDone={() => { setFormOpen(false); setReload((r) => r + 1); }}
-          />
-        )}
-        <div className="ccal-cols">
-          {/* Левая колонка: сетка месяца */}
-          <div className="ccal-left">
-            <div className="ccal-head">
-              <div className="ccal-month">{CCAL_MONTHS_NOM[view.m]} {view.y}</div>
-              <span className="bd-nav" role="group" aria-label="Переключение месяца">
-                <button className="bd-nav-btn" aria-label="Предыдущий месяц" onClick={() => shiftMonth(-1)}>‹</button>
-                <button className="bd-nav-btn" aria-label="Следующий месяц" onClick={() => shiftMonth(1)}>›</button>
-              </span>
-              <button className="pill-btn ccal-today-btn" onClick={goToday}>Сегодня</button>
-            </div>
-            <div className="ccal-grid" role="grid" aria-label={`Календарь: ${CCAL_MONTHS_NOM[view.m]} ${view.y}`}>
-              {CCAL_DOW.map((d) => (
-                <span className="ccal-dow" key={d} aria-hidden="true">{d}</span>
-              ))}
-              {cells.map((c, i) =>
-                c.out ? (
-                  <span className="ccal-day out" key={"o" + i} aria-hidden="true">
-                    <span className="ccal-num">{c.d}</span>
-                  </span>
-                ) : (
-                  <button
-                    key={c.iso}
-                    className={
-                      "ccal-day" +
-                      (c.iso === todayIso ? " today" : "") +
-                      (c.iso === selected ? " sel" : "") +
-                      (c.dow >= 5 ? " wkend" : "") +
-                      // Дата с событиями подсвечена мягким кругом в цвет типа (как на референсе);
-                      // «сегодня» остаётся синим кругом и не перекрашивается
-                      (c.items.length && c.iso !== todayIso ? " ev-" + ccalTone(c.items[0].type) : "")
-                    }
-                    aria-label={`${c.d} ${MONTHS[view.m]} ${view.y}, ${DAYS[new Date(c.iso + "T00:00:00").getDay()].toLowerCase()}, ${ccalCountWord(c.items.length)}`}
-                    aria-pressed={c.iso === selected}
-                    onClick={() => setSelected(c.iso === selected ? null : c.iso)}
-                  >
-                    <span className="ccal-num">{c.d}</span>
-                    <span className="ccal-dots" aria-hidden="true">
-                      {c.items.slice(0, 3).map((it, j) => (
-                        <span className={"ccal-dot " + ccalTone(it.type)} key={j} />
-                      ))}
-                      {c.items.length > 3 && <span className="ccal-more">+{c.items.length - 3}</span>}
-                    </span>
-                  </button>
-                )
-              )}
-            </div>
-            <div className="ccal-legend" aria-hidden="true">
-              <span><i className="ccal-dot gold" /> События и праздники</span>
-              <span><i className="ccal-dot pink" /> Дни рождения</span>
-              <span><i className="ccal-dot blue" /> Напоминания</span>
-            </div>
+      <div className="ccal2-cols">
+        {/* Левая панель: навигация по месяцам, сетка, легенда */}
+        <div className="ccal2-left">
+          <div className="ccal2-nav" role="group" aria-label="Переключение месяца">
+            <button className="ccal2-nav-btn" aria-label="Предыдущий месяц" onClick={() => shiftMonth(-1)}>
+              <CcalChevron dir="left" />
+            </button>
+            <div className="ccal2-month">{CCAL_MONTHS_NOM[view.m]} {view.y}</div>
+            <button className="ccal2-nav-btn" aria-label="Следующий месяц" onClick={() => shiftMonth(1)}>
+              <CcalChevron dir="right" />
+            </button>
           </div>
-          {/* Правая колонка: ближайшие события или выбранный день */}
-          <div className="ccal-side">
-            <div className="ccal-side-title">{sideTitle}</div>
-            {loading && !sideItems.length ? (
-              <div className="ccal-empty muted">События загружаются…</div>
-            ) : sideEmpty ? (
-              <div className="ccal-empty">
-                <div className="muted">{sideEmpty}</div>
-                {selected && (
-                  <button className="pill-btn blue" onClick={() => setSelected(null)}>К ближайшим событиям</button>
-                )}
-              </div>
-            ) : (
-              sideItems.map((it) => (
-                <CcalEvent
-                  key={it.id} it={it} onTab={onTab}
-                  onPick={selected ? null : (d) => {
-                    // «Подробнее» показывает день в сетке — вместе с его месяцем
-                    const [y, m] = d.split("-").map(Number);
-                    setView({ y, m: m - 1 });
-                    setSelected(d);
-                  }}
-                />
-              ))
+          <div className="ccal2-grid" role="grid" aria-label={`Календарь: ${CCAL_MONTHS_NOM[view.m]} ${view.y}`}>
+            {CCAL_DOW.map((d) => (
+              <span className="ccal2-dow" key={d} aria-hidden="true">{d}</span>
+            ))}
+            {cells.map((c, i) =>
+              c.out ? (
+                <span className="ccal2-day out" key={"o" + i} aria-hidden="true" />
+              ) : (
+                <button
+                  key={c.iso}
+                  className={
+                    "ccal2-day" +
+                    (c.iso === todayIso ? " today" : "") +
+                    (c.iso === selected ? " sel" : "") +
+                    (c.dow >= 5 ? " wkend" : "") +
+                    // Дата с событиями — мягкая заливка цвета типа; «сегодня» — синий круг
+                    (c.items.length && c.iso !== todayIso ? " ev-" + ccalTone(c.items[0].type) : "")
+                  }
+                  aria-label={`${c.d} ${MONTHS[view.m]} ${view.y}, ${DAYS[new Date(c.iso + "T00:00:00").getDay()].toLowerCase()}, ${ccalCountWord(c.items.length)}`}
+                  aria-pressed={c.iso === selected}
+                  onClick={() => setSelected(c.iso === selected ? null : c.iso)}
+                >
+                  <span className="ccal2-num">{c.d}</span>
+                  {c.items.length > 0 && c.iso !== todayIso && (
+                    <span className="ccal2-dots" aria-hidden="true">
+                      {/* Одна точка на ТИП записей: несколько типов — несколько точек поменьше */}
+                      {[...new Set(c.items.map((it) => ccalTone(it.type)))].slice(0, 3).map((t, j, arr) => (
+                        <span className={"ccal2-dot " + t + (arr.length > 1 ? " many" : "")} key={t} />
+                      ))}
+                    </span>
+                  )}
+                </button>
+              )
             )}
           </div>
+          <div className="ccal2-legend" aria-hidden="true">
+            <span><i className="ccal2-dot gold" /> События</span>
+            <span><i className="ccal2-dot pink" /> Дни рождения</span>
+            <span><i className="ccal2-dot blue" /> Напоминания</span>
+          </div>
+        </div>
+        {/* Правая панель: ближайшие события или выбранный день */}
+        <div className="ccal2-side">
+          <div className="ccal2-side-title">{sideTitle}</div>
+          {loading && !sideItems.length ? (
+            <div className="ccal2-empty muted">События загружаются…</div>
+          ) : sideEmpty ? (
+            <div className="ccal2-empty muted">{sideEmpty}</div>
+          ) : (
+            sideItems.map((it) => (
+              <CcalEventCard
+                key={it.id} it={it} onTab={onTab}
+                onPick={selected ? null : (d) => {
+                  // «Подробнее» показывает день в сетке — вместе с его месяцем
+                  const [y, m] = d.split("-").map(Number);
+                  setView({ y, m: m - 1 });
+                  setSelected(d);
+                }}
+              />
+            ))
+          )}
+          {selected ? (
+            <button className="ccal2-ev-link ccal2-back" onClick={() => setSelected(null)}>
+              К ближайшим событиям <CcalArrow />
+            </button>
+          ) : (
+            <div className="ccal2-hint">
+              <CcalInfo />
+              <span>Все события выбранного дня — по нажатию на дату.</span>
+            </div>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

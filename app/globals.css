@@ -2389,62 +2389,6 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
   .qa-panel .qa-wide .qa-label{min-height:0}
 }
 
-/* ===== Календарь класса ===== */
-.ccal-card{padding:20px;margin-bottom:28px}
-.ccal-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
-@media(max-width:1023px){.ccal-cols{grid-template-columns:1fr;gap:16px}}
-
-.ccal-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-.ccal-month{font-size:16.5px;font-weight:800;margin-right:auto}
-.ccal-today-btn{margin-left:2px}
-
-.ccal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
-.ccal-dow{font-size:11px;font-weight:800;color:var(--muted);text-align:center;
-  text-transform:uppercase;letter-spacing:.02em;padding:4px 0}
-.ccal-day{position:relative;display:flex;flex-direction:column;align-items:center;
-  justify-content:flex-start;min-height:44px;border-radius:12px;border:1.5px solid transparent;
-  background:none;cursor:pointer;padding:5px 2px 4px;font:inherit;font-size:13.5px;
-  font-weight:600;color:var(--ink);transition:background .15s ease}
-@media(hover:hover){.ccal-day:not(.out):hover{background:var(--blue-soft)}}
-.ccal-day:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
-.ccal-day.out{color:#C9C4B8;pointer-events:none}
-.ccal-day.wkend{color:var(--muted)}
-.ccal-num{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;line-height:1}
-/* Сегодня — синий круг с белой цифрой; выбранный день — контур и светлый фон
-   (два РАЗНЫХ состояния, различимых одновременно) */
-.ccal-day.today .ccal-num{background:var(--blue);color:#fff;font-weight:800}
-.ccal-day.sel{border-color:var(--blue);background:var(--blue-soft)}
-.ccal-dots{display:flex;gap:3px;align-items:center;justify-content:center;min-height:8px;margin-top:2px}
-.ccal-dot{display:inline-block;width:6px;height:6px;border-radius:50%;flex:none}
-.ccal-dot.gold{background:#F5CA45}
-.ccal-dot.pink{background:#EA539B}
-.ccal-dot.blue{background:#4964DA}
-.ccal-more{font-size:9px;font-weight:800;color:var(--muted);line-height:1}
-
-.ccal-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;
-  font-size:12px;font-weight:600;color:var(--muted)}
-.ccal-legend span{display:inline-flex;align-items:center;gap:6px}
-.ccal-legend .ccal-dot{font-style:normal}
-
-/* Правая колонка: ближайшие события / выбранный день */
-.ccal-side{background:#FBF7EE;border-radius:18px;padding:14px 16px;min-height:100%}
-.ccal-side-title{font-size:14.5px;font-weight:800;margin-bottom:8px}
-.ccal-ev{display:flex;align-items:flex-start;gap:11px;padding:9px 0;border-bottom:1px dashed var(--soft-line)}
-.ccal-ev:last-of-type{border-bottom:none;padding-bottom:2px}
-.ccal-ev-date{display:flex;flex-direction:column;align-items:center;justify-content:center;
-  min-width:44px;min-height:44px;border-radius:13px;padding:5px 4px;flex:none;background:#fff}
-.ccal-ev-date.gold{background:var(--gold-soft)}
-.ccal-ev-date.pink{background:var(--pink-soft)}
-.ccal-ev-date.blue{background:var(--blue-soft)}
-.ccal-ev-date b{font-size:17px;line-height:1.05}
-.ccal-ev-date small{font-size:10.5px;font-weight:700;color:var(--muted)}
-.ccal-ev-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.ccal-ev-title{font-size:13.5px;font-weight:700;overflow-wrap:anywhere}
-.ccal-ev-meta{font-size:12px;font-weight:600;color:var(--muted)}
-.ccal-ev-btn{flex:none;align-self:center}
-.ccal-empty{display:flex;flex-direction:column;align-items:flex-start;gap:10px;
-  padding:14px 2px;font-size:13.5px;font-weight:600}
-
 /* ===== «Новости класса» справа от расписания ===== */
 .dash-news{margin-bottom:28px}
 .dash-news-row{display:flex;align-items:flex-start;gap:10px;width:100%;min-height:44px;
@@ -2463,27 +2407,14 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .dash-news-arrow{font-size:19px;line-height:1;color:var(--muted);margin-top:2px}
 .dash-news-all{margin-top:10px}
 
-/* Телефоны: календарь компактнее, кнопки месяца не выпирают */
-@media(max-width:520px){
-  .ccal-card{padding:16px 14px}
-  .ccal-grid{gap:2px}
-  .ccal-day{min-height:44px;border-radius:10px;font-size:13px}
-  .ccal-side{padding:12px 12px}
-  .ccal-ev{gap:9px}
-}
-
 /* Спокойный режим: без плавной прокрутки и ховер-эффектов календаря */
 @media(prefers-reduced-motion:reduce){
-  .ccal-day{transition:none}
+  .ccal2-day{transition:none}
 }
 
 /* Прокрутка к заголовку календаря с плитки «Календарь»: отступ под липкую шапку */
 #class-calendar-title{scroll-margin-top:160px;outline:none}
 #class-calendar-title:focus-visible{outline:2px solid var(--blue);outline-offset:4px;border-radius:6px}
-
-/* Кнопка «Подробнее» на кремовой подложке — белая с синим текстом, чтобы читалась */
-.ccal-ev-btn{background:#fff;color:var(--blue);border:1px solid var(--soft-line)}
-.ccal-today-btn{background:#fff;color:var(--blue);border:1px solid var(--soft-line)}
 
 /* ===== Объёмные иконки заголовков и строк (как на референсе) ===== */
 /* Иконка-3D в заголовке секции («Календарь класса») */
@@ -2498,20 +2429,144 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 
 /* На телефонах воздух между блоками чуть меньше, чтобы не растягивать страницу */
 @media(max-width:640px){
-  .imp-card,.pollhome-card,.bday-banner,.ccal-card,.dash-sched,.dash-news,
+  .imp-card,.pollhome-card,.bday-banner,.ccal2,.dash-sched,.dash-news,
   .fam-widget,.notes-widget,.remind-card{margin-bottom:18px}
   .sec-head{margin:24px 0 12px}
   .sec-ico-3d{width:36px;height:36px}
 }
 
-/* ===== Календарь: подсветка дат с событиями и строки дней рождения (референс) ===== */
-/* Число даты с событиями — в мягком круге цвета типа события */
-.ccal-day.ev-gold .ccal-num{background:var(--gold-soft)}
-.ccal-day.ev-pink .ccal-num{background:var(--pink-soft)}
-.ccal-day.ev-blue .ccal-num{background:var(--blue-soft)}
-/* Розовая плашка «Поздравляем всем классом» и тортик в строке ДР */
-.ccal-ev-greet{display:inline-block;align-self:flex-start;margin-top:4px;
-  background:var(--pink-soft);color:#B4316E;border-radius:999px;
-  padding:4px 10px;font-size:12px;font-weight:700}
-.ccal-ev-cake{flex:none;align-self:center;font-size:26px;line-height:1;
-  filter:drop-shadow(0 2px 3px rgba(180,49,110,.25))}
+/* ===== Календарь класса — точное соответствие референсу (ТЗ, 22 раздела) =====
+   Все цвета блока — локальные переменные --cc-* из таблицы ТЗ §3. */
+.ccal2{
+  --cc-card:#FFFEFC;--cc-panel:#FAF8F2;--cc-line:#EEEAE2;
+  --cc-head:#101A42;--cc-ink:#202124;--cc-mut:#7F8391;
+  --cc-blue:#1764FF;--cc-gold:#FFBF00;--cc-orange:#FF9D00;--cc-pink:#F52693;
+  background:var(--cc-card);border-radius:22px;padding:12px 14px 13px;
+  box-shadow:0 8px 24px rgba(91,73,35,.045);margin-bottom:28px}
+
+/* Шапка внутри карточки: иконка 36×38, заголовок, «Сегодня», «Весь календарь» */
+.ccal2-head{display:flex;align-items:center;gap:10px;padding:2px 6px 8px;flex-wrap:wrap}
+.ccal2-ico{width:36px;height:38px;object-fit:contain;flex:none;
+  filter:drop-shadow(0 3px 6px rgba(39,65,114,.16))}
+.ccal2-title{font-family:'Comfortaa','Trebuchet MS','Arial Rounded MT Bold',sans-serif;
+  font-size:28px;font-weight:700;line-height:34px;letter-spacing:-.01em;
+  color:var(--cc-head);margin:0 auto 0 0;outline:none;scroll-margin-top:160px}
+.ccal2-title:focus-visible{outline:2px solid var(--cc-blue);outline-offset:4px;border-radius:6px}
+.ccal2-today{flex:none;background:#EEF4FF;border:1px solid #E5E9F0;border-radius:999px;
+  padding:7px 16px;font:inherit;font-size:12px;font-weight:600;color:var(--cc-blue);
+  cursor:pointer;line-height:1.3;transition:.15s}
+@media(hover:hover){.ccal2-today:hover{background:#E2ECFF}}
+.ccal2-link{display:inline-flex;align-items:center;gap:5px;background:none;border:none;
+  padding:6px 2px;font:inherit;font-size:12px;font-weight:600;color:var(--cc-blue);cursor:pointer}
+
+/* Две внутренние панели: левая чуть шире (1.035fr), скругление 16, рамка 1px */
+.ccal2-cols{display:grid;grid-template-columns:1.035fr 1fr;gap:11px;align-items:stretch}
+.ccal2-left{background:#fff;border:1px solid var(--cc-line);border-radius:16px;padding:12px 14px 10px}
+.ccal2-side{background:var(--cc-panel);border:1px solid var(--cc-line);border-radius:16px;
+  padding:12px 14px 12px;display:flex;flex-direction:column;gap:10px}
+
+/* Навигация по месяцам: белые кнопки 32px с SVG-шевроном, месяц строго по центру */
+.ccal2-nav{display:grid;grid-template-columns:32px 1fr 32px;align-items:center;gap:8px;margin-bottom:6px}
+.ccal2-nav-btn{width:32px;height:31px;display:grid;place-items:center;background:#fff;
+  border:1px solid var(--cc-line);border-radius:10px;cursor:pointer;padding:0;transition:.15s}
+@media(hover:hover){.ccal2-nav-btn:hover{background:#F6F3EC}}
+.ccal2-nav-btn:focus-visible{outline:2px solid var(--cc-blue);outline-offset:1px}
+.ccal2-month{text-align:center;font-size:19px;font-weight:700;color:var(--cc-head);
+  font-variant-numeric:tabular-nums;line-height:1.2}
+
+/* Сетка месяца: 7 колонок, клетки ~41px, дни соседних месяцев — пустые */
+.ccal2-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.ccal2-dow{font-size:12px;font-weight:600;color:var(--cc-mut);text-align:center;padding:7px 0 5px}
+.ccal2-day{position:relative;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;min-height:40px;border-radius:8px;border:1.5px solid transparent;
+  background:none;cursor:pointer;padding:2px;font:inherit;font-size:14px;font-weight:500;
+  color:var(--cc-ink);font-variant-numeric:tabular-nums;transition:background .15s ease}
+@media(hover:hover){.ccal2-day:not(.out):hover{background:#F3F5FA}}
+.ccal2-day:focus-visible{outline:2px solid var(--cc-blue);outline-offset:1px}
+.ccal2-day.out{pointer-events:none}
+.ccal2-day.wkend{color:var(--cc-mut)}
+.ccal2-num{display:grid;place-items:center;min-width:22px;height:22px;border-radius:50%;line-height:1}
+/* Сегодня — синий круг-градиент с белой цифрой, без контура клетки */
+.ccal2-day.today .ccal2-num{width:40px;height:40px;
+  background:linear-gradient(145deg,#287BFF,#0754FF);color:#fff;font-weight:700}
+/* Даты с событиями — мягкая заливка всей клетки в цвет типа */
+.ccal2-day.ev-gold{background:#FFF5CD}
+.ccal2-day.ev-pink{background:#FFE9F2}
+.ccal2-day.ev-pink .ccal2-num{color:var(--cc-pink);font-weight:700}
+.ccal2-day.ev-blue{background:#E9F1FF}
+/* Выбранный день — синий контур, не перекрывающий заливку и «сегодня» */
+.ccal2-day.sel{border-color:var(--cc-blue)}
+.ccal2-dots{display:flex;gap:3px;align-items:center;justify-content:center}
+.ccal2-dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
+.ccal2-dot.many{width:7px;height:7px}
+.ccal2-dot.gold{background:var(--cc-gold)}
+.ccal2-dot.pink{background:var(--cc-pink)}
+.ccal2-dot.blue{background:var(--cc-blue)}
+
+/* Легенда под сеткой: кружки 13px, серый текст 12px */
+.ccal2-legend{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:8px;padding:2px 2px 0;
+  font-size:12px;font-weight:400;color:var(--cc-mut)}
+.ccal2-legend span{display:inline-flex;align-items:center;gap:6px}
+.ccal2-legend .ccal2-dot{width:13px;height:13px}
+
+/* Правая панель: заголовок и карточки событий */
+.ccal2-side-title{font-size:18px;font-weight:700;color:var(--cc-head);padding:2px 2px 0;
+  font-family:'Comfortaa','Trebuchet MS','Arial Rounded MT Bold',sans-serif;letter-spacing:-.01em}
+.ccal2-ev{display:flex;align-items:flex-start;gap:12px;border-radius:14px;
+  padding:11px 12px;border:1px solid transparent}
+.ccal2-ev.gold{background:#FFF9DE;border-color:#FFEDAD}
+.ccal2-ev.pink{background:#FFF0F5;border-color:#FFD8E7}
+.ccal2-ev.blue{background:#EEF4FF;border-color:#DCE7FF}
+
+/* Белая плашка даты 54×64: крупное число, «ОКТ», точка типа */
+.ccal2-plq{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  width:54px;height:64px;flex:none;background:#fff;border-radius:12px;
+  box-shadow:0 2px 6px rgba(91,73,35,.07)}
+.ccal2-plq b{font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.ccal2-plq.gold b{color:var(--cc-orange)}
+.ccal2-plq.pink b{color:var(--cc-pink)}
+.ccal2-plq.blue b{color:var(--cc-blue)}
+.ccal2-plq small{font-size:10px;font-weight:700;color:var(--cc-head);letter-spacing:.05em}
+.ccal2-plq .ccal2-dot{width:7px;height:7px;margin-top:2px}
+
+.ccal2-ev-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.ccal2-ev-title{font-size:14px;font-weight:700;color:var(--cc-ink);overflow-wrap:anywhere}
+.ccal2-ev-meta{font-size:12.5px;font-weight:400;color:#5A5E6B;line-height:1.4;overflow-wrap:anywhere}
+/* Текстовые ссылки «Подробнее» / «К сбору» — без фона-кнопки, как на референсе */
+.ccal2-ev-link{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;
+  background:none;border:none;padding:2px 0 0;font:inherit;font-size:12px;font-weight:600;
+  color:var(--cc-blue);cursor:pointer}
+.ccal2-ev-link.pink{color:var(--cc-pink)}
+/* Ссылка справа в карточке события — по центру по вертикали, не переносится */
+.ccal2-ev-side{align-self:center;flex:none;padding:0;white-space:nowrap}
+/* Розовая плашка-поздравление в карточке ДР */
+.ccal2-badge{align-self:flex-start;background:#FFE0ED;color:var(--cc-pink);border-radius:10px;
+  padding:7px 11px;font-size:12px;font-weight:600;line-height:1.3;margin-top:2px}
+/* Объёмный тортик справа в карточке ДР — файл, не эмодзи (ТЗ §16) */
+.ccal2-cake{width:48px;height:52px;object-fit:contain;flex:none;align-self:center;
+  filter:drop-shadow(0 3px 6px rgba(180,49,110,.18))}
+
+.ccal2-empty{font-size:13px;font-weight:600;padding:6px 2px}
+/* Подсказка внизу панели; при выбранном пустом дне её заменяет «К ближайшим событиям» */
+.ccal2-hint{display:flex;gap:7px;align-items:flex-start;margin-top:auto;padding:14px 2px 2px;
+  font-size:12px;font-weight:400;color:var(--cc-mut);line-height:1.45}
+.ccal2-hint-ico{flex:none;margin-top:-1px}
+.ccal2-back{margin-top:auto;padding:10px 2px 2px}
+
+/* Якоря прокрутки из плиток и ссылки «Весь календарь» */
+#class-calendar-title,#holidays-full-title{scroll-margin-top:160px;outline:none}
+#holidays-full-title:focus-visible{outline:2px solid var(--blue);outline-offset:4px;border-radius:6px}
+
+/* Узкий блок (<700px): панели в столбик, заголовок компактнее */
+@media(max-width:740px){
+  .ccal2-cols{grid-template-columns:1fr}
+  .ccal2-title{font-size:23px;line-height:28px}
+  .ccal2-head{min-height:0}
+}
+@media(max-width:520px){
+  .ccal2{padding:12px 10px}
+  .ccal2-left,.ccal2-side{padding:11px 11px 10px}
+  .ccal2-head{gap:8px;padding:2px 2px 8px}
+  .ccal2-ico{width:30px;height:32px}
+  .ccal2-day{min-height:40px}
+}
