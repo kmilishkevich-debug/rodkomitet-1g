@@ -441,6 +441,48 @@ function BirthdaysWidget({ committee, ev, list, onTab }) {
 // Иконка по типу записи, если своя не задана
 const HOLIDAY_EMOJI = { holiday: "🎉", vacation: "🏖️", class: "🎒" };
 
+// ===== 3D-иконки событий (файлы public/icons/icon-*.webp) =====
+// Эмодзи в интерфейсе не показываем — подбираем 3D-иконку:
+// по эмодзи записи → по словам в названии → по типу записи.
+const EVENT_ICON_BY_EMOJI = {
+  "🎄": "tree", "✨": "star", "⭐": "star", "🌟": "star",
+  "🎖": "medal", "🏅": "medal", "🥇": "medal",
+  "🌷": "tulip", "💐": "tulip", "🌸": "tulip",
+  "🕊": "dove", "🔔": "bell", "🍂": "autumn", "🍁": "autumn",
+  "⛄": "snowman", "☃": "snowman", "❄": "snowman",
+  "🌱": "sprout", "🌿": "sprout", "☀": "sun", "🌞": "sun", "🏖": "sun",
+  "🎉": "party", "🎊": "party", "🎈": "party",
+  "🎒": "backpack", "🎂": "cake", "📌": "note", "📝": "note",
+};
+const EVENT_ICON_BY_WORD = [
+  ["собрани", "meeting"], ["новый год", "tree"], ["ёлк", "tree"], ["елк", "tree"],
+  ["рождеств", "star"], ["защитник", "medal"], ["8 март", "tulip"], ["побед", "dove"],
+  ["звонок", "bell"], ["осенн", "autumn"], ["зимн", "snowman"], ["весенн", "sprout"],
+  ["летн", "sun"],
+];
+function eventIcon(rec) {
+  // Эмодзи может быть с «селектором начертания» (️) — убираем его
+  const e = (rec.emoji || "").replace(/[\uFE00-\uFE0F]/g, "");
+  if (e && EVENT_ICON_BY_EMOJI[e]) return EVENT_ICON_BY_EMOJI[e];
+  const t = (rec.title || "").toLowerCase();
+  for (const [w, ic] of EVENT_ICON_BY_WORD) if (t.includes(w)) return ic;
+  const k = rec.kind || rec.type;
+  if (k === "vacation") return "sun";
+  if (k === "class" || k === "event") return "backpack";
+  if (k === "note") return "note";
+  if (k === "bday") return "cake";
+  return "party";
+}
+function EventIcon({ rec, size = 20, className = "" }) {
+  return (
+    <img
+      src={`/icons/icon-${eventIcon(rec)}.webp`} alt="" aria-hidden="true"
+      className={className} width={size} height={size}
+      style={{ objectFit: "contain", verticalAlign: "-4px", marginRight: 6 }}
+    />
+  );
+}
+
 // Сколько дней осталось до даты (по Минску); 0 = сегодня, отрицательное = прошло
 function daysUntil(iso) {
   if (!iso) return null;
@@ -458,10 +500,32 @@ function fmtHolidayDate(iso) {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}${year}`;
 }
 
+// Диапазон дат: «2–6 ноября» или «28 октября – 2 ноября» (для каникул)
+function fmtHolidayRange(aIso, bIso) {
+  if (!bIso) return fmtHolidayDate(aIso);
+  const a = new Date(aIso + "T00:00:00");
+  const b = new Date(bIso + "T00:00:00");
+  const year = b.getFullYear() !== minskNow().getFullYear() ? ` ${b.getFullYear()}` : "";
+  if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear())
+    return `${a.getDate()}–${b.getDate()} ${MONTHS[b.getMonth()]}${year}`;
+  return `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]}${year}`;
+}
+
+// Диапазон словами для карточки события: «со 2 по 6 ноября»
+function ccalRangeText(aIso, bIso) {
+  const a = new Date(aIso + "T00:00:00");
+  const b = new Date(bIso + "T00:00:00");
+  const pre = a.getDate() === 2 ? "со" : "с";
+  if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear())
+    return `${pre} ${a.getDate()} по ${b.getDate()} ${MONTHS[b.getMonth()]}`;
+  return `${pre} ${a.getDate()} ${MONTHS[a.getMonth()]} по ${b.getDate()} ${MONTHS[b.getMonth()]}`;
+}
+
 // Форма добавления/правки праздника (комитет и учитель)
 function HolidayForm({ initial, authorName, onDone, onCancel, toast }) {
   const [title, setTitle] = useState(initial?.title || "");
   const [date, setDate] = useState(initial?.on_date || "");
+  const [endDate, setEndDate] = useState(initial?.end_date || "");
   const [kind, setKind] = useState(initial?.kind || "holiday");
   const [emoji, setEmoji] = useState(initial?.emoji || "");
   const [note, setNote] = useState(initial?.note || "");
@@ -476,6 +540,9 @@ function HolidayForm({ initial, authorName, onDone, onCancel, toast }) {
         ...(initial?.id ? { id: initial.id } : {}),
         title: t,
         on_date: date || null,
+        // Конец диапазона шлём, только если он задан (или был) —
+        // иначе база без колонки end_date (до calendar-dates.sql) вернёт ошибку
+        ...(endDate || initial?.end_date ? { end_date: endDate || null } : {}),
         kind,
         emoji: emoji.trim() || null,
         note: note.trim() || null,
@@ -498,6 +565,9 @@ function HolidayForm({ initial, authorName, onDone, onCancel, toast }) {
       />
       <input className="note-date" type="date" value={date} onChange={(e) => setDate(e.target.value)}
         aria-label="Дата (можно оставить пустой — покажем «даты уточняются»)" />
+      <input className="note-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+        aria-label="По какую дату (для каникул; пусто = один день)"
+        title="По какую дату (для каникул; пусто = один день)" />
       <select className="note-date" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Тип записи">
         <option value="holiday">Праздник</option>
         <option value="vacation">Каникулы</option>
@@ -547,7 +617,8 @@ function HolidaysWidget({ committee, role, events, authorName, toast, onTab }) {
       note: [e.time_text, e.place].filter(Boolean).join(" · ") || null,
     })),
   ].filter((x) => {
-    const d = daysUntil(x.on_date);
+    // Диапазон (каникулы) не прошёл, пока не кончился end_date
+    const d = daysUntil(x.end_date || x.on_date);
     return d === null || d >= 0; // прошедшие не показываем
   });
   const dated = list.filter((x) => x.on_date).sort((a, b) => a.on_date.localeCompare(b.on_date));
@@ -593,16 +664,17 @@ function HolidaysWidget({ committee, role, events, authorName, toast, onTab }) {
         {visible.length === 0 && <div className="bday-empty muted">Ближайших праздников пока нет</div>}
         {visible.map((h) => {
           const d = daysUntil(h.on_date);
+          const going = h.end_date && d !== null && d <= 0 && daysUntil(h.end_date) >= 0;
           return (
-            <div className={"bday-row" + (d === 0 ? " today" : "")} key={h.id}>
-              <span className="bday-date">{fmtHolidayDate(h.on_date)}</span>
+            <div className={"bday-row" + (d === 0 || going ? " today" : "")} key={h.id}>
+              <span className="bday-date">{h.end_date ? fmtHolidayRange(h.on_date, h.end_date) : fmtHolidayDate(h.on_date)}</span>
               <span className="bday-name">
-                <span aria-hidden="true" style={{ marginRight: 4 }}>{h.emoji || HOLIDAY_EMOJI[h.kind] || "🎉"}</span>
+                <EventIcon rec={h} size={20} />
                 {h.title}
                 {h.note && <span className="muted" style={{ fontWeight: 400, fontSize: 12.5 }}> · {h.note}</span>}
               </span>
               <span className={"bday-when" + (d !== null && d >= 0 && d <= 5 ? " close" : "")}>
-                {d === null ? "" : d === 0 ? "сегодня!" : inDaysWord(d)}
+                {d === null ? "" : going ? "идут сейчас" : d === 0 ? "сегодня!" : inDaysWord(d)}
               </span>
               {h.fee_link && (
                 <button className="pill-btn pink" onClick={() => onTab("fees")}>К сбору →</button>
@@ -731,7 +803,10 @@ function CcalPlaque({ date, tone }) {
 function CcalEventCard({ it, onTab, onPick }) {
   const tone = ccalTone(it.type);
   const days = daysUntil(it.date);
-  const meta = [it.time || null, it.place || null].filter(Boolean).join(" · ") || it.note || null;
+  // У каникул показываем диапазон дат, у остальных — время и место или заметку
+  const meta = it.endDate
+    ? ccalRangeText(it.date, it.endDate)
+    : [it.time || null, it.place || null].filter(Boolean).join(" · ") || it.note || null;
   const names = it.names || (it.name ? [it.name] : []);
   return (
     <div className={"ccal2-ev " + tone}>
@@ -750,7 +825,7 @@ function CcalEventCard({ it, onTab, onPick }) {
         ) : (
           <>
             <span className="ccal2-ev-title">
-              {it.emoji ? <span aria-hidden="true">{it.emoji} </span> : null}
+              <EventIcon rec={it} size={20} />
               {it.title}
             </span>
             {meta && <span className="ccal2-ev-meta">{meta}</span>}
@@ -802,8 +877,8 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo }) {
   (hols || []).forEach((h) => {
     if (h.on_date) baseItems.push({
       id: "hol-" + h.id, type: h.kind === "vacation" ? "vacation" : "holiday",
-      date: h.on_date, title: h.title, emoji: h.emoji || null,
-      note: h.note || null, feeLink: !!h.fee_link,
+      date: h.on_date, endDate: h.end_date || null, title: h.title,
+      emoji: h.emoji || null, note: h.note || null, feeLink: !!h.fee_link,
     });
   });
   // Личные напоминания видит только своя семья
@@ -825,14 +900,18 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo }) {
       };
     });
 
-  // --- Сетка месяца: карта «дата → события» ---
-  const monthItems = [
-    ...baseItems.filter((it) => {
-      const [y, m] = it.date.split("-").map(Number);
-      return y === view.y && m - 1 === view.m;
-    }),
-    ...bdayItemsFor(view.y, view.m),
-  ];
+  // --- Сетка месяца: карта «дата → события». Каникулы (endDate) занимают
+  // каждый день диапазона, попавший в просматриваемый месяц ---
+  const monthItems = [];
+  baseItems.forEach((it) => {
+    const d = new Date(it.date + "T00:00:00");
+    const end = new Date((it.endDate || it.date) + "T00:00:00");
+    for (; d <= end; d.setDate(d.getDate() + 1)) {
+      if (d.getFullYear() === view.y && d.getMonth() === view.m)
+        monthItems.push({ ...it, date: ccalIso(view.y, view.m, d.getDate()) });
+    }
+  });
+  monthItems.push(...bdayItemsFor(view.y, view.m));
   const byDate = {};
   monthItems.forEach((it) => { (byDate[it.date] = byDate[it.date] || []).push(it); });
 
@@ -878,7 +957,9 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo }) {
   if (selected) {
     const [sy, sm] = selected.split("-").map(Number);
     const dayItems = [
-      ...baseItems.filter((it) => it.date === selected),
+      // Диапазон (каникулы) попадает в день, если выбранная дата внутри него
+      ...baseItems.filter((it) => it.date === selected ||
+        (it.endDate && it.date <= selected && selected <= it.endDate)),
       ...groupBd(bdayItemsFor(sy, sm - 1).filter((it) => it.date === selected)),
     ].sort((a, b) => (ccalTimeKey(a.time) || "") < (ccalTimeKey(b.time) || "") ? -1 : 1);
     const sd = new Date(selected + "T00:00:00");
@@ -898,7 +979,7 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo }) {
         turns: bornYear >= 2000 && bornYear <= y ? y - bornYear : null,
       };
     });
-    sideItems = [...baseItems.filter((it) => it.date >= todayIso), ...groupBd(nextBd)]
+    sideItems = [...baseItems.filter((it) => (it.endDate || it.date) >= todayIso), ...groupBd(nextBd)]
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(0, 4);
     if (!sideItems.length) sideEmpty = "Ближайших событий пока нет";

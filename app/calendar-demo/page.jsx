@@ -12,6 +12,11 @@ const DEMO_BDAYS = [
   { id: 1, first: "Ева", last: "Милишкевич", born: "2019-10-27" },
   { id: 2, first: "Ольга", last: "Белоус", born: "2019-10-27" },
 ];
+const DEMO_HOLS = [
+  { id: "h1", title: "Осенние каникулы", on_date: "2026-11-02", end_date: "2026-11-06", kind: "vacation", emoji: "🍂" },
+  { id: "h2", title: "Новый год", on_date: "2027-01-01", kind: "holiday", emoji: "🎄" },
+  { id: "h3", title: "Рождество", on_date: "2027-01-07", kind: "holiday", emoji: "✨" },
+];
 
 export default function CalendarDemoPage() {
   // Хост проверяем только после монтирования, чтобы не «утекать» в SSR-разметку
@@ -30,7 +35,7 @@ export default function CalendarDemoPage() {
           bdays={DEMO_BDAYS}
           family={null}
           onTab={() => {}}
-          demo={{ today: "2026-10-19", hols: [] }}
+          demo={{ today: "2026-10-19", hols: DEMO_HOLS }}
         />
       </div>
     </div>
