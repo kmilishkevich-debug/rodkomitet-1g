@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import {
   saveAnnouncement,
   saveHomework, deleteHomework,
-  saveClassEvent, deleteClassEvent,
+  saveClassEvent,
 } from "@/lib/supabase";
 import { sendManualPush } from "@/lib/push";
 import { useRefreshPause } from "@/lib/formGuard";
@@ -11,18 +11,24 @@ import { AttachPicker } from "./Attachments";
 import FamilyPicker from "./FamilyPicker";
 import { canonicalN, familyLabel } from "./data";
 import TeacherWelcomeCard from "./TeacherWelcomeCard";
-import TeacherTodayStats from "./TeacherTodayStats";
 import TeacherQuickCards from "./TeacherQuickCards";
 import TeacherFamilyChat from "./TeacherFamilyChat";
 import { PostChatModal, commentsFor, unreadFor } from "./PostChat";
 import { fmtDayWord } from "./TeacherBoard";
 import { TeacherAbsenceCard } from "./Absences";
 import { ClassCalendar } from "./DashboardTab";
-import { BIRTHDAYS_FALLBACK, bdInfo, bdName, fmtBd, inDaysWord } from "./birthdaysData";
+import { BIRTHDAYS_FALLBACK, bdName } from "./birthdaysData";
+import { isoToDay, activeOverridesFor, applyOverridesToDay } from "./scheduleOverrides";
+import { LESSONS_FALLBACK } from "./scheduleData";
 
 // ===== Кабинет классного руководителя =====
-// Рабочий экран на каждый день: приветствие с маскотом, две главные кнопки,
-// три быстрых действия и две колонки с тем, что уже опубликовано.
+// Переработка 21.10.2026 (ТЗ «календарь — центральный блок»): порядок
+// блоков — компактное приветствие с маскотом → единая строка пяти быстрых
+// действий → календарь класса (центральный рабочий блок) → две колонки:
+// задания | сообщения, объявления | дни рождения месяца. Полоса «Сегодня
+// в цифрах» удалена, её цифры разошлись по месту употребления: уроки — в
+// строку приветствия, задания — в заголовок карточки заданий, события —
+// в календарь, непрочитанные — в заголовок сообщений.
 // Все формы открываются поверх кабинета — со страницы не уходим.
 // Каждая публикация уходит родителям пушем: отдельной галочки больше нет.
 
@@ -46,6 +52,22 @@ function short(s, n = 90) {
   const t = (s || "").trim();
   return t.length > n ? t.slice(0, n) + "…" : t;
 }
+
+// «задание/задания/заданий», «урок/урока/уроков» — по правилам русского
+function plural(n, one, few, many) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+
+// Месяц в предложном падеже — для заголовка «Дни рождения в октябре»
+const MONTHS_PREP = ["январе", "феврале", "марте", "апреле", "мае", "июне",
+  "июле", "августе", "сентябре", "октябре", "ноябре", "декабре"];
+// …и в родительном — для строк «27 октября»
+const MONTHS_GEN = ["января", "февраля", "марта", "апреля", "мая", "июня",
+  "июля", "августа", "сентября", "октября", "ноября", "декабря"];
 
 // ===== Окно поверх кабинета =====
 // Пока оно открыто, авто-обновление данных на паузе — иначе оно стирает набранное.
@@ -195,8 +217,10 @@ function HomeworkForm({ author, onDone, toast, defaultDate }) {
 }
 
 // ===== Событие класса =====
-function EventForm({ author, onDone, toast }) {
-  const [date, setDate] = useState(tomorrowIso());
+// defaultDate — дата, выбранная в календаре (ТЗ 21.10.2026 §14): форма,
+// открытая из календаря, уже стоит на нужном дне.
+function EventForm({ author, onDone, toast, defaultDate }) {
+  const [date, setDate] = useState(defaultDate || tomorrowIso());
   const [timeText, setTimeText] = useState("");
   const [title, setTitle] = useState("");
   const [place, setPlace] = useState("");
@@ -333,6 +357,21 @@ function HeadLock() {
       <path d="M15.4 19v-3.6a4.6 4.6 0 0 1 9.2 0V19" stroke="currentColor"
         strokeWidth="2.4" strokeLinecap="round" />
       <circle cx="20" cy="25.2" r="1.9" fill="#fff" />
+    </svg>
+  );
+}
+
+// Розовый тортик для блока «Дни рождения месяца» (ТЗ 21.10.2026 §10) —
+// в той же контурной манере, что остальные значки шапок.
+function HeadCake() {
+  return (
+    <svg className="tc-head-ico tone-pink" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <rect x="8" y="19" width="24" height="13.5" rx="4" fill="currentColor" opacity=".16" />
+      <rect x="8" y="19" width="24" height="13.5" rx="4" stroke="currentColor" strokeWidth="2.4" />
+      <path d="M8 25c2.4 2 4.6 2 7 0s4.6-2 7 0 4.6 2 7 0" stroke="currentColor"
+        strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M20 13.5V19" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M20 7.5c1.5 1.8 1.5 3.2 0 4.4-1.5-1.2-1.5-2.6 0-4.4Z" fill="currentColor" />
     </svg>
   );
 }
@@ -481,6 +520,7 @@ export default function TeacherTab({
   onReload, onReloadMessages,
 }) {
   const [form, setForm] = useState(null);      // 'ann' | 'hw' | 'event' | null
+  const [evDate, setEvDate] = useState(null);  // дата из календаря для формы события
   const [pickOpen, setPickOpen] = useState(false);
   const [chatFamily, setChatFamily] = useState(null); // {n, child}
   const [postChat, setPostChat] = useState(null);     // {kind, id, title}
@@ -508,14 +548,10 @@ export default function TeacherTab({
   const author = authorName || "Учитель";
   const todayIso = minskIso();
   const tmrIso = tomorrowIso();
-  const close = () => { setForm(null); onReload?.(); };
+  const close = () => { setForm(null); setEvDate(null); onReload?.(); };
 
   const delHw = async (h) => {
     try { await deleteHomework(h.id); onReload?.(); toast("Задание удалено"); }
-    catch (e) { console.error(e); toast("Не получилось удалить"); }
-  };
-  const delEv = async (e2) => {
-    try { await deleteClassEvent(e2.id); onReload?.(); toast("Событие удалено"); }
     catch (e) { console.error(e); toast("Не получилось удалить"); }
   };
 
@@ -524,32 +560,53 @@ export default function TeacherTab({
   // ТЗ §23): полные списки живут в своих разделах, здесь только сводка.
   const hw = (homework || []).filter((h) => h.on_date === pickedDay).slice(0, 3);
 
-  // События — только предстоящие, ближайшие сверху. Вперемешку с ними,
-  // по той же дате, идут дни рождения детей на ближайшие 30 дней
-  // (добавлено 28.09.2026): при совпадении даты ДР стоит выше события.
-  // Превью выросло с 3 до 5 строк, чтобы ДР не вытесняли события.
-  // Клик по строке ДР ведёт на вкладку «Класс» — там список на весь год.
+  // Переработка 21.10.2026: отдельной карточки «Ближайшие события» больше
+  // нет — события живут в центральном календаре. Вместо неё — блок «Дни
+  // рождения в [месяце]»: ВСЕ именинники текущего месяца, включая уже
+  // прошедших (они приглушены), список не обрезается.
   const bdays = birthdays || BIRTHDAYS_FALLBACK;
-  const bdRows = bdays
-    .map((k) => ({ ...k, ...bdInfo(k.born) }))
-    .filter((k) => k.days <= 30)
-    .map((k) => ({
-      ...k,
-      kind: "bday",
-      key: "bd" + k.id,
-      on_date: `${k.next.getFullYear()}-${String(k.next.getMonth() + 1).padStart(2, "0")}-${String(k.next.getDate()).padStart(2, "0")}`,
-    }));
-  const ev = [
-    ...(events || [])
-      .filter((e) => e.on_date >= todayIso)
-      .map((e) => ({ ...e, kind: "event", key: "ev" + e.id })),
-    ...bdRows,
-  ]
-    .sort((a, b) => {
-      if (a.on_date !== b.on_date) return a.on_date < b.on_date ? -1 : 1;
-      return (a.kind === "bday" ? 0 : 1) - (b.kind === "bday" ? 0 : 1);
+  const curMonth = Number(todayIso.slice(5, 7)) - 1; // 0..11
+  const todayDay = Number(todayIso.slice(8, 10));
+  const curYear = Number(todayIso.slice(0, 4));
+  const monthBd = bdays
+    .map((k) => {
+      const [by, bm, bd] = (k.born || "").split("-").map(Number);
+      return { ...k, bm: bm - 1, bd, turns: by >= 2000 && by <= curYear ? curYear - by : null };
     })
-    .slice(0, 5);
+    .filter((k) => k.bm === curMonth)
+    .sort((a, b) => a.bd - b.bd);
+
+  // Уроки сегодня — та же математика, что была в удалённой полосе
+  // «Сегодня в цифрах»: база из живого расписания или запасного набора,
+  // поверх — активные опубликованные замены на сегодняшнюю дату.
+  const dow = isoToDay(todayIso); // 1=Пн … 7=Вс
+  let lessonsLine = null; // null → выходной, строка — в приветствие
+  if (dow >= 1 && dow <= 5) {
+    const allLessons = schedule?.lessons?.length ? schedule.lessons : LESSONS_FALLBACK;
+    const ovs = activeOverridesFor(overrides || [], todayIso);
+    const { lessons } = applyOverridesToDay(allLessons, dow, ovs);
+    lessonsLine = `${lessons.length} ${plural(lessons.length, "урок", "урока", "уроков")} сегодня`;
+  }
+
+  // Счётчики из удалённой полосы — по месту употребления (ТЗ §8):
+  // активные задания → заголовок карточки заданий,
+  // непрочитанные от родителей → заголовок карточки сообщений.
+  const hwActive = (homework || []).filter((h) => h.on_date >= todayIso).length;
+  const msgNew = (familyMessages || []).filter((m) => !m.from_teacher && !m.read_teacher).length;
+
+  // Реплика облачка маскота — по приоритету ТЗ §16: ближайшее событие
+  // (до недели) → непрочитанные сообщения → нейтральная (в TeacherPlush).
+  const nextEv = (events || [])
+    .filter((e) => e.on_date >= todayIso)
+    .sort((a, b) => a.on_date.localeCompare(b.on_date))[0];
+  let bubble = null;
+  if (nextEv) {
+    const dd = Math.round((new Date(nextEv.on_date + "T12:00:00") - new Date(todayIso + "T12:00:00")) / 86400000);
+    if (dd === 0) bubble = ["Сегодня событие,", "всё готово?"];
+    else if (dd === 1) bubble = ["Завтра событие —", "не забудем!"];
+    else if (dd <= 7) bubble = ["Скоро событие:", `${Number(nextEv.on_date.slice(8, 10))} ${MONTHS_GEN[Number(nextEv.on_date.slice(5, 7)) - 1]}!`];
+  }
+  if (!bubble && msgNew > 0) bubble = ["Есть новые", "сообщения!"];
 
   // Свои объявления — последние три
   const myAnn = (announcements || [])
@@ -573,19 +630,20 @@ export default function TeacherTab({
     }).slice(0, 3);
   }, [familyMessages]);
 
+  // Пять быстрых действий одной строкой (ТЗ §7): объявление и задание
+  // переехали сюда из приветствия.
   const pickCard = (id) => {
-    if (id === "event") setForm("event");
+    if (id === "ann") setForm("ann");
+    else if (id === "hw") setForm("hw");
+    else if (id === "event") setForm("event");
     else if (id === "note") setPickOpen(true);
     else if (id === "schedule") onTab("schedule");
   };
 
-  // Клик по карточке статистики (редизайн 28.09.2026, ТЗ §17):
-  // уроки ведут во вкладку расписания, остальные — плавно прокручивают
-  // к своей рабочей карточке ниже на этой же странице.
-  const pickStat = (id) => {
-    if (id === "schedule") { onTab("schedule"); return; }
-    const anchor = { homework: "tc-card-hw", events: "tc-card-ev", messages: "tc-card-msg" }[id];
-    if (anchor) document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  // «+ Событие» из календаря: выбранный день подставляется в форму
+  const addEventAt = (date) => {
+    setEvDate(date || null);
+    setForm("event");
   };
 
   return (
@@ -593,31 +651,40 @@ export default function TeacherTab({
       <TeacherWelcomeCard
         name={greetingName}
         todayIso={todayIso}
-        onAnnounce={() => setForm("ann")}
-        onHomework={() => setForm("hw")}
-      />
-
-      <TeacherTodayStats
-        schedule={schedule}
-        overrides={overrides}
-        homework={homework}
-        events={events}
-        familyMessages={familyMessages}
-        onPick={pickStat}
+        lessonsLine={lessonsLine}
+        idlePhrase={bubble}
       />
 
       <TeacherQuickCards onPick={pickCard} />
 
-      {/* ТЗ §14: карточки лежат прямо в сетке, без колонок-обёрток.
-          Порядок в DOM — задания → события → объявления → сообщения,
-          ровно тот, что нужен на телефоне одной колонкой. На десктопе
-          двухколоночная сетка сама раскладывает их 1-2 / 3-4, поэтому
-          визуальный порядок нигде не расходится с порядком табуляции
-          и обходиться свойством order не приходится. */}
+      {/* Центральный рабочий блок кабинета (ТЗ 21.10.2026): календарь
+          класса сразу под строкой действий. Тот же ClassCalendar, что у
+          родителей: события, праздники/каникулы, дни рождения. Личных
+          напоминаний у учителя нет (family=null), ссылки «Весь календарь»
+          тоже. «+ Событие» в шапке открывает форму с выбранной датой. */}
+      <ClassCalendar
+        events={events}
+        notes={[]}
+        bdays={bdays}
+        family={null}
+        onTab={onTab}
+        fullLink={false}
+        onAddEvent={addEventAt}
+      />
+
+      {/* Карточки лежат прямо в сетке, без колонок-обёрток. Порядок в DOM —
+          задания → сообщения → объявления → дни рождения: на десктопе
+          двухколоночная сетка раскладывает их рядами «задания | сообщения»
+          и «объявления | ДР» (ТЗ 21.10.2026 §9–10). На телефоне сообщения
+          поднимаются выше заданий правилом order в CSS (§19). */}
       <div className="tc-grid">
           <WorkCard
             icon={<HeadBook />}
             title="Задания и что взять"
+            /* ТЗ §8: счётчик активных заданий — в подписи карточки;
+               до загрузки (homework === null) цифру не показываем */
+            sub={homework === null ? null
+              : `${hwActive} ${plural(hwActive, "активное задание", "активных задания", "активных заданий")}`}
             anchor="tc-card-hw"
             delay="d2"
             tall={hw.length ? null : "tc-h-hw"}
@@ -655,56 +722,39 @@ export default function TeacherTab({
             ))}
           </WorkCard>
 
-          {/* ТЗ §12.2: подпись «Поездки, праздники, собрания» убрана —
-              она дословно повторяла подпись быстрого действия «Событие
-              класса», стоящего на том же экране двумя блоками выше. */}
           <WorkCard
-            icon={<HeadCalendar />}
-            title="Ближайшие события"
-            anchor="tc-card-ev"
+            icon={<HeadLock />}
+            title="Личные сообщения семьям"
+            /* ТЗ §8: счётчик непрочитанных — в шапке карточки («2 новых»);
+               до загрузки и при нуле плашку не показываем */
+            sub="Видно только вам и выбранной семье"
+            head={msgNew > 0 ? <span className="tc-head-count">{msgNew} {plural(msgNew, "новое", "новых", "новых")}</span> : null}
+            anchor="tc-card-msg"
             delay="d2"
-            tall={ev.length ? null : "tc-h-ev"}
+            tall={threads.length ? null : "tc-h-msg"}
           >
-            {events === null && <CardSkeleton onRetry={onReload} />}
-            {events !== null && !ev.length && (
+            {familyMessages === null && <CardSkeleton onRetry={onReloadMessages} />}
+            {familyMessages !== null && !threads.length && (
               <Empty
-                icon={<EmptyCalendar />}
-                title="Ближайших событий пока нет"
-                hint="Здесь будут поездки, праздники и собрания."
-                cta="+ Создать событие"
+                icon={<EmptyPeople />}
+                title="Выберите семью, чтобы написать сообщение."
+                plain
+                cta="Выбрать семью"
                 ctaTone="soft"
-                onCta={() => setForm("event")}
+                onCta={() => setPickOpen(true)}
               />
             )}
-            {ev.map((e) => e.kind === "bday" ? (
-              // День рождения: сегодняшний подсвечен золотой плашкой .now
-              // и стоит первым; клик открывает вкладку «Класс»
-              <button
-                className={"tb-row tb-bd" + (e.days === 0 ? " now" : "")}
-                key={e.key}
-                onClick={() => onTab("class")}
-                title="Открыть список класса"
-              >
-                <span className="tb-day">{fmtDayWord(e.on_date, todayIso)}</span>
-                <span className="tb-body">
-                  <span className="tb-text">🎂 <b>{bdName(e)}</b> — день рождения</span>
-                  <span className="tb-bring">
-                    {fmtBd(e.born)}, {e.days === 0 ? <b className="tc-hot">сегодня!</b> : inDaysWord(e.days)}
-                  </span>
+            {threads.map((t) => (
+              <button className="tc-line" key={t.n}
+                onClick={() => setChatFamily({ n: t.n, child: familyLabel(t.n) })}>
+                <span className="tc-line-title">
+                  {familyLabel(t.n)}
+                  {t.unread > 0 && <span className="tc-badge">{t.unread}</span>}
+                </span>
+                <span className="tc-line-sub">
+                  {t.last?.from_teacher ? "Вы: " : ""}{short(t.last?.text, 60)}
                 </span>
               </button>
-            ) : (
-              <div className="tb-row" key={e.key}>
-                <span className="tb-day">{fmtDayWord(e.on_date, todayIso)}</span>
-                <div className="tb-body">
-                  <div className="tb-text"><b>{e.title}</b>{e.time_text ? ` · ${e.time_text}` : ""}</div>
-                  {(e.place || e.note) && (
-                    <div className="tb-bring">{e.place || ""}{e.place && e.note ? " · " : ""}{e.note || ""}</div>
-                  )}
-                  {chatBtn("event", e.id, e.title)}
-                </div>
-                <button className="note-del" onClick={() => delEv(e)} aria-label="Удалить" title="Удалить">✕</button>
-              </div>
             ))}
           </WorkCard>
 
@@ -740,37 +790,47 @@ export default function TeacherTab({
             ))}
           </WorkCard>
 
+          {/* НОВЫЙ блок (ТЗ §10): все именинники текущего месяца, включая
+              уже прошедших — прошедшие приглушены, список не обрезается.
+              Клик по строке ведёт на вкладку «Класс» (список на весь год). */}
           <WorkCard
-            icon={<HeadLock />}
-            title="Личные сообщения семьям"
-            sub="Видно только вам и выбранной семье"
-            anchor="tc-card-msg"
+            icon={<HeadCake />}
+            title={`Дни рождения в ${MONTHS_PREP[curMonth]}`}
+            link="Весь класс"
+            onLink={() => onTab("class")}
+            anchor="tc-card-bd"
             delay="d3"
-            tall={threads.length ? null : "tc-h-msg"}
           >
-            {familyMessages === null && <CardSkeleton onRetry={onReloadMessages} />}
-            {familyMessages !== null && !threads.length && (
+            {!monthBd.length && (
               <Empty
-                icon={<EmptyPeople />}
-                title="Выберите семью, чтобы написать сообщение."
+                icon={<EmptyCalendar />}
+                title="В этом месяце именинников нет."
                 plain
-                cta="Выбрать семью"
-                ctaTone="soft"
-                onCta={() => setPickOpen(true)}
               />
             )}
-            {threads.map((t) => (
-              <button className="tc-line" key={t.n}
-                onClick={() => setChatFamily({ n: t.n, child: familyLabel(t.n) })}>
-                <span className="tc-line-title">
-                  {familyLabel(t.n)}
-                  {t.unread > 0 && <span className="tc-badge">{t.unread}</span>}
-                </span>
-                <span className="tc-line-sub">
-                  {t.last?.from_teacher ? "Вы: " : ""}{short(t.last?.text, 60)}
-                </span>
-              </button>
-            ))}
+            {monthBd.map((k) => {
+              const past = k.bd < todayDay;
+              const isToday = k.bd === todayDay;
+              return (
+                <button
+                  className={"tc-line tc-bd-line" + (past ? " past" : "") + (isToday ? " now" : "")}
+                  key={k.id}
+                  onClick={() => onTab("class")}
+                  title="Открыть список класса"
+                >
+                  <span className="tc-bd-date">{k.bd} {MONTHS_GEN[curMonth]}</span>
+                  <span className="tc-line-title">
+                    {bdName(k)}
+                    {isToday && <b className="tc-hot"> — сегодня!</b>}
+                  </span>
+                  {k.turns != null && (
+                    <span className="tc-bd-age">
+                      {past || isToday ? "исполнилось" : "исполнится"} {k.turns}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </WorkCard>
 
           {/* Отсутствия детей: кто не придёт сегодня и о ком предупредили
@@ -778,19 +838,6 @@ export default function TeacherTab({
               самодостаточная: сама грузит данные и обновляется раз в минуту. */}
           <TeacherAbsenceCard />
       </div>
-
-      {/* Календарь класса — тот же, что у родителей на «Главной»:
-          события, праздники/каникулы и дни рождения. Личных напоминаний
-          у учителя нет (family=null), ссылки «Весь календарь» тоже —
-          лента «Предстоящие праздники» живёт только на родительской главной. */}
-      <ClassCalendar
-        events={events}
-        notes={[]}
-        bdays={bdays}
-        family={null}
-        onTab={onTab}
-        fullLink={false}
-      />
 
       {form === "ann" && (
         <Modal title="Объявление классу" sub="Увидят все родители, придёт уведомление" onClose={close}>
@@ -804,7 +851,7 @@ export default function TeacherTab({
       )}
       {form === "event" && (
         <Modal title="Событие класса" sub="Поездка, праздник, собрание" onClose={close}>
-          <EventForm author={author} onDone={close} toast={toast} />
+          <EventForm author={author} onDone={close} toast={toast} defaultDate={evDate} />
         </Modal>
       )}
 

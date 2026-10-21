@@ -1,38 +1,47 @@
 "use client";
 
-// ===== Три быстрых действия под приветствием =====
-// Композиция как в макете: крупная иконка слева → название и подпись →
-// стрелка справа. Кликабельна вся карточка, есть наведение и видимый
-// фокус с клавиатуры.
+// ===== Единая строка быстрых действий кабинета учителя =====
+// Переработка 21.10.2026 (ТЗ §7): пять действий в ОДНУ строку сразу под
+// компактным приветствием. Сюда переехали «Объявление» и «Задание» из
+// приветствия; «Объявление» — главная синяя кнопка, остальные четыре —
+// светлые. Высота кнопок 56–60 px, иконки 28–32 px, радиус 16 px —
+// заметно компактнее прежних карточек 108 px: строка должна читаться
+// как панель инструментов, а не как ряд плиток.
 //
-// Иконки: «Событие класса» — календарь, «Написать семье» — конверт,
-// «Изменить расписание» — календарь с часами. Книгу с расписания убрали:
-// она означает задания и путала действие.
+// Иконки — фирменные объёмные webp из /public/icons: мегафон (сгенерирован
+// 21.10.2026 тем же пайплайном, что и набор календаря), книга, календарь,
+// конверт, календарь с часами.
 
 const CARDS = [
   {
+    id: "ann",
+    tone: "blue",
+    icon: "/icons/icon-megaphone.webp",
+    title: "Объявление",
+  },
+  {
+    id: "hw",
+    tone: "soft",
+    icon: "/icons/icon-book.webp",
+    title: "Задание",
+  },
+  {
     id: "event",
-    tone: "pink",
+    tone: "soft",
     icon: "/icons/icon-calendar.webp",
-    title: "Событие класса",
-    sub: "Поездка, праздник, собрание",
+    title: "Событие",
   },
   {
     id: "note",
-    tone: "green",
+    tone: "soft",
     icon: "/icons/icon-envelope.webp",
     title: "Написать семье",
-    sub: "Личное сообщение родителям",
   },
   {
     id: "schedule",
-    tone: "lav",
+    tone: "soft",
     icon: "/icons/icon-calendar-clock.webp",
     title: "Изменить расписание",
-    // ТЗ §11: подпись — «Замена или отмена урока». Смена кабинета из неё
-    // ушла, но из формы не исчезла: карточка по-прежнему открывает полный
-    // набор изменений расписания, включая другой кабинет.
-    sub: "Замена или отмена урока",
   },
 ];
 
@@ -47,14 +56,7 @@ export default function TeacherQuickCards({ onPick }) {
           onClick={() => onPick(c.id)}
         >
           <img src={c.icon} className="tc-quick-icon" alt="" />
-          <span className="tc-quick-body">
-            <span className="tc-quick-title">{c.title}</span>
-            <span className="tc-quick-sub">{c.sub}</span>
-          </span>
-          <svg className="tc-quick-arrow" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor"
-              strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <span className="tc-quick-title">{c.title}</span>
         </button>
       ))}
     </div>

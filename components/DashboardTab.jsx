@@ -850,7 +850,7 @@ function CcalEventCard({ it, onTab, onPick }) {
 // события выбранного дня. Источники: события класса, праздники/каникулы,
 // дни рождения и личные напоминания семьи. Проп demo — фиксированное
 // состояние только для визуальной приёмки (страница /calendar-demo).
-export function ClassCalendar({ events, notes, bdays, family, onTab, demo, fullLink = true }) {
+export function ClassCalendar({ events, notes, bdays, family, onTab, demo, fullLink = true, onAddEvent }) {
   const now = demo ? new Date(demo.today + "T12:00:00") : minskNow();
   const todayIso = demo ? demo.today : minskIso();
   const [view, setView] = useState({ y: now.getFullYear(), m: now.getMonth() });
@@ -994,6 +994,13 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo, fullL
         {/* Заголовок получает фокус при переходе с плитки «Календарь» */}
         <h2 className="ccal2-title" id="class-calendar-title" tabIndex={-1}>Календарь класса</h2>
         <button className="ccal2-today" onClick={goToday}>Сегодня</button>
+        {/* Кабинет учителя (ТЗ 21.10.2026): «+ Событие» прямо в шапке календаря.
+            Выбранный в сетке день автоматически подставляется в форму. */}
+        {onAddEvent && (
+          <button className="ccal2-add" onClick={() => onAddEvent(selected || null)}>
+            + Событие
+          </button>
+        )}
         {/* В кабинете учителя ленты «Предстоящие праздники» нет — ссылку прячем */}
         {fullLink && <button className="ccal2-link" onClick={goFull}>Весь календарь <CcalArrow /></button>}
       </div>
@@ -1056,7 +1063,16 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo, fullL
           {loading && !sideItems.length ? (
             <div className="ccal2-empty muted">События загружаются…</div>
           ) : sideEmpty ? (
-            <div className="ccal2-empty muted">{sideEmpty}</div>
+            <div className="ccal2-empty muted">
+              {sideEmpty}
+              {/* У учителя пустой день — не тупик: событие создаётся на месте,
+                  дата дня уже подставлена в форму (ТЗ 21.10.2026, §14) */}
+              {onAddEvent && selected && (
+                <button className="ccal2-empty-add" onClick={() => onAddEvent(selected)}>
+                  + Добавить событие
+                </button>
+              )}
+            </div>
           ) : (
             sideItems.map((it) => (
               <CcalEventCard
