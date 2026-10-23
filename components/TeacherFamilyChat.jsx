@@ -4,6 +4,7 @@ import { sendFamilyMessage, markThreadRead } from "@/lib/supabase";
 import { sendManualPush, sendFamilyChatPush } from "@/lib/push";
 import { useRefreshPause } from "@/lib/formGuard";
 import { familyNs } from "./data";
+import { AttachPicker, AttachList } from "./Attachments";
 
 // ===== Личная переписка семьи и учителя =====
 // Одно окно на двоих, сторона задаётся пропом side:
@@ -29,6 +30,7 @@ export default function TeacherFamilyChat({
   side = "teacher", onSent, onClose, toast,
 }) {
   const [text, setText] = useState("");
+  const [files, setFiles] = useState([]); // вложения: фото, документы, скрины
   const [busy, setBusy] = useState(false);
   const bottomRef = useRef(null);
 
@@ -49,7 +51,7 @@ export default function TeacherFamilyChat({
   }, [open, thread.length]);
 
   useEffect(() => {
-    if (open) setText("");
+    if (open) { setText(""); setFiles([]); }
   }, [open, familyN]);
 
   if (!open) return null;
@@ -58,7 +60,8 @@ export default function TeacherFamilyChat({
 
   const send = async () => {
     const body = text.trim();
-    if (!body || busy) return;
+    // Можно отправить и без текста — только вложения (фото, документ, скрин)
+    if ((!body && !files.length) || busy) return;
     setBusy(true);
     try {
       await sendFamilyMessage({
@@ -66,14 +69,21 @@ export default function TeacherFamilyChat({
         from_teacher: fromTeacher,
         author: authorName || (fromTeacher ? "Учитель" : "Родитель"),
         text: body,
+        files: files.length ? files : null,
       });
       setText("");
+      setFiles([]);
       onSent?.();
+      // Предпросмотр в уведомлении: текст сообщения; если текста нет —
+      // говорим про вложения, чтобы пуш не был пустым
+      const preview = body
+        ? (body.length > 90 ? body.slice(0, 90) + "…" : body)
+        : `📎 ${files.length === 1 ? "Вложение" : "Вложения"} (${files.length})`;
       if (fromTeacher) {
         // Родителю — адресный пуш только этой семье (текст личный!)
         sendManualPush({
           title: "Сообщение от учителя",
-          body: body.length > 90 ? body.slice(0, 90) + "…" : body,
+          body: preview,
           url: "/?tab=dashboard",
           audience: "family",
           familyNs: familyNs(familyN),
@@ -81,7 +91,7 @@ export default function TeacherFamilyChat({
       } else {
         // Учителю — пуш о сообщении родителя (роут сам ограничит получателя)
         sendFamilyChatPush({
-          body: body.length > 90 ? body.slice(0, 90) + "…" : body,
+          body: preview,
           url: "/",
         }).catch(() => {});
       }
@@ -125,7 +135,13 @@ export default function TeacherFamilyChat({
                 ((fromTeacher ? m.from_teacher : !m.from_teacher) ? " mine" : " theirs")
               }
             >
-              <div className="chat-bubble">{m.text}</div>
+              <div className="chat-bubble">
+                {m.text}
+                {/* Вложения: фото превьюшками со скачиванием, документы списком */}
+                {Array.isArray(m.files) && m.files.length > 0 && (
+                  <AttachList files={m.files} />
+                )}
+              </div>
               <div className="chat-meta">
                 {m.from_teacher ? (m.author || "Учитель") : "Родитель"} · {fmtTime(m.created_at)}
               </div>
@@ -142,9 +158,18 @@ export default function TeacherFamilyChat({
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKey}
         />
+        {/* Вложения: до 5 файлов по 10 МБ — фото, документы, скрины.
+            Кнопка «Прикрепить файлы» и список выбранного — из Attachments. */}
+        <div style={{ marginTop: 8 }}>
+          <AttachPicker files={files} onChange={setFiles} toast={toast} />
+        </div>
         <div className="actions">
           <button className="btn small" onClick={onClose}>Закрыть</button>
-          <button className="btn small primary" onClick={send} disabled={busy || !text.trim()}>
+          <button
+            className="btn small primary"
+            onClick={send}
+            disabled={busy || (!text.trim() && !files.length)}
+          >
             {busy ? "Отправляем…" : "Отправить"}
           </button>
         </div>

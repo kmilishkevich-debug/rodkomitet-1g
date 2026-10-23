@@ -5,7 +5,7 @@ import { Ic, CIc } from "./Art";
 import NavIcon from "./NavIcons";
 import {
   fmt, FAMILIES_COUNT, applyAutoFees, fallbackFeeData,
-  FAMILIES, familyNs, familyGroup,
+  FAMILIES, familyNs, familyGroup, STAFF,
 } from "./data";
 import { DAY_NAMES, BELLS_FALLBACK, LESSONS_FALLBACK, INFO_HOUR, scheduleFocus, subjectIcon, lessonDisplay } from "./scheduleData";
 import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDateRu } from "./scheduleOverrides";
@@ -1684,12 +1684,11 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     text: "Всё важное — под рукой!",
   });
   // ===== Данные для сетки быстрых действий =====
-  // Имя учителя — из подписей к его материалам (как раньше в карточке чата)
+  // Имя учителя — из справочника класса (STAFF). Раньше оно угадывалось
+  // по автору ближайшей записи, и если первой попадалась запись комитета,
+  // над чатом с учителем красовалось «Комитет» (баг со скриншота 23.10.2026).
   const teacherName =
-    (homework || []).find((h) => h.author)?.author ||
-    (events || []).find((e) => e.author)?.author ||
-    (notes || []).find((n) => n.from_teacher && n.author)?.author ||
-    null;
+    STAFF.find((s) => /классн/i.test(s.role || ""))?.name || null;
   // Непрочитанные семьёй сообщения от учителя — бейдж на иконке «Учителю»
   const qaNs = family ? familyNs(family.n) : [];
   const teacherUnread = family

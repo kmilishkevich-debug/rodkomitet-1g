@@ -11,8 +11,9 @@ import {
   sendManualPush,
 } from "@/lib/push";
 
-// Пошаговая инструкция для iPhone: пуши работают только из значка на «Домой»
-function IosSteps() {
+// Пошаговая инструкция для iPhone: пуши работают только из значка на «Домой».
+// Экспортируется: ту же инструкцию показывает плашка в кабинете учителя.
+export function IosSteps() {
   return (
     <div className="push-ios">
       <div className="push-ios-title">

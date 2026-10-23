@@ -3,6 +3,7 @@ import { toggleFamilyNote, deleteFamilyNote } from "@/lib/supabase";
 import { Ic } from "./Art";
 import { PostChatInline } from "./PostChat";
 import { AttachList } from "./Attachments";
+import { STAFF } from "./data";
 
 // ===== Карточка «От учителя» на «Главной» у родителей =====
 // Всё, что публикует классный руководитель, собрано в одном месте
@@ -69,11 +70,11 @@ export default function TeacherBoard({
 
   if (!hw.length && !ev.length && !personal.length) return null;
 
-  // Имя учителя берём из того, что он же и подписал
+  // Имя учителя — из справочника класса (STAFF). Раньше оно угадывалось
+  // по автору ближайшей записи, и если первым попадалось событие комитета,
+  // в плашке красовалось «Комитет» (баг со скриншота 23.10.2026).
   const author =
-    hw.find((h) => h.author)?.author ||
-    ev.find((e) => e.author)?.author ||
-    personal.find((n) => n.author)?.author ||
+    STAFF.find((s) => /классн/i.test(s.role || ""))?.name ||
     "Классный руководитель";
 
   const toggle = async (n) => {

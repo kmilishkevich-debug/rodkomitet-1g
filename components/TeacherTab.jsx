@@ -1,11 +1,13 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   saveAnnouncement,
   saveHomework, deleteHomework,
   saveClassEvent,
 } from "@/lib/supabase";
-import { sendManualPush } from "@/lib/push";
+import { sendManualPush, pushStatus, enablePush } from "@/lib/push";
+import { IosSteps } from "./PushSettings";
+import { CIc } from "./Art";
 import { useRefreshPause } from "@/lib/formGuard";
 import { AttachPicker } from "./Attachments";
 import FamilyPicker from "./FamilyPicker";
@@ -373,6 +375,67 @@ function EmptyPeople() {
 // ТЗ §22: переключатель «Сегодня | Завтра» живёт в хедере карточки
 // заданий, а не в её теле). `anchor` — id для прокрутки из полосы
 // статистики «Сегодня в цифрах».
+// ===== Плашка «уведомления выключены» в кабинете учителя =====
+// Доработка 23.10.2026: в базе не было ни одной учительской пуш-подписки —
+// сообщения родителей (чат, обсуждения) физически не доходили. На родительской
+// главной секция «Уведомления» есть, а в кабинете не было ничего. Плашка
+// видна, пока уведомления на этом устройстве не включены; при «on» исчезает.
+function TeacherPushBanner({ toast }) {
+  const [status, setStatus] = useState(null); // null — ещё проверяем
+  const [busy, setBusy] = useState(false);
+  const refresh = () => pushStatus().then(setStatus).catch(() => {});
+  useEffect(() => {
+    // На демо-страницах (скриншоты) плашку не показываем
+    if (/-demo\/?$/.test(window.location.pathname)) return;
+    refresh();
+  }, []);
+
+  if (!status || status === "on" || status === "unsupported") return null;
+
+  const turnOn = async () => {
+    setBusy(true);
+    const res = await enablePush("teacher", null);
+    setBusy(false);
+    if (res.ok) toast?.("Уведомления включены — сообщения родителей будут приходить сами");
+    else if (res.reason === "denied") toast?.("Уведомления запрещены в браузере — разрешите их в настройках сайта");
+    else if (res.reason !== "ios-install") toast?.("Не получилось включить: " + (res.error || res.reason || "ошибка"));
+    refresh();
+  };
+
+  return (
+    <div className="card push-card reveal d1" style={{ marginBottom: 20 }}>
+      {status === "off" && (
+        <div className="push-row">
+          <CIc id="i-bell" tone="blue" size="sm" />
+          <div className="push-body">
+            <div className="push-title">Уведомления выключены</div>
+            <div className="muted">
+              Включите, чтобы сообщения родителей и ответы в обсуждениях приходили
+              на это устройство сами — даже когда сайт закрыт.
+            </div>
+          </div>
+          <button className="btn small teal" onClick={turnOn} disabled={busy}>
+            {busy ? "Включаю…" : "Включить"}
+          </button>
+        </div>
+      )}
+      {status === "denied" && (
+        <div className="push-row">
+          <CIc id="i-bell" tone="pink" size="sm" />
+          <div className="push-body">
+            <div className="push-title">Уведомления запрещены в браузере</div>
+            <div className="muted">
+              Разрешите их в настройках браузера для этого сайта (значок замка рядом
+              с адресом → Уведомления → Разрешить), затем обновите страницу.
+            </div>
+          </div>
+        </div>
+      )}
+      {status === "ios-install" && <IosSteps />}
+    </div>
+  );
+}
+
 function WorkCard({ icon, title, sub, link, onLink, head, anchor, children, delay, tall }) {
   return (
     <div id={anchor} className={"card tc-work" + (tall ? " " + tall : "") +
@@ -598,6 +661,10 @@ export default function TeacherTab({
       />
 
       <TeacherQuickCards onPick={pickCard} />
+
+      {/* Пока уведомления на этом устройстве не включены — плашка-напоминание:
+          без неё пуши о сообщениях родителей учителю не доходят вовсе */}
+      <TeacherPushBanner toast={toast} />
 
       {/* Центральный рабочий блок кабинета (ТЗ 21.10.2026): календарь
           класса сразу под строкой действий. Тот же ClassCalendar, что у
