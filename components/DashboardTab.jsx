@@ -12,6 +12,7 @@ import { weekDates, activeOverridesFor, applyOverridesToDay, dayEndTime, fmtDate
 import { BIRTHDAYS_FALLBACK, BD_MONTHS_PREP, birthdayEvents, upcomingBirthdays, joinNames, fmtBd, bdName, bdInfo, inDaysWord } from "./birthdaysData";
 import FamilyPicker from "./FamilyPicker";
 import PushSettings from "./PushSettings";
+import PushBanner from "./PushBanner";
 import { AbsenceCard } from "./Absences";
 import TeacherBoard from "./TeacherBoard";
 import TeacherFamilyChat from "./TeacherFamilyChat";
@@ -1801,6 +1802,10 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           <span className="qa-urgent-arrow" aria-hidden="true">›</span>
         </button>
       )}
+
+      {/* Плашка-напоминание про уведомления: висит каждый заход, пока
+          родитель их не включит (модалку PushNag можно закрыть — эту нет) */}
+      {role !== "teacher" && <PushBanner role={role} familyN={family?.n} toast={toast} />}
 
       {/* Порядок секций — как на новом макете: сначала «Важное от учителя»,
           затем объявления класса и баннеры, а финансовые напоминания — после них. */}

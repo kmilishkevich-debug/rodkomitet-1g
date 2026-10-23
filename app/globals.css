@@ -2115,6 +2115,30 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 .qa-urgent:active{transform:scale(.98)}
 .qa-urgent-ico{flex:none}
 .qa-urgent-arrow{margin-left:auto;font-size:20px;line-height:1;color:#d08177}
+
+/* ── Плашка «Включите уведомления» (PushBanner) — видна каждый заход,
+      пока пуши не включены; тёплый жёлтый, чтобы выделялась, но не пугала ── */
+.push-banner{display:flex;align-items:center;gap:12px;width:100%;margin-bottom:14px;
+  background:linear-gradient(120deg,#FFF7E3,#FFEFC7);border:1.5px solid #F2D48A;border-radius:16px;
+  padding:12px 16px;font-size:13.5px;line-height:1.45;font-weight:600;color:#6B5212;
+  box-shadow:0 8px 24px rgba(214,167,52,.12)}
+.push-banner-ico{flex:none;display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:12px;background:#fff;color:#C8931B;
+  box-shadow:0 2px 6px rgba(160,120,20,.14)}
+.push-banner-ico svg{width:19px;height:19px}
+.push-banner-text{flex:1;min-width:0}
+.push-banner-text b{font-weight:800;color:#5A440D}
+.push-banner-btn{flex:none;border:none;cursor:pointer;border-radius:999px;
+  padding:10px 18px;font-family:'Onest';font-size:13.5px;font-weight:800;color:#fff;
+  background:linear-gradient(180deg,#3A86FF 0%,#2470F4 100%);
+  box-shadow:0 4px 10px rgba(40,120,255,.22);transition:.15s}
+.push-banner-btn:hover{box-shadow:0 5px 13px rgba(40,120,255,.3)}
+.push-banner-btn:disabled{opacity:.6;cursor:default}
+@media(max-width:520px){
+  .push-banner{flex-wrap:wrap;padding:12px 14px}
+  .push-banner-text{flex-basis:calc(100% - 48px)}
+  .push-banner-btn{margin-left:48px;width:calc(100% - 48px)}
+}
 /* Телефоны (до 520px) — 3 колонки, чтобы подписи не распирали сетку за край экрана */
 @media(max-width:520px){
   .qa-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}

@@ -4,6 +4,8 @@
 // поэтому вёрстка проверяется здесь на фикстурах. В проде — пустота.
 import { useEffect, useState } from "react";
 import ParentTeacherCard from "../../components/ParentTeacherCard";
+import PushBanner from "../../components/PushBanner";
+import { Sprite } from "../../components/Art";
 
 function iso(delta = 0) {
   const d = new Date();
@@ -30,6 +32,13 @@ export default function ParentDemoPage() {
 
   return (
     <main style={{ margin: "0 auto", maxWidth: 680, padding: "28px 24px 56px" }}>
+      <Sprite />
+      {/* Плашка уведомлений — три состояния */}
+      <div style={{ display: "grid", gap: 4, marginBottom: 20 }}>
+        <PushBanner role="parent" familyN={18} demoState="off" />
+        <PushBanner role="parent" familyN={18} demoState="denied" />
+        <PushBanner role="parent" familyN={18} demoState="ios-install" />
+      </div>
       {/* Основной сценарий: есть непрочитанное от учителя */}
       <ParentTeacherCard
         familyMessages={messages}
