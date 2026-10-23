@@ -15,6 +15,7 @@ import PushSettings from "./PushSettings";
 import { AbsenceCard } from "./Absences";
 import TeacherBoard from "./TeacherBoard";
 import TeacherFamilyChat from "./TeacherFamilyChat";
+import ParentTeacherCard from "./ParentTeacherCard";
 import ClassMascot from "./ClassMascot";
 import { pollState, fmtDeadline } from "./VotesTab";
 import { fmtNewsDate } from "./FamilyPicker";
@@ -1816,6 +1817,19 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         onNeedFamily={() => setFamOpen(true)}
         onReloadComments={onReloadComments}
       />
+
+      {/* Переписка с учителем — в новом дизайне мини-мессенджера (23.10.2026):
+          последнее сообщение, счётчик непрочитанных, кнопка «Написать учителю».
+          Без выбранной семьи клик сначала попросит выбрать её. */}
+      {role !== "teacher" && (
+        <ParentTeacherCard
+          familyMessages={familyMessages}
+          family={family}
+          teacherName={teacherName}
+          onOpenChat={needFamily(() => setChatOpen(true))}
+          onRetry={onReloadMessages}
+        />
+      )}
 
       <ImportantNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
       <BdayBanner ev={bdayEv} />

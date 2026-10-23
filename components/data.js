@@ -62,6 +62,22 @@ export function familyLabel(n) {
   return FAMILIES.find((f) => f.n === n)?.child || `Семья №${n}`;
 }
 
+// Семья члена комитета по его имени из user_roles («Наталья Коваленкова»,
+// «Кристина Милишкевич»): ищем семью, у которой в ФИО одного из родителей
+// встречаются все слова этого имени. Нужно, чтобы адресные пуши о личных
+// сообщениях учителя доходили и до семей комитета — они ведь тоже родители.
+export function familyNByParent(name) {
+  const words = String(name || "").toLowerCase().split(/\s+/).filter((w) => w.length > 1);
+  if (words.length < 2) return null; // по одному слову семью не угадываем
+  const fam = FAMILIES.find((f) =>
+    (f.parents || []).some((p) => {
+      const full = String(p).toLowerCase();
+      return words.every((w) => full.includes(w));
+    })
+  );
+  return fam ? canonicalN(fam.n) : null;
+}
+
 export const STAFF = [
   { name: "Головко Виктория Петровна", phone: "(29) 553-69-22", role: "Классный руководитель" },
   { name: "Нушаба Алиевна", phone: "(25) 777-55-85", role: "Воспитатель ГПД" },

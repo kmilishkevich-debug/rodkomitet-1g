@@ -22,7 +22,9 @@ import { canonicalN, familyLabel } from "./data";
 //   onAllLink()     — переход «Все переписки →» (только при limit)
 //   onRetry()       — повторная загрузка при недоступных данных
 
-function plural(n, one, few, many) {
+// Хелперы и мелкая графика экспортируются: карточка родителя
+// (ParentTeacherCard) рисует тот же дизайн для переписки с учителем.
+export function plural(n, one, few, many) {
   const a = Math.abs(n) % 100, b = a % 10;
   if (a > 10 && a < 20) return many;
   if (b > 1 && b < 5) return few;
@@ -31,14 +33,14 @@ function plural(n, one, few, many) {
 }
 
 // Инициалы отправителя: до двух букв («Анна Ковалёва» → «АК»)
-function initialsOf(label) {
+export function initialsOf(label) {
   const words = String(label || "").split(/\s+/).filter((w) => /^[А-ЯЁA-Z]/i.test(w));
   return words.slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?";
 }
 
 // Палитра аватаров (ТЗ §11): светлый фон + тёмный текст, цвет закреплён
 // за семьёй по её номеру и не меняется между перезагрузками.
-const AVA_COLORS = [
+export const AVA_COLORS = [
   { bg: "#EAE2FF", fg: "#6247B5" }, // лавандовый
   { bg: "#FFE5D9", fg: "#9A4E39" }, // персиковый
   { bg: "#DFF4E7", fg: "#347653" }, // мятный
@@ -60,7 +62,7 @@ function toMinsk(iso) {
 }
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-function fmtWhen(iso) {
+export function fmtWhen(iso) {
   if (!iso) return "";
   const d = toMinsk(iso);
   const now = toMinsk(new Date().toISOString());
@@ -73,7 +75,7 @@ function fmtWhen(iso) {
 }
 
 // Полная дата для tooltip и accessible label (ТЗ §14)
-function fullWhen(iso) {
+export function fullWhen(iso) {
   if (!iso) return "";
   const d = toMinsk(iso);
   return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -82,7 +84,7 @@ function fullWhen(iso) {
 // ===== Превью сообщения (ТЗ §13) =====
 // Текста нет → тип содержимого: «Фотография», «3 фотографии» или имя
 // документа. Пустого превью у сообщения с вложением не бывает.
-function previewOf(m) {
+export function previewOf(m) {
   const t = (m?.text || "").trim();
   if (t) return t;
   const files = Array.isArray(m?.files) ? m.files : [];
@@ -106,7 +108,7 @@ function PaperclipIcon() {
   );
 }
 
-function LockIcon() {
+export function LockIcon() {
   return (
     <svg viewBox="0 0 16 16" width="15" height="15" fill="none" aria-hidden="true">
       <rect x="3" y="7" width="10" height="7" rx="2" stroke="#81899A" strokeWidth="1.5" />
@@ -125,7 +127,7 @@ function ArrowIcon() {
   );
 }
 
-function PlusIcon() {
+export function PlusIcon() {
   return (
     <svg viewBox="0 0 18 18" width="18" height="18" fill="none" aria-hidden="true">
       <path d="M9 3.5v11M3.5 9h11" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
@@ -137,7 +139,7 @@ function PlusIcon() {
 // Ссылка, а не кнопка: строка переписки — div role="button", и вкладывать
 // в неё <button> нельзя (ТЗ §24). stopPropagation, чтобы клик по файлу
 // не открывал одновременно диалог.
-function AttachmentChip({ files }) {
+export function AttachmentChip({ files }) {
   const list = Array.isArray(files) ? files : [];
   if (!list.length) return null;
   const f = list[0];
@@ -198,11 +200,12 @@ function ConversationRow({ t, onOpen }) {
         {initialsOf(name)}
       </span>
       <span className="conversation-content">
+        {/* Имя, точка и родство — в одну строку, как на референсе */}
         <span className={"conversation-name" + (unread ? " is-unread" : "")}>
           {name}
           {unread && <span className="conversation-dot" aria-hidden="true" />}
+          {relation && <span className="conversation-relation">{relation}</span>}
         </span>
-        {relation && <span className="conversation-relation">{relation}</span>}
         <span className={"message-preview" + (relation ? " after-relation" : "")}>{preview}</span>
         <AttachmentChip files={t.last?.files} />
       </span>
@@ -222,7 +225,7 @@ function ConversationRow({ t, onOpen }) {
 // familyMessages === null значит «данные недоступны»: API не различает
 // загрузку и ошибку, поэтому честно показываем skeleton той же структуры
 // и кнопку «Повторить» — она дёргает перезагрузку, если запрос упал.
-function PmSkeleton({ onRetry }) {
+export function PmSkeleton({ onRetry }) {
   return (
     <div className="conversation-list" aria-busy="true">
       {[0, 1, 2].map((i) => (

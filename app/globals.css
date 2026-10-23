@@ -2538,127 +2538,139 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 @media(max-width:1023px){.tc-grid .pm-wrap{margin-bottom:20px}}
 
 .parent-messages-card{
-  /* Локальные токены компонента (ТЗ §4) */
-  --pm-text:#141A43;--pm-text2:#69728A;--pm-text3:#747D90;
-  --pm-blue:#1765F5;--pm-blue-h:#1354D8;
-  --pm-unread:#F0F6FF;--pm-unread-h:#E5EFFF;--pm-read-h:#F7F9FC;
+  /* Локальные токены компонента (ТЗ §4); голубой и подсветки — по референсу */
+  --pm-text:#141A43;--pm-text2:#69728A;--pm-text3:#8A93A6;
+  --pm-blue:#2878FF;--pm-blue-h:#1D66EA;
+  --pm-unread:#EAF3FF;--pm-unread-h:#DFEDFF;--pm-read-h:#F7F9FC;
   --pm-line:#EBEEF3;
   width:100%;min-width:0;
-  background:#fff;border:1px solid #E8EDE9;border-radius:24px;
-  box-shadow:0 10px 28px rgba(59,66,44,.055),0 2px 5px rgba(59,66,44,.025);
+  background:#fff;border:1px solid #ECF1EE;border-radius:28px;
+  box-shadow:0 18px 40px rgba(20,26,67,.07),0 3px 8px rgba(20,26,67,.03);
   overflow:hidden; /* мятная шапка повторяет верхние скругления */
 }
 .parent-messages-card *{min-width:0}
+/* В кабинете учителя .teacher-dashboard * навязывает Nunito — возвращаем
+   карточке шрифты родительской версии: Onest для текста, Comfortaa — заголовку */
+.teacher-dashboard .parent-messages-card,
+.teacher-dashboard .parent-messages-card *{font-family:'Onest','Century Gothic',system-ui,sans-serif}
+.teacher-dashboard .parent-messages-card .pm-title{font-family:'Comfortaa','Trebuchet MS','Arial Rounded MT Bold',sans-serif}
 
-/* ── Мятная шапка (ТЗ §6–§8) ── */
+/* ── Мятная шапка (ТЗ §6–§8): крупный 3D-конверт, компактная по высоте ── */
 .parent-messages-header{
-  display:grid;grid-template-columns:52px minmax(0,1fr);
-  column-gap:14px;align-items:center;padding:20px;
-  border-radius:24px 24px 0 0;
-  background:linear-gradient(135deg,#F0FCF5,#E8F8EE);
+  display:grid;grid-template-columns:92px minmax(0,1fr);
+  column-gap:18px;align-items:center;padding:14px 22px;
+  border-radius:28px 28px 0 0;
+  background:linear-gradient(120deg,#E7F8EE 0%,#F2FBF5 60%,#F8FEFA 100%);
 }
-.pm-head-icon{width:52px;height:52px;object-fit:contain}
-.pm-title-line{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
-.pm-title{margin:0;font-size:22px;line-height:28px;font-weight:700;color:var(--pm-text)}
-.pm-sub{margin:4px 0 0;font-size:13px;line-height:18px;font-weight:500;color:var(--pm-text2)}
+.pm-head-icon{width:92px;height:92px;object-fit:contain;
+  filter:drop-shadow(0 8px 14px rgba(52,118,83,.18))}
+.pm-title-line{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.pm-title{margin:0;font-size:26px;line-height:32px;font-weight:700;color:var(--pm-text)}
+.pm-sub{margin:4px 0 0;font-size:14px;line-height:20px;font-weight:500;color:var(--pm-text2)}
 .header-unread-badge{
   display:inline-flex;align-items:center;justify-content:center;
-  min-height:28px;padding:4px 10px;border-radius:999px;
+  min-height:30px;padding:5px 14px;border-radius:999px;
   color:#fff;background:var(--pm-blue);white-space:nowrap;
-  font-size:13px;line-height:18px;font-weight:700;
+  font-size:14px;line-height:19px;font-weight:700;
   font-variant-numeric:tabular-nums;
+  box-shadow:0 3px 7px rgba(40,120,255,.22);
 }
 
 /* ── Панель фильтров (ТЗ §9) ── */
 .pm-toolbar{
   display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:8px 12px;padding:16px 20px 12px;
+  flex-wrap:wrap;gap:8px 12px;padding:18px 24px 12px;
 }
-.pm-tabs{display:inline-flex;background:#F0F3FA;border-radius:999px;padding:3px}
+.pm-tabs{display:inline-flex;background:#EFF3FA;border-radius:999px;padding:4px;
+  box-shadow:inset 0 1px 3px rgba(20,26,67,.05)}
 .pm-tab{
   border:0;background:transparent;cursor:pointer;
-  min-height:32px;padding:0 12px;border-radius:999px;
-  font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--pm-text2);
+  min-height:38px;padding:0 18px;border-radius:999px;
+  font:inherit;font-size:14px;line-height:19px;font-weight:600;color:var(--pm-text2);
   transition:background-color .16s ease,color .16s ease;
 }
 .pm-tab:hover{background:#E6EBF5}
-.pm-tab.is-active{background:var(--pm-blue);color:#fff;box-shadow:0 2px 5px rgba(23,101,245,.16)}
+.pm-tab.is-active{background:var(--pm-blue);color:#fff;box-shadow:0 3px 8px rgba(40,120,255,.3)}
 .pm-tab.is-active:hover{background:var(--pm-blue)}
 .pm-all-link{
   display:inline-flex;align-items:center;gap:6px;
   border:0;background:none;cursor:pointer;padding:6px 2px;
-  font:inherit;font-size:13px;line-height:18px;font-weight:600;color:var(--pm-blue);
+  font:inherit;font-size:14px;line-height:19px;font-weight:600;color:var(--pm-blue);
   transition:color .15s ease;
 }
 .pm-all-link:hover{color:var(--pm-blue-h)}
 .pm-all-link svg{flex:none}
 
 /* ── Строка переписки (ТЗ §10–§16) ── */
-.conversation-list{padding:0 12px 12px;display:flex;flex-direction:column;gap:6px}
+.conversation-list{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px}
 .conversation-row{
-  display:grid;grid-template-columns:44px minmax(0,1fr) 48px;
-  column-gap:12px;align-items:start;padding:14px;border-radius:16px;
+  display:grid;grid-template-columns:56px minmax(0,1fr) 48px;
+  column-gap:14px;align-items:start;padding:16px;border-radius:18px;
   cursor:pointer;transition:background-color .15s ease;
   animation:pmRowIn .18s ease both;
 }
 @keyframes pmRowIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-.conversation-row--unread{background:#F0F6FF}
+.conversation-row--unread{background:var(--pm-unread)}
 .conversation-row--unread:hover{background:var(--pm-unread-h)}
 .conversation-row--read{background:#fff}
 .conversation-row--read:hover{background:var(--pm-read-h)}
 /* Прочитанные строки разделяет тонкая линия, без рамок вокруг записей */
 .conversation-row--read + .conversation-row--read{position:relative}
 .conversation-row--read + .conversation-row--read::before{
-  content:"";position:absolute;left:14px;right:14px;top:-3px;height:1px;background:var(--pm-line);
+  content:"";position:absolute;left:16px;right:16px;top:-4px;height:1px;background:var(--pm-line);
 }
 .conversation-avatar{
-  width:44px;height:44px;border-radius:50%;
+  width:56px;height:56px;border-radius:50%;
   display:inline-flex;align-items:center;justify-content:center;
-  font-size:15px;font-weight:700;user-select:none;
+  font-size:18px;font-weight:700;user-select:none;
 }
 .conversation-content{display:flex;flex-direction:column;align-items:flex-start}
+/* Имя с точкой непрочитанного; подпись семьи — отдельной строкой под ним
+   (flex-basis:100% переносит её, разметка не меняется). Начертание имён
+   одинаковое у прочитанных и непрочитанных — различает только точка и фон. */
 .conversation-name{
-  font-size:15px;line-height:20px;font-weight:600;color:var(--pm-text);
-  display:inline-flex;align-items:center;gap:7px;overflow-wrap:anywhere;
+  font-size:17px;line-height:23px;font-weight:700;color:var(--pm-text);
+  display:inline-flex;align-items:center;flex-wrap:wrap;gap:2px 8px;overflow-wrap:anywhere;
 }
 .conversation-name.is-unread{font-weight:700}
 .conversation-dot{width:7px;height:7px;border-radius:50%;background:var(--pm-blue);flex:none}
 .conversation-relation{
-  margin-top:2px;font-size:12px;line-height:17px;font-weight:500;color:var(--pm-text2);
+  flex-basis:100%;
+  font-size:13px;line-height:18px;font-weight:500;color:var(--pm-text3);
   overflow-wrap:anywhere;
 }
 .message-preview{
-  margin-top:4px;font-size:14px;line-height:20px;font-weight:400;color:#27324D;
+  margin-top:5px;font-size:15px;line-height:21px;font-weight:400;color:#222B49;
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
   overflow:hidden;overflow-wrap:anywhere;
 }
-.message-preview.after-relation{margin-top:6px}
+.message-preview.after-relation{margin-top:5px}
 .conversation-meta{
   display:flex;flex-direction:column;align-items:flex-end;justify-self:end;
 }
 .conversation-time{
-  font-size:12px;line-height:16px;font-weight:500;color:var(--pm-text2);
+  font-size:13px;line-height:18px;font-weight:500;color:var(--pm-text3);
   white-space:nowrap;font-variant-numeric:tabular-nums;
 }
 .conversation-unread-count{
-  margin-top:10px;min-width:22px;height:22px;padding-inline:6px;
+  margin-top:10px;min-width:26px;height:26px;padding-inline:7px;
   display:inline-flex;align-items:center;justify-content:center;
   border-radius:999px;background:var(--pm-blue);color:#fff;
-  font-size:12px;line-height:16px;font-weight:700;font-variant-numeric:tabular-nums;
+  font-size:13px;line-height:18px;font-weight:700;font-variant-numeric:tabular-nums;
 }
 
 /* ── Вложения (ТЗ §17) ── */
 .attachment-row{display:inline-flex;align-items:center;gap:6px;margin-top:8px;max-width:100%}
 .attachment-chip{
-  display:inline-flex;align-items:center;gap:6px;min-height:28px;
-  padding:5px 9px;border-radius:12px;background:#E8EFFA;border:1px solid #D5DFEE;
+  display:inline-flex;align-items:center;gap:7px;min-height:30px;
+  padding:6px 12px;border-radius:999px;background:#EFF3F8;border:1px solid #E3E9F2;
   text-decoration:none;max-width:100%;
   transition:background-color .15s ease;
 }
-.attachment-chip:hover{background:#DDE8F8}
+.attachment-chip:hover{background:#E4EAF3}
 .attachment-chip svg{flex:none}
 .attachment-name{
-  font-size:12px;line-height:16px;font-weight:500;color:var(--pm-text);
+  font-size:13px;line-height:17px;font-weight:500;color:var(--pm-text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;
 }
 .attachment-more{font-size:12px;line-height:16px;font-weight:600;color:var(--pm-text2);flex:none}
@@ -2687,24 +2699,24 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
 /* ── Нижняя панель (ТЗ §19–§20) ── */
 .parent-messages-footer{
   display:flex;align-items:center;justify-content:space-between;
-  gap:16px;padding:16px 20px;border-top:1px solid var(--pm-line);
+  gap:16px;padding:18px 24px;border-top:1px solid var(--pm-line);
   flex-wrap:wrap;
 }
 .pm-privacy{
   display:inline-flex;align-items:center;gap:7px;
-  font-size:12px;line-height:17px;color:var(--pm-text3);
+  font-size:13px;line-height:18px;color:var(--pm-text3);
 }
 .pm-privacy svg{flex:none}
 .pm-write-btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  box-sizing:border-box;height:42px;padding:11px 16px;border-radius:14px;border:0;
-  cursor:pointer;font:inherit;font-size:14px;line-height:20px;font-weight:600;color:#fff;
-  background:linear-gradient(180deg,#2878FF 0%,#1765F5 100%);
-  box-shadow:0 5px 12px rgba(23,101,245,.16);
+  box-sizing:border-box;height:46px;padding:12px 20px;border-radius:16px;border:0;
+  cursor:pointer;font:inherit;font-size:15px;line-height:20px;font-weight:600;color:#fff;
+  background:linear-gradient(180deg,#3A86FF 0%,#2470F4 100%);
+  box-shadow:0 4px 10px rgba(40,120,255,.2);
   transition:box-shadow .15s ease,transform .1s ease,filter .15s ease;
 }
-.pm-write-btn:hover{filter:brightness(.95);box-shadow:0 6px 14px rgba(23,101,245,.24)}
-.pm-write-btn:active{box-shadow:0 2px 6px rgba(23,101,245,.2);transform:translateY(1px)}
+.pm-write-btn:hover{filter:brightness(.95);box-shadow:0 6px 13px rgba(40,120,255,.26)}
+.pm-write-btn:active{box-shadow:0 2px 6px rgba(40,120,255,.2);transform:translateY(1px)}
 .pm-write-btn svg{flex:none}
 
 /* ── Фокус с клавиатуры (ТЗ §24) ── */
@@ -2719,14 +2731,16 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
    аватар 40, имя 14, точка у имени скрыта, кнопка на всю ширину,
    подпись приватности над ней */
 @container (max-width:479px){
-  .parent-messages-header{padding:16px;grid-template-columns:42px minmax(0,1fr);column-gap:10px}
-  .pm-head-icon{width:42px;height:42px}
-  .pm-title{font-size:19px;line-height:24px}
+  .parent-messages-header{padding:12px 16px;grid-template-columns:64px minmax(0,1fr);column-gap:12px}
+  .pm-head-icon{width:64px;height:64px}
+  .pm-title{font-size:21px;line-height:26px}
   .pm-toolbar{padding:14px 16px 10px}
-  .conversation-list{padding:0 8px 10px}
-  .conversation-row{grid-template-columns:40px minmax(0,1fr) 48px;column-gap:10px;padding:12px}
-  .conversation-avatar{width:40px;height:40px}
-  .conversation-name{font-size:14px}
+  .pm-tab{min-height:34px;padding:0 14px;font-size:13px}
+  .conversation-list{padding:0 10px 10px}
+  .conversation-row{grid-template-columns:44px minmax(0,1fr) 48px;column-gap:10px;padding:13px}
+  .conversation-avatar{width:44px;height:44px;font-size:15px}
+  .conversation-name{font-size:16px}
+  .message-preview{font-size:14px;line-height:20px}
   .conversation-dot{display:none}
   .parent-messages-footer{flex-direction:column;align-items:stretch;gap:10px;padding:14px 16px}
   .pm-privacy{justify-content:center}
@@ -2739,6 +2753,12 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
   .pm-write-btn:active{transform:none}
   .conversation-row,.pm-tab,.pm-all-link,.pm-write-btn,.attachment-chip{transition:none}
 }
+
+/* Карточка «Переписка с учителем» у родителя: фильтров нет, поэтому
+   список и пустые состояния начинаются сразу под шапкой — даём им воздух */
+.pm-wrap--parent{margin-top:20px}
+.pm-wrap--parent .conversation-list{padding-top:14px}
+.pm-wrap--parent .pm-empty{padding-top:24px}
 
 /* ============================================================
    Реакции на сообщения в переписке с семьёй (23.10.2026)

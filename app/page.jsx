@@ -16,7 +16,7 @@ import UploadModal from "@/components/UploadModal";
 import PushNag from "@/components/PushNag";
 import LogoutModal from "@/components/LogoutModal";
 import { useFamily, loadSeen, saveSeen } from "@/components/FamilyPicker";
-import { familyNs, applyFamiliesFromDb } from "@/components/data";
+import { familyNs, familyNByParent, applyFamiliesFromDb } from "@/components/data";
 import { supabase, fetchExpenseGroups, fetchSchedule, fetchBirthdays, fetchScheduleOverrides, fetchUserRole, fetchAnnouncements, fetchNewsReads, fetchPolls, fetchFamilyNotes, fetchHomework, fetchClassEvents, fetchTeacherNotes, fetchFamilyMessages, fetchPostComments, fetchChatClosed, fetchFamilies, recordVisit, visitHeartbeat } from "@/lib/supabase";
 import { enablePush, syncPushRole } from "@/lib/push";
 import { isFormOpen, onFormsChange } from "@/lib/formGuard";
@@ -132,6 +132,13 @@ export default function Page() {
         if (data?.display_name) setAuthorName(data.display_name);
         if (data?.greeting_name) setGreetingName(data.greeting_name);
         setFullName(data?.full_name || data?.display_name || null);
+        // Член комитета — тоже родитель: находим его семью по имени
+        // и привязываем к пуш-подписке, чтобы личные сообщения учителя
+        // доходили адресным пушем (Кристина → №18, Наталья → №14).
+        if (role === "committee") {
+          const n = familyNByParent(data?.full_name) || familyNByParent(data?.display_name);
+          if (n) syncPushRole("committee", n);
+        }
       });
     } else {
       setAuthorName(null);
