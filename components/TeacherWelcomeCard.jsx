@@ -47,17 +47,14 @@ export default function TeacherWelcomeCard({ name, todayIso, lessonsLine, idlePh
             <span className="tc-greet-line">{greetWord()}{name ? "," : "!"}</span>
             {name && <span className="tc-greet-line tc-greet-name">{name}!</span>}
           </h1>
-          {/* ТЗ §6: одна строка — дата и уроки, без отдельной плашки даты */}
+          {/* ТЗ §6: одна строка — дата и уроки, без отдельной плашки даты.
+              Правка 23.10.2026 по референсу: без иконки календаря. */}
           <p className="tc-dayline">
-            <svg className="tc-date-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="3" y="5" width="18" height="16" rx="4"
-                stroke="currentColor" strokeWidth="1.8" />
-              <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor"
-                strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
             <span>
+              {/* Референс 21.10.2026: строка заканчивается точкой —
+                  «Среда, 21 октября · 5 уроков сегодня.» */}
               {fmtToday(todayIso)}
-              {lessonsLine ? <> · <b>{lessonsLine}</b></> : null}
+              {lessonsLine ? <> · <b>{lessonsLine}.</b></> : "."}
             </span>
           </p>
         </div>

@@ -54,14 +54,11 @@ export default function TeacherPlush({ idlePhrase }) {
   const [blink, setBlink] = useState(false);
   const idle = idlePhrase && idlePhrase.length ? idlePhrase : IDLE_PHRASE;
   const [phrase, setPhrase] = useState(idle);
-  // ТЗ 21.10.2026 §16: у анимации есть видимая кнопка паузы
-  const [paused, setPaused] = useState(false);
 
   const jobs = useRef(new Set());     // все живые таймеры
   const busy = useRef(false);         // идёт крупное действие (письмо/радость)
   const reduced = useRef(false);      // prefers-reduced-motion
   const tapIndex = useRef(0);         // какая реплика тапа следующая
-  const pausedRef = useRef(false);    // зеркало paused для таймеров
 
   const later = useCallback((fn, ms) => {
     const id = setTimeout(() => {
@@ -114,31 +111,14 @@ export default function TeacherPlush({ idlePhrase }) {
   }, [later]);
 
   const startLoops = useCallback(() => {
-    if (reduced.current || pausedRef.current) return;
+    if (reduced.current) return;
     blinkLoop();
     writeLoop();
   }, [blinkLoop, writeLoop]);
 
-  // — пауза по кнопке: все таймеры стоят, персонаж в базовой позе —
-  const togglePause = useCallback(() => {
-    setPaused((p) => {
-      const next = !p;
-      pausedRef.current = next;
-      if (next) {
-        clearAll();
-        busy.current = false;
-        setBlink(false);
-        setPose("base");
-      } else {
-        startLoops();
-      }
-      return next;
-    });
-  }, [clearAll, startLoops]);
-
   // — реакция на тап: радость + подпрыгивание + реплика —
   const onTap = useCallback(() => {
-    if (reduced.current || busy.current || pausedRef.current) return;
+    if (reduced.current || busy.current) return;
     busy.current = true;
     setBlink(false);
     setPose("happy");
@@ -228,7 +208,7 @@ export default function TeacherPlush({ idlePhrase }) {
 
   return (
     <div className="tc-scene">
-      <div className={"tc-stage" + (shown ? " is-in" : "") + (paused ? " is-paused" : "")}>
+      <div className={"tc-stage" + (shown ? " is-in" : "")}>
         <div className="tc-mascot-shadow" aria-hidden="true" />
 
         <div
@@ -288,26 +268,6 @@ export default function TeacherPlush({ idlePhrase }) {
             ))}
           </span>
         </div>
-
-        {/* ТЗ 21.10.2026 §16: кнопка паузы анимации — маленькая, в углу сцены */}
-        <button
-          type="button"
-          className="tc-pause"
-          onClick={togglePause}
-          aria-pressed={paused}
-          aria-label={paused ? "Включить анимацию помощника" : "Остановить анимацию помощника"}
-          title={paused ? "Включить анимацию" : "Остановить анимацию"}
-        >
-          {paused ? (
-            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M5 3.5v9l7-4.5-7-4.5Z" fill="currentColor" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M5.2 3.5v9M10.8 3.5v9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-            </svg>
-          )}
-        </button>
       </div>
     </div>
   );

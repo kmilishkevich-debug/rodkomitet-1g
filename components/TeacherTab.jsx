@@ -62,10 +62,7 @@ function plural(n, one, few, many) {
   return many;
 }
 
-// Месяц в предложном падеже — для заголовка «Дни рождения в октябре»
-const MONTHS_PREP = ["январе", "феврале", "марте", "апреле", "мае", "июне",
-  "июле", "августе", "сентябре", "октябре", "ноябре", "декабре"];
-// …и в родительном — для строк «27 октября»
+// Месяц в родительном падеже — заголовок «Именинники октября» и строки «27 октября»
 const MONTHS_GEN = ["января", "февраля", "марта", "апреля", "мая", "июня",
   "июля", "августа", "сентября", "октября", "ноября", "декабря"];
 
@@ -297,83 +294,19 @@ function EventForm({ author, onDone, toast, defaultDate }) {
 }
 
 // ===== Иконки шапок и пустых состояний =====
-// ТЗ §12 просит для каждой карточки свой плоский значок: синяя закрытая
-// книга, синий календарь, жёлтый колокольчик в бледно-жёлтом круге,
-// зелёный замок в светло-зелёном круге, а в пустых состояниях —
-// бледно-голубые листок, календарь, рупор и группа людей.
-// В /public/icons таких файлов нет — там объёмные цветные картинки,
-// которые нельзя перекрасить в бледно-голубой. Поэтому значки нарисованы
-// контуром прямо здесь: новых файлов в проект не добавляется, а системные
-// emoji, которые ТЗ запрещает, не используются. Список недостающих
-// ассетов вынесен в отчёт — если картинки появятся, замена будет точечной.
-
-// Значок шапки: 40 px (ТЗ §12.1 — 38–42 px)
-function HeadBook() {
-  return (
-    <svg className="tc-head-ico tone-blue" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-      <path d="M9 7.5h17.5A4.5 4.5 0 0 1 31 12v20.5H13.5A4.5 4.5 0 0 1 9 28V7.5Z"
-        fill="currentColor" opacity=".16" />
-      <path d="M9 7.5h17.5A4.5 4.5 0 0 1 31 12v20.5H13.5A4.5 4.5 0 0 1 9 28V7.5Z"
-        stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
-      <path d="M13.5 32.5H31" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M15 14h10M15 19.5h7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-    </svg>
-  );
+// Значки шапок карточек — по референсу 21.10.2026: те же объёмные
+// webp-картинки из /public/icons, что и в быстрых действиях и календаре
+// (книга, конверт, мегафон, тортик). Контурные SVG прежней версии убраны.
+function HeadIcon({ src }) {
+  return <img src={src} className="tc-head-img" alt="" />;
 }
 
-function HeadCalendar() {
-  return (
-    <svg className="tc-head-ico tone-blue" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-      <rect x="6.5" y="9.5" width="27" height="24" rx="5.5"
-        fill="currentColor" opacity=".16" />
-      <rect x="6.5" y="9.5" width="27" height="24" rx="5.5"
-        stroke="currentColor" strokeWidth="2.4" />
-      <path d="M6.5 17h27M14 6v6M26 6v6" stroke="currentColor"
-        strokeWidth="2.4" strokeLinecap="round" />
-      <circle cx="14" cy="24" r="2.1" fill="currentColor" />
-    </svg>
-  );
-}
-
-// ТЗ §12.3: жёлтый колокольчик на бледно-жёлтом круге
-function HeadBell() {
-  return (
-    <svg className="tc-head-ico tone-yellow" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-      <circle cx="20" cy="20" r="20" fill="#FDF0CE" />
-      <path d="M20 9.5a7.6 7.6 0 0 1 7.6 7.6v4.4l1.7 3a1.2 1.2 0 0 1-1.05 1.8H11.75a1.2 1.2 0 0 1-1.05-1.8l1.7-3v-4.4A7.6 7.6 0 0 1 20 9.5Z"
-        fill="currentColor" />
-      <path d="M17 27.2a3.1 3.1 0 0 0 6 0" stroke="currentColor"
-        strokeWidth="2.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// ТЗ §12.4: зелёный замок на светло-зелёном круге
-function HeadLock() {
-  return (
-    <svg className="tc-head-ico tone-green" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-      <circle cx="20" cy="20" r="20" fill="#E3F2D5" />
-      <rect x="11.5" y="19" width="17" height="12.5" rx="4" fill="currentColor" />
-      <path d="M15.4 19v-3.6a4.6 4.6 0 0 1 9.2 0V19" stroke="currentColor"
-        strokeWidth="2.4" strokeLinecap="round" />
-      <circle cx="20" cy="25.2" r="1.9" fill="#fff" />
-    </svg>
-  );
-}
-
-// Розовый тортик для блока «Дни рождения месяца» (ТЗ 21.10.2026 §10) —
-// в той же контурной манере, что остальные значки шапок.
-function HeadCake() {
-  return (
-    <svg className="tc-head-ico tone-pink" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-      <rect x="8" y="19" width="24" height="13.5" rx="4" fill="currentColor" opacity=".16" />
-      <rect x="8" y="19" width="24" height="13.5" rx="4" stroke="currentColor" strokeWidth="2.4" />
-      <path d="M8 25c2.4 2 4.6 2 7 0s4.6-2 7 0 4.6 2 7 0" stroke="currentColor"
-        strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M20 13.5V19" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M20 7.5c1.5 1.8 1.5 3.2 0 4.4-1.5-1.2-1.5-2.6 0-4.4Z" fill="currentColor" />
-    </svg>
-  );
+// Инициалы семьи для кружка-аватара в списке сообщений (референс §:
+// розово-голубой круг с буквами вместо безликих строк). Берём первые
+// буквы двух первых слов подписи («Ева Милишкевич» → «ЕМ»).
+function initialsOf(label) {
+  const words = String(label || "").split(/\s+/).filter((w) => /^[А-ЯЁA-Z]/i.test(w));
+  return words.slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?";
 }
 
 // Значки пустых состояний: 56 px (ТЗ §12 — 52–60 px), бледно-голубые.
@@ -602,9 +535,18 @@ export default function TeacherTab({
   let bubble = null;
   if (nextEv) {
     const dd = Math.round((new Date(nextEv.on_date + "T12:00:00") - new Date(todayIso + "T12:00:00")) / 86400000);
-    if (dd === 0) bubble = ["Сегодня событие,", "всё готово?"];
-    else if (dd === 1) bubble = ["Завтра событие —", "не забудем!"];
-    else if (dd <= 7) bubble = ["Скоро событие:", `${Number(nextEv.on_date.slice(8, 10))} ${MONTHS_GEN[Number(nextEv.on_date.slice(5, 7)) - 1]}!`];
+    // Референс 21.10.2026: реплика называет тип события и время —
+    // «Завтра собрание в 18:00.» Тип угадываем по заголовку, иначе «событие».
+    const t = nextEv.title || "";
+    const word = /собрани/i.test(t) ? "собрание"
+      : /экскурси/i.test(t) ? "экскурсия"
+      : /фотограф/i.test(t) ? "фотосъёмка"
+      : /праздник|утренник/i.test(t) ? "праздник"
+      : "событие";
+    const at = nextEv.time_text ? `в ${nextEv.time_text}` : null;
+    if (dd === 0) bubble = at ? [`Сегодня ${word}`, `${at}!`] : ["Сегодня событие,", "всё готово?"];
+    else if (dd === 1) bubble = at ? [`Завтра ${word}`, `${at}.`] : [`Завтра ${word} —`, "не забудем!"];
+    else if (dd <= 7) bubble = [`Скоро ${word}:`, `${Number(nextEv.on_date.slice(8, 10))} ${MONTHS_GEN[Number(nextEv.on_date.slice(5, 7)) - 1]}!`];
   }
   if (!bubble && msgNew > 0) bubble = ["Есть новые", "сообщения!"];
 
@@ -672,14 +614,18 @@ export default function TeacherTab({
         onAddEvent={addEventAt}
       />
 
-      {/* Карточки лежат прямо в сетке, без колонок-обёрток. Порядок в DOM —
-          задания → сообщения → объявления → дни рождения: на десктопе
-          двухколоночная сетка раскладывает их рядами «задания | сообщения»
-          и «объявления | ДР» (ТЗ 21.10.2026 §9–10). На телефоне сообщения
-          поднимаются выше заданий правилом order в CSS (§19). */}
+      {/* Правка 23.10.2026 по скриншоту: карточки больше не прямые дети
+          сетки — ряды grid выравнивали «Объявления» по высокой карточке
+          сообщений, и между окнами возникали огромные пустоты. Теперь две
+          независимые flex-колонки: слева задания → объявления → кого нет,
+          справа сообщения → именинники; каждая колонка прижимает свои
+          карточки друг к другу. На телефоне (≤1023) колонки схлопываются
+          display:contents, а мобильный порядок (сообщения выше заданий,
+          ТЗ §19) по-прежнему задаёт order в CSS. */}
       <div className="tc-grid">
+        <div className="tc-col">
           <WorkCard
-            icon={<HeadBook />}
+            icon={<HeadIcon src="/icons/icon-book.webp" />}
             title="Задания и что взять"
             /* ТЗ §8: счётчик активных заданий — в подписи карточки;
                до загрузки (homework === null) цифру не показываем */
@@ -722,47 +668,11 @@ export default function TeacherTab({
             ))}
           </WorkCard>
 
-          <WorkCard
-            icon={<HeadLock />}
-            title="Личные сообщения семьям"
-            /* ТЗ §8: счётчик непрочитанных — в шапке карточки («2 новых»);
-               до загрузки и при нуле плашку не показываем */
-            sub="Видно только вам и выбранной семье"
-            head={msgNew > 0 ? <span className="tc-head-count">{msgNew} {plural(msgNew, "новое", "новых", "новых")}</span> : null}
-            anchor="tc-card-msg"
-            delay="d2"
-            tall={threads.length ? null : "tc-h-msg"}
-          >
-            {familyMessages === null && <CardSkeleton onRetry={onReloadMessages} />}
-            {familyMessages !== null && !threads.length && (
-              <Empty
-                icon={<EmptyPeople />}
-                title="Выберите семью, чтобы написать сообщение."
-                plain
-                cta="Выбрать семью"
-                ctaTone="soft"
-                onCta={() => setPickOpen(true)}
-              />
-            )}
-            {threads.map((t) => (
-              <button className="tc-line" key={t.n}
-                onClick={() => setChatFamily({ n: t.n, child: familyLabel(t.n) })}>
-                <span className="tc-line-title">
-                  {familyLabel(t.n)}
-                  {t.unread > 0 && <span className="tc-badge">{t.unread}</span>}
-                </span>
-                <span className="tc-line-sub">
-                  {t.last?.from_teacher ? "Вы: " : ""}{short(t.last?.text, 60)}
-                </span>
-              </button>
-            ))}
-          </WorkCard>
-
           {/* ТЗ §12.3: вместо кнопки — текстовая ссылка на полный список.
               Кнопку создания здесь не дублируем: объявление создаётся
               главной синей кнопкой в приветствии. */}
           <WorkCard
-            icon={<HeadBell />}
+            icon={<HeadIcon src="/icons/icon-megaphone.webp" />}
             title="Объявления класса"
             link="Все объявления"
             onLink={() => onTab("announcements")}
@@ -790,12 +700,59 @@ export default function TeacherTab({
             ))}
           </WorkCard>
 
+          {/* Отсутствия детей: кто не придёт сегодня и о ком предупредили
+              заранее — по отметкам родителей (фича 06.10.2026). Карточка
+              самодостаточная: сама грузит данные и обновляется раз в минуту. */}
+          <TeacherAbsenceCard />
+        </div>
+
+        <div className="tc-col">
+          <WorkCard
+            icon={<HeadIcon src="/icons/icon-envelope.webp" />}
+            title="Сообщения от родителей"
+            /* ТЗ §8: счётчик непрочитанных — в шапке карточки («2 новых»);
+               до загрузки и при нуле плашку не показываем */
+            sub="Видно только вам и выбранной семье"
+            head={msgNew > 0 ? <span className="tc-head-count">{msgNew} {plural(msgNew, "новое", "новых", "новых")}</span> : null}
+            anchor="tc-card-msg"
+            delay="d2"
+            tall={threads.length ? null : "tc-h-msg"}
+          >
+            {familyMessages === null && <CardSkeleton onRetry={onReloadMessages} />}
+            {familyMessages !== null && !threads.length && (
+              <Empty
+                icon={<EmptyPeople />}
+                title="Выберите семью, чтобы написать сообщение."
+                plain
+                cta="Выбрать семью"
+                ctaTone="soft"
+                onCta={() => setPickOpen(true)}
+              />
+            )}
+            {threads.map((t) => (
+              <button className="tc-line tc-msg-line" key={t.n}
+                onClick={() => setChatFamily({ n: t.n, child: familyLabel(t.n) })}>
+                {/* Референс 21.10.2026: кружок-аватар с инициалами семьи */}
+                <span className="tc-ava" aria-hidden="true">{initialsOf(familyLabel(t.n))}</span>
+                <span className="tc-msg-body">
+                  <span className="tc-line-title">
+                    {familyLabel(t.n)}
+                    {t.unread > 0 && <span className="tc-badge">{t.unread}</span>}
+                  </span>
+                  <span className="tc-line-sub">
+                    {t.last?.from_teacher ? "Вы: " : ""}{short(t.last?.text, 60)}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </WorkCard>
+
           {/* НОВЫЙ блок (ТЗ §10): все именинники текущего месяца, включая
               уже прошедших — прошедшие приглушены, список не обрезается.
               Клик по строке ведёт на вкладку «Класс» (список на весь год). */}
           <WorkCard
-            icon={<HeadCake />}
-            title={`Дни рождения в ${MONTHS_PREP[curMonth]}`}
+            icon={<HeadIcon src="/icons/icon-cake.webp" />}
+            title={`Именинники ${MONTHS_GEN[curMonth]}`}
             link="Весь класс"
             onLink={() => onTab("class")}
             anchor="tc-card-bd"
@@ -818,6 +775,8 @@ export default function TeacherTab({
                   onClick={() => onTab("class")}
                   title="Открыть список класса"
                 >
+                  {/* Референс §10: будущие строки — розовые плашки с мини-тортиком */}
+                  {!past && <img src="/icons/icon-cake.webp" className="tc-bd-ico" alt="" />}
                   <span className="tc-bd-date">{k.bd} {MONTHS_GEN[curMonth]}</span>
                   <span className="tc-line-title">
                     {bdName(k)}
@@ -832,11 +791,7 @@ export default function TeacherTab({
               );
             })}
           </WorkCard>
-
-          {/* Отсутствия детей: кто не придёт сегодня и о ком предупредили
-              заранее — по отметкам родителей (фича 06.10.2026). Карточка
-              самодостаточная: сама грузит данные и обновляется раз в минуту. */}
-          <TeacherAbsenceCard />
+        </div>
       </div>
 
       {form === "ann" && (

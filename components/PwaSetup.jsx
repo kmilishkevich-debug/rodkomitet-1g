@@ -50,6 +50,9 @@ export default function PwaSetup() {
 
     if (isStandalone()) return; // уже установлено — не трогаем
     if (hiddenThisSession()) return; // закрыли в этот заход
+    // Демо-страницы (/calendar-demo, /teacher-demo) существуют только для
+    // визуальной приёмки вёрстки — модалка установки там лишь мешает.
+    if (/-demo\/?$/.test(window.location.pathname)) return;
 
     const onPrompt = (e) => {
       e.preventDefault();

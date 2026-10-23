@@ -12,34 +12,37 @@
 // 21.10.2026 тем же пайплайном, что и набор календаря), книга, календарь,
 // конверт, календарь с часами.
 
+// Референс 21.10.2026: у первых трёх действий «+» в названии, кнопки
+// тонированы пастелью — синяя заливка у объявления, лаванда у задания
+// и расписания, розовая у события, зелёная у письма семье.
 const CARDS = [
   {
     id: "ann",
     tone: "blue",
     icon: "/icons/icon-megaphone.webp",
-    title: "Объявление",
+    title: "+ Объявление",
   },
   {
     id: "hw",
-    tone: "soft",
+    tone: "lav",
     icon: "/icons/icon-book.webp",
-    title: "Задание",
+    title: "+ Задание",
   },
   {
     id: "event",
-    tone: "soft",
+    tone: "pink",
     icon: "/icons/icon-calendar.webp",
-    title: "Событие",
+    title: "+ Событие",
   },
   {
     id: "note",
-    tone: "soft",
+    tone: "green",
     icon: "/icons/icon-envelope.webp",
     title: "Написать семье",
   },
   {
     id: "schedule",
-    tone: "soft",
+    tone: "lav",
     icon: "/icons/icon-calendar-clock.webp",
     title: "Изменить расписание",
   },

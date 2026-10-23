@@ -375,13 +375,8 @@ export function TeacherAbsenceCard() {
   return (
     <div className="card tc-work reveal d3" id="tc-card-abs">
       <div className="dash-card-head tc-work-head">
-        <svg className="tc-head-ico tone-blue" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-          <circle cx="20" cy="15" r="7" fill="currentColor" opacity=".16" />
-          <circle cx="20" cy="15" r="7" stroke="currentColor" strokeWidth="2.4" />
-          <path d="M8 34a12 12 0 0 1 24 0" fill="currentColor" opacity=".16" />
-          <path d="M8 34a12 12 0 0 1 24 0" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-          <path d="M28.5 8.5 35 15M35 8.5 28.5 15" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-        </svg>
+        {/* Референс 21.10.2026: объёмные webp-значки во всех шапках карточек */}
+        <img src="/icons/icon-people.webp" className="tc-head-img" alt="" />
         <div className="dash-card-titles">
           <h2 className="sec-title">Кого нет в школе</h2>
           <div className="dash-card-sub">Отметки родителей · причина и документ</div>
