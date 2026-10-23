@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   saveAnnouncement,
   saveHomework, deleteHomework,
@@ -13,6 +13,7 @@ import { AttachPicker } from "./Attachments";
 import FamilyPicker from "./FamilyPicker";
 import { canonicalN, familyLabel } from "./data";
 import TeacherWelcomeCard from "./TeacherWelcomeCard";
+import ParentMessagesCard from "./ParentMessagesCard";
 import TeacherQuickCards from "./TeacherQuickCards";
 import TeacherFamilyChat from "./TeacherFamilyChat";
 import { PostChatModal, commentsFor, unreadFor } from "./PostChat";
@@ -303,14 +304,6 @@ function HeadIcon({ src }) {
   return <img src={src} className="tc-head-img" alt="" />;
 }
 
-// Инициалы семьи для кружка-аватара в списке сообщений (референс §:
-// розово-голубой круг с буквами вместо безликих строк). Берём первые
-// буквы двух первых слов подписи («Ева Милишкевич» → «ЕМ»).
-function initialsOf(label) {
-  const words = String(label || "").split(/\s+/).filter((w) => /^[А-ЯЁA-Z]/i.test(w));
-  return words.slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?";
-}
-
 // Значки пустых состояний: 56 px (ТЗ §12 — 52–60 px), бледно-голубые.
 // ТЗ §12.1 отдельно оговаривает, что рюкзака здесь быть не должно.
 function EmptySheet() {
@@ -347,20 +340,6 @@ function EmptyMegaphone() {
         stroke="currentColor" strokeWidth="2.8" strokeLinejoin="round" />
       <path d="M46 22.5a7.5 7.5 0 0 1 0 11" stroke="currentColor"
         strokeWidth="2.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function EmptyPeople() {
-  return (
-    <svg className="tc-empty-ico" viewBox="0 0 56 56" fill="none" aria-hidden="true">
-      <circle cx="23" cy="19" r="8" fill="currentColor" opacity=".3" />
-      <circle cx="23" cy="19" r="8" stroke="currentColor" strokeWidth="2.8" />
-      <path d="M9 44a14 14 0 0 1 28 0" fill="currentColor" opacity=".3" />
-      <path d="M9 44a14 14 0 0 1 28 0" stroke="currentColor"
-        strokeWidth="2.8" strokeLinecap="round" />
-      <path d="M38 13.6a7.4 7.4 0 0 1 0 14.3M42 42a12.6 12.6 0 0 0-5.4-10.4"
-        stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -618,23 +597,6 @@ export default function TeacherTab({
     .filter((a) => a.status === "active" && (!authorName || a.author === authorName))
     .slice(0, 3);
 
-  // Переписка: одна строка на семью, сверху те, кто ждёт ответа.
-  // Семья близнецов — одна ветка под каноническим номером.
-  const threads = useMemo(() => {
-    const byFamily = new Map();
-    (familyMessages || []).forEach((m) => {
-      const n = canonicalN(m.family_n);
-      const cur = byFamily.get(n) || { n, last: null, unread: 0 };
-      cur.last = m; // сообщения приходят по возрастанию времени
-      if (!m.from_teacher && !m.read_teacher) cur.unread += 1;
-      byFamily.set(n, cur);
-    });
-    return [...byFamily.values()].sort((a, b) => {
-      if (!!b.unread !== !!a.unread) return b.unread - a.unread;
-      return (a.last?.created_at || "") < (b.last?.created_at || "") ? 1 : -1;
-    }).slice(0, 3);
-  }, [familyMessages]);
-
   // Пять быстрых действий одной строкой (ТЗ §7): объявление и задание
   // переехали сюда из приветствия.
   const pickCard = (id) => {
@@ -774,45 +736,18 @@ export default function TeacherTab({
         </div>
 
         <div className="tc-col">
-          <WorkCard
-            icon={<HeadIcon src="/icons/icon-envelope.webp" />}
-            title="Сообщения от родителей"
-            /* ТЗ §8: счётчик непрочитанных — в шапке карточки («2 новых»);
-               до загрузки и при нуле плашку не показываем */
-            sub="Видно только вам и выбранной семье"
-            head={msgNew > 0 ? <span className="tc-head-count">{msgNew} {plural(msgNew, "новое", "новых", "новых")}</span> : null}
-            anchor="tc-card-msg"
-            delay="d2"
-            tall={threads.length ? null : "tc-h-msg"}
-          >
-            {familyMessages === null && <CardSkeleton onRetry={onReloadMessages} />}
-            {familyMessages !== null && !threads.length && (
-              <Empty
-                icon={<EmptyPeople />}
-                title="Выберите семью, чтобы написать сообщение."
-                plain
-                cta="Выбрать семью"
-                ctaTone="soft"
-                onCta={() => setPickOpen(true)}
-              />
-            )}
-            {threads.map((t) => (
-              <button className="tc-line tc-msg-line" key={t.n}
-                onClick={() => setChatFamily({ n: t.n, child: familyLabel(t.n) })}>
-                {/* Референс 21.10.2026: кружок-аватар с инициалами семьи */}
-                <span className="tc-ava" aria-hidden="true">{initialsOf(familyLabel(t.n))}</span>
-                <span className="tc-msg-body">
-                  <span className="tc-line-title">
-                    {familyLabel(t.n)}
-                    {t.unread > 0 && <span className="tc-badge">{t.unread}</span>}
-                  </span>
-                  <span className="tc-line-sub">
-                    {t.last?.from_teacher ? "Вы: " : ""}{short(t.last?.text, 60)}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </WorkCard>
+          {/* Мини-мессенджер (ТЗ 23.10.2026): мятная шапка, фильтры
+              «Все/Непрочитанные», до трёх переписок, footer с кнопкой
+              «Написать семье». Диалоги (выбор семьи, чат) остались здесь,
+              в кабинете — карточка только зовёт их колбэками. */}
+          <ParentMessagesCard
+            familyMessages={familyMessages}
+            limit={3}
+            onOpenChat={(n) => setChatFamily({ n, child: familyLabel(n) })}
+            onNewChat={() => setPickOpen(true)}
+            onAllLink={() => onTab("messages")}
+            onRetry={onReloadMessages}
+          />
 
           {/* НОВЫЙ блок (ТЗ §10): все именинники текущего месяца, включая
               уже прошедших — прошедшие приглушены, список не обрезается.

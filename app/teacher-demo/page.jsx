@@ -25,12 +25,17 @@ export default function TeacherDemoPage() {
   // Демо-переключение вкладок нижней панели (23.10.2026): «Кабинет» и
   // «Сообщения» живые, остальные кнопки просто подсвечиваются.
   const [tab, setTab] = useState("teacher");
+  // ?chat=12 — сразу открыть переписку семьи №12 (скриншоты модалки)
+  const [chatN, setChatN] = useState(null);
   useEffect(() => {
     const h = window.location.hostname;
     if (h === "localhost" || h === "127.0.0.1") setOk(true);
     // ?tab=messages — открыть демо сразу на вкладке «Сообщения» (скриншоты)
-    const t = new URLSearchParams(window.location.search).get("tab");
+    const q = new URLSearchParams(window.location.search);
+    const t = q.get("tab");
     if (t) setTab(t);
+    const c = q.get("chat");
+    if (c) setChatN(Number(c));
   }, []);
   if (!ok) return null;
 
@@ -51,10 +56,19 @@ export default function TeacherDemoPage() {
     { id: 1, status: "active", author: "Виктория Петровна", important: true, title: "Фотографирование класса в пятницу", body: "Приходим в парадной форме, начало в 9:00." },
     { id: 2, status: "active", author: "Виктория Петровна", important: false, title: "Сбор на рабочие тетради", body: "До конца недели, подробности у родительского комитета." },
   ];
+  // Фикстуры мини-мессенджера (ТЗ 23.10.2026 §26): непрочитанные с автором
+  // и вложением, прочитанная с «Вы:», сообщение без текста (только фото),
+  // четвёртая переписка — проверка обрезки до трёх строк на главной.
   const familyMessages = [
-    { id: 1, family_n: 3, from_teacher: false, read_teacher: false, text: "Добрый день! Ева завтра будет после врача, можно прийти ко второму уроку?", created_at: "2026-10-21T08:10:00" },
-    { id: 2, family_n: 7, from_teacher: true, read_teacher: true, text: "Конечно, выздоравливайте!", created_at: "2026-10-20T15:30:00" },
-    { id: 3, family_n: 12, from_teacher: false, read_teacher: false, text: "Подскажите, что взять на экскурсию?", created_at: "2026-10-21T09:05:00" },
+    { id: 1, family_n: 3, from_teacher: false, read_teacher: false, author: "Кристина Милишкевич", text: "Добрый день! Ева завтра будет после врача, можно прийти ко второму уроку?", created_at: `${today}T08:10:00` },
+    { id: 2, family_n: 7, from_teacher: true, read_teacher: true, author: "Виктория Петровна", text: "Конечно, выздоравливайте!", created_at: iso(-1) + "T15:30:00",
+      reactions: { family: "❤️" } },
+    { id: 3, family_n: 12, from_teacher: false, read_teacher: false, author: "Анна К.", text: "И во сколько сбор?", created_at: `${today}T09:04:00`,
+      reactions: { teacher: "👍" } },
+    { id: 4, family_n: 12, from_teacher: false, read_teacher: false, author: "Анна К.", text: "Подскажите, что взять на экскурсию?", created_at: `${today}T09:05:00`,
+      files: [{ name: "список-вещей-для-экскурсии.pdf", url: "#", size: 48211, type: "application/pdf" }, { name: "маршрут.jpg", url: "#", size: 120000, type: "image/jpeg" }] },
+    { id: 5, family_n: 5, from_teacher: false, read_teacher: true, author: "Ольга Белоус", text: "", created_at: iso(-9) + "T12:00:00",
+      files: [{ name: "фото1.jpg", url: "#", size: 90000, type: "image/jpeg" }, { name: "фото2.jpg", url: "#", size: 91000, type: "image/jpeg" }, { name: "фото3.jpg", url: "#", size: 92000, type: "image/jpeg" }] },
   ];
   // Дни рождения: прошедший в этом месяце (приглушён), сегодняшний,
   // два будущих в один день — и один в другом месяце (не попадает в блок).
@@ -74,6 +88,7 @@ export default function TeacherDemoPage() {
           toast={() => {}}
           familyMessages={familyMessages}
           onReloadMessages={() => {}}
+          initialChatN={chatN}
         />
       )}
       {tab !== "messages" && <TeacherTab
