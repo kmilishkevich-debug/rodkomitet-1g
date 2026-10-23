@@ -174,7 +174,7 @@ function ResultBar({ label, count, total, highlight }) {
 }
 
 // ===== Карточка голосования =====
-function PollCard({ p, committee, canEdit, family, author, toast, onEdit, onReload, onNeedFamily }) {
+function PollCard({ p, committee, teacher, canEdit, family, author, toast, onEdit, onReload, onNeedFamily }) {
   const state = pollState(p);
   const votes = p.votes || [];
   const myVote = family ? votes.find((v) => familyNs(family.n).includes(v.family_n)) : null;
@@ -360,8 +360,10 @@ function PollCard({ p, committee, canEdit, family, author, toast, onEdit, onRelo
         )
       )}
 
-      {/* Комитету: кто как проголосовал и кто ещё нет */}
-      {committee && (
+      {/* Кто как проголосовал и кто ещё нет: комитету — всегда,
+          учителю — в её собственных голосованиях (чужие голосования
+          комитета показывают ей только обезличенные итоги) */}
+      {(committee || (teacher && p.author === author)) && (
         <>
           <button className="news-read-count" onClick={() => setWhoOpen(!whoOpen)} aria-expanded={whoOpen}>
             <Ic id="i-eye" /> Кто как проголосовал {whoOpen ? "▴" : "▾"}
@@ -457,7 +459,7 @@ export default function VotesTab({ committee, canEdit, teacher, author, toast, p
     setFamOpen(true);
   };
 
-  const cardProps = { committee, canEdit, family, author, toast, onEdit: openEditor, onReload, onNeedFamily: needFamily };
+  const cardProps = { committee, teacher, canEdit, family, author, toast, onEdit: openEditor, onReload, onNeedFamily: needFamily };
 
   return (
     <section id="tab-votes">
