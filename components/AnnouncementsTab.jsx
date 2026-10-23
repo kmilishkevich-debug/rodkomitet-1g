@@ -7,6 +7,7 @@ import { isLive, saveAnnouncement, deleteAnnouncement, markRead } from "@/lib/su
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
 import { PostChatInline } from "./PostChat";
 import { shareText, shareUrl } from "@/lib/share";
+import { sendNewsPush } from "@/lib/push";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 import { AttachPicker, AttachList } from "./Attachments";
 
@@ -67,7 +68,17 @@ function AnnouncementEditor({ open, initial, author, teacher, onClose, onSaved, 
       };
       if (initial?.id) payload.id = initial.id;
       else { payload.author = author; payload.status = "active"; }
-      await saveAnnouncement(payload);
+      const row = await saveAnnouncement(payload);
+      // Новое объявление (не правка) — родителям сразу уходит пуш.
+      // Нажатие на пуш открывает карточку объявления, и отметка
+      // «прочитано» ставится автоматически (см. ниже по файлу).
+      // Доставка — в фоне: её ошибки не мешают публикации.
+      if (!initial?.id && row?.id) {
+        sendNewsPush({
+          body: payload.title + (payload.body ? " — " + payload.body : ""),
+          url: `/?tab=announcements&ann=${row.id}`,
+        });
+      }
       clearDraft(dkey);
       toast(initial?.id ? "Объявление обновлено" : "Объявление опубликовано");
       onSaved();
