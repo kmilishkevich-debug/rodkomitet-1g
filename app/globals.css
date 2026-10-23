@@ -2800,6 +2800,8 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
   background:#F0F3FA;border:1px solid #E3E8F2;font-size:14px;line-height:1;
 }
 button.chat-react-chip{cursor:pointer;transition:background-color .15s ease}
+/* Счётчик у чипа: в обсуждениях одну эмодзи могут поставить несколько семей */
+.chat-react-cnt{margin-left:3px;font-size:11.5px;font-weight:800;color:#5B667F}
 .chat-react-chip.mine{background:#E2EDFF;border-color:#BFD5FA}
 button.chat-react-chip:hover{background:#D9E7FD}
 .chat-react-add{
@@ -2811,6 +2813,12 @@ button.chat-react-chip:hover{background:#D9E7FD}
 .chat-msg:hover .chat-react-add,.chat-react-add:focus-visible,
 .chat-react-add[aria-expanded="true"]{opacity:1}
 .chat-react-add:hover{background:#F0F3FA;color:#1765F5}
+/* Телефоны и планшеты: hover нет, полупрозрачную кнопку легко не заметить —
+   показываем её всегда, чуть крупнее и контрастнее */
+@media (hover:none){
+  .chat-react-add{opacity:1;width:28px;height:28px;color:#6E7890;background:#F5F7FB}
+  .chat-react-add svg{width:16px;height:16px}
+}
 .chat-react-picker{
   display:inline-flex;gap:2px;padding:4px;border-radius:999px;
   background:#fff;border:1px solid #E3E8F2;
@@ -2830,3 +2838,20 @@ button.chat-react-chip:hover{background:#D9E7FD}
   .chat-react-picker{animation:none}
   .chat-react-opt:hover{transform:none}
 }
+
+/* ===== Правка и удаление своих сообщений (23.10.2026) =====
+   Кнопки ✎ и ✕ в строке с автором и временем; .chat-edit —
+   поле правки вместо облачка; «· изменено» — приглушённая отметка. */
+.chat-msg-act{
+  border:none;background:none;cursor:pointer;padding:0 2px;margin-left:6px;
+  font-size:13px;line-height:1;color:#9AA3B8;
+  transition:color .15s ease;
+}
+.chat-msg-act:hover{color:#1765F5}
+.chat-msg-act.chat-msg-del:hover{color:var(--red)}
+.chat-msg-act:focus-visible{outline:2px solid #1765F5;outline-offset:2px;border-radius:4px}
+.chat-edited{color:#A8B0C3}
+.chat-edit{display:flex;flex-direction:column;gap:6px;width:100%;max-width:420px}
+.chat-msg.mine .chat-edit{align-items:flex-end}
+.chat-edit .chat-input{width:100%}
+.chat-edit-actions{display:flex;gap:6px;justify-content:flex-end}

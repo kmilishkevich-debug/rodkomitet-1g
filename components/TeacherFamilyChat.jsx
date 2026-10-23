@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { sendFamilyMessage, markThreadRead, setMessageReaction } from "@/lib/supabase";
+import {
+  sendFamilyMessage, markThreadRead, setMessageReaction,
+  updateFamilyMessage, deleteFamilyMessage,
+} from "@/lib/supabase";
 import { sendManualPush, sendFamilyChatPush } from "@/lib/push";
 import { useRefreshPause } from "@/lib/formGuard";
 import { familyNs } from "./data";
@@ -38,6 +41,9 @@ export default function TeacherFamilyChat({
   const [files, setFiles] = useState([]); // вложения: фото, документы, скрины
   const [busy, setBusy] = useState(false);
   const [reactFor, setReactFor] = useState(null); // id сообщения с открытым выбором реакции
+  const [editId, setEditId] = useState(null);     // id своего сообщения в режиме правки
+  const [editText, setEditText] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
   const bottomRef = useRef(null);
 
   useRefreshPause(open);
@@ -57,7 +63,7 @@ export default function TeacherFamilyChat({
   }, [open, thread.length]);
 
   useEffect(() => {
-    if (open) { setText(""); setFiles([]); setReactFor(null); }
+    if (open) { setText(""); setFiles([]); setReactFor(null); setEditId(null); }
   }, [open, familyN]);
 
   if (!open) return null;
@@ -85,6 +91,39 @@ export default function TeacherFamilyChat({
       toast?.(/reactions/i.test(e?.message || "")
         ? "База ещё без реакций — запустите family-chat-reactions-setup.sql"
         : "Не получилось сохранить реакцию");
+    }
+  };
+
+  // Редактирование и удаление своих сообщений (23.10.2026).
+  // На демо-страницах в базу не пишем — там фикстурные id.
+  const isDemo = () => /-demo\/?$/.test(window.location.pathname);
+
+  const saveEdit = async () => {
+    const body = editText.trim();
+    if (!body || editBusy) return;
+    if (isDemo()) { toast?.("Демо: правки здесь не сохраняются"); setEditId(null); return; }
+    setEditBusy(true);
+    try {
+      await updateFamilyMessage(editId, body);
+      setEditId(null);
+      onSent?.();
+    } catch (e) {
+      console.error(e);
+      toast?.("Не получилось сохранить правку");
+    } finally {
+      setEditBusy(false);
+    }
+  };
+
+  const delMsg = async (m) => {
+    if (isDemo()) { toast?.("Демо: удаление здесь не работает"); return; }
+    if (!window.confirm("Удалить это сообщение? Собеседник его больше не увидит.")) return;
+    try {
+      await deleteFamilyMessage(m.id);
+      onSent?.();
+    } catch (e) {
+      console.error(e);
+      toast?.("Не получилось удалить");
     }
   };
 
@@ -163,6 +202,25 @@ export default function TeacherFamilyChat({
             const theirR = m.reactions?.[otherSide]; // реакция собеседника
             return (
               <div key={m.id} className={"chat-msg" + (mine ? " mine" : " theirs")}>
+                {editId === m.id ? (
+                  /* Режим правки: текст в поле, «Сохранить» / «Отмена» */
+                  <div className="chat-edit">
+                    <textarea
+                      className="chat-input"
+                      rows={3}
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      autoFocus
+                    />
+                    <div className="chat-edit-actions">
+                      <button className="btn small" onClick={() => setEditId(null)}>Отмена</button>
+                      <button className="btn small primary" onClick={saveEdit}
+                        disabled={editBusy || !editText.trim()}>
+                        {editBusy ? "Сохраняем…" : "Сохранить"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                 <div className="chat-bubble">
                   {m.text}
                   {/* Вложения: фото превьюшками со скачиванием, документы списком */}
@@ -170,12 +228,13 @@ export default function TeacherFamilyChat({
                     <AttachList files={m.files} />
                   )}
                 </div>
+                )}
 
                 {/* Реакции (23.10.2026): под пузырём — поставленные эмодзи;
                     своя реакция подсвечена, тап по ней убирает. Кнопка «☺+»
-                    открывает выбор — только на сообщениях собеседника:
-                    реакция — это быстрый ответ, а не пометка своих слов. */}
-                {(myR || theirR || !mine) && (
+                    открывает выбор на любом сообщении — и собеседника,
+                    и своём (по просьбе родителей, 23.10.2026). */}
+                {(
                   <div className="chat-reacts">
                     {theirR && (
                       <span className="chat-react-chip" title={m.from_teacher ? "Реакция семьи" : "Реакция учителя"}>
@@ -192,7 +251,7 @@ export default function TeacherFamilyChat({
                         {myR}
                       </button>
                     )}
-                    {!mine && !myR && (
+                    {!myR && (
                       <button
                         className="chat-react-add"
                         onClick={() => setReactFor(reactFor === m.id ? null : m.id)}
@@ -224,6 +283,22 @@ export default function TeacherFamilyChat({
 
                 <div className="chat-meta">
                   {m.from_teacher ? (m.author || "Учитель") : "Родитель"} · {fmtTime(m.created_at)}
+                  {m.edited_at && <span className="chat-edited"> · изменено</span>}
+                  {/* Свои сообщения можно изменить или удалить (23.10.2026) */}
+                  {mine && editId !== m.id && (
+                    <>
+                      <button className="chat-msg-act" title="Изменить"
+                        aria-label="Изменить сообщение"
+                        onClick={() => { setEditId(m.id); setEditText(m.text || ""); }}>
+                        ✎
+                      </button>
+                      <button className="chat-msg-act chat-msg-del" title="Удалить"
+                        aria-label="Удалить сообщение"
+                        onClick={() => delMsg(m)}>
+                        ✕
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
