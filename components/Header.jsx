@@ -43,6 +43,7 @@ const MONEY_SUBS = ["fees", "expenses", "history"];
 // «Главной» у него тоже нет — там сводка с деньгами класса; его дом — Кабинет.
 const TEACHER_TOP_TABS = [
   { id: "teacher", icon: "i-edit", label: "Кабинет" },
+  { id: "messages", icon: "i-bell", label: "Сообщения" },
   { id: "announcements", icon: "i-bell", label: "Объявления" },
   { id: "schedule", icon: "i-clock", label: "Расписание" },
   { id: "votes", icon: "i-vote", label: "Голосования" },
@@ -50,14 +51,17 @@ const TEACHER_TOP_TABS = [
   { id: "photos", icon: "i-users", label: "Фото" },
 ];
 
+// Нижняя панель учителя (23.10.2026): «Сообщения» заняли место
+// «Объявлений» — переписка с семьями нужна чаще, объявления уехали в «Ещё».
 const TEACHER_BOTTOM_TABS = [
   { id: "teacher", icon: "i-edit", label: "Кабинет" },
-  { id: "announcements", icon: "i-bell", label: "Объявления" },
+  { id: "messages", icon: "i-bell", label: "Сообщения" },
   { id: "schedule", icon: "i-clock", label: "Уроки" },
   { id: "class", icon: "i-users", label: "Класс" },
 ];
 
 const TEACHER_MORE_ITEMS = [
+  { id: "announcements", label: "Объявления" },
   { id: "votes", label: "Голосования" },
   { id: "photos", label: "Фото класса" },
 ];
@@ -102,13 +106,13 @@ function shortName(name, fallback) {
   return `${parts[0]} ${parts[1][0].toUpperCase()}.`;
 }
 
-export default function Header({ committee, role, teacherName, userFullName, tab, moneySub, onTab, onLogout, newsBadge = 0, pollsBadge = 0, notesBadge = 0 }) {
+export default function Header({ committee, role, teacherName, userFullName, tab, moneySub, onTab, onLogout, newsBadge = 0, pollsBadge = 0, notesBadge = 0, msgBadge = 0 }) {
   const teacher = isTeacher(role);
   const tabs = teacher ? TEACHER_TOP_TABS : TOP_TABS;
   const isActive = (t) =>
     t.id === tab || (tab === "money" && MONEY_SUBS.includes(t.id) && moneySub === t.id);
   // Бейдж заметок: у родителей живёт на «Главной», у учителя — на «Кабинете»
-  const badgeFor = (id) => (id === "announcements" ? newsBadge : id === "votes" ? pollsBadge : id === "dashboard" || id === "teacher" ? notesBadge : 0);
+  const badgeFor = (id) => (id === "announcements" ? newsBadge : id === "votes" ? pollsBadge : id === "messages" ? msgBadge : id === "dashboard" || id === "teacher" ? notesBadge : 0);
 
   // Имя и инициалы берём у того, кто реально вошёл: у комитета их было
   // зашито «КМ» / «Кристина М.», из-за чего Наталья видела чужие инициалы.
@@ -164,7 +168,7 @@ function BurgerIcon({ open }) {
   );
 }
 
-export function BottomNav({ tab, role, moneySub, onTab, newsBadge = 0, pollsBadge = 0, notesBadge = 0 }) {
+export function BottomNav({ tab, role, moneySub, onTab, newsBadge = 0, pollsBadge = 0, notesBadge = 0, msgBadge = 0 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const teacher = isTeacher(role);
   const tabs = teacher ? TEACHER_BOTTOM_TABS : BOTTOM_TABS;
@@ -185,6 +189,7 @@ export function BottomNav({ tab, role, moneySub, onTab, newsBadge = 0, pollsBadg
           {t.id === "votes" && pollsBadge > 0 && <span className="nav-badge">{pollsBadge > 9 ? "9+" : pollsBadge}</span>}
           {(t.id === "dashboard" || t.id === "teacher") && notesBadge > 0 && <span className="nav-badge">{notesBadge > 9 ? "9+" : notesBadge}</span>}
           {t.id === "announcements" && newsBadge > 0 && <span className="nav-badge">{newsBadge > 9 ? "9+" : newsBadge}</span>}
+          {t.id === "messages" && msgBadge > 0 && <span className="nav-badge">{msgBadge > 9 ? "9+" : msgBadge}</span>}
         </button>
       ))}
       <div className="bnav-more-wrap">
@@ -197,12 +202,12 @@ export function BottomNav({ tab, role, moneySub, onTab, newsBadge = 0, pollsBadg
           onClick={() => setMoreOpen((v) => !v)}
         >
           <BurgerIcon open={moreOpen} />Ещё
-          {/* На кнопке «Ещё» — бейдж того, что спрятано внутри: у родителей это
-              объявления и голосования, у учителя объявления вынесены в панель, внутри — голосования */}
-          {!teacher && newsBadge + pollsBadge > 0 && (
+          {/* На кнопке «Ещё» — бейдж того, что спрятано внутри: и у родителей,
+              и у учителя это объявления и голосования (23.10.2026: объявления
+              учителя переехали сюда, их место в панели заняли «Сообщения») */}
+          {newsBadge + pollsBadge > 0 && (
             <span className="nav-badge">{newsBadge + pollsBadge > 9 ? "9+" : newsBadge + pollsBadge}</span>
           )}
-          {teacher && pollsBadge > 0 && <span className="nav-badge">{pollsBadge > 9 ? "9+" : pollsBadge}</span>}
         </button>
         {moreOpen && (
           <div className="bnav-more-menu" role="menu">

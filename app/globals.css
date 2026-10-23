@@ -1765,6 +1765,8 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
   letter-spacing:.02em}
 .tc-msg-body{flex:1;min-width:0;display:flex;flex-direction:column}
 .tc-msg-line .tc-badge{margin-left:6px;vertical-align:middle}
+/* Время последнего сообщения в ветке — вкладка «Сообщения» учителя */
+.tc-msg-when{flex:none;margin-left:auto;font-size:12.5px;color:var(--muted);align-self:flex-start;padding-top:2px}
 
 /* — «Именинники [месяца]» (ТЗ 21.10.2026 §10 + референс) ---------- */
 /* Все именинники месяца. По референсу строки — цветные плашки-пилюли:
@@ -1903,17 +1905,20 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
    ТЗ §14 требует «сохранять две колонки только при читабельной
    ширине каждой» и «не делать одну случайно узкую карточку». */
 @media (max-width:1023px){
-  .tc-grid{grid-template-columns:1fr}
-  /* Колонки-обёртки схлопываются: карточки снова прямые дети сетки,
-     и порядок задают order-правила ниже (правка 23.10.2026). */
-  .tc-col{display:contents}
-  /* ТЗ 21.10.2026 §14, мобильный порядок карточек: сообщения → задания →
-     объявления → дни рождения → кого нет. В DOM (через display:contents)
-     идут задания, объявления, кого нет, сообщения, ДР — поднимаем
-     сообщения и опускаем отсутствия под именинников. */
+  /* Правка 23.10.2026: «подними окошко с сообщениями вверх после
+     приветствия». Сетка и колонки схлопываются display:contents, кабинет
+     становится одной flex-колонкой — теперь порядком управляются ВСЕ блоки,
+     а не только карточки внутри сетки. Порядок на телефоне: приветствие →
+     сообщения → быстрые действия → плашка уведомлений → календарь →
+     задания → объявления → именинники → кого нет. */
+  .teacher-dashboard{display:flex;flex-direction:column}
+  .tc-grid,.tc-col{display:contents}
+  /* gap сетки исчез вместе с ней — зазор карточкам дают нижние отступы,
+     как у остальных блоков кабинета (20 px) */
+  .tc-grid .card{margin-bottom:20px}
+  .tc-welcome-wrap{order:-2}
   #tc-card-msg{order:-1}
-  #tc-card-bd{order:1}
-  #tc-card-abs{order:2}
+  #tc-card-abs{order:1}
 
   .tc-welcome-wrap{--tc-mascot-h:clamp(170px,20vw,200px);--tc-foot-inset:0px}
   .tc-welcome{grid-template-columns:1fr;gap:0;min-height:0;margin-top:0}

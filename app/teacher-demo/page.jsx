@@ -9,6 +9,8 @@
 // дней рождения показывались как в жизни.
 import { useEffect, useState } from "react";
 import TeacherTab from "../../components/TeacherTab";
+import TeacherMessagesTab from "../../components/TeacherMessagesTab";
+import { BottomNav } from "../../components/Header";
 
 // ISO-дата со сдвигом в днях от сегодняшнего дня (локальное время)
 function iso(delta = 0) {
@@ -20,9 +22,15 @@ function iso(delta = 0) {
 
 export default function TeacherDemoPage() {
   const [ok, setOk] = useState(false);
+  // Демо-переключение вкладок нижней панели (23.10.2026): «Кабинет» и
+  // «Сообщения» живые, остальные кнопки просто подсвечиваются.
+  const [tab, setTab] = useState("teacher");
   useEffect(() => {
     const h = window.location.hostname;
     if (h === "localhost" || h === "127.0.0.1") setOk(true);
+    // ?tab=messages — открыть демо сразу на вкладке «Сообщения» (скриншоты)
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t) setTab(t);
   }, []);
   if (!ok) return null;
 
@@ -60,7 +68,15 @@ export default function TeacherDemoPage() {
 
   return (
     <main style={{ margin: "0 auto", padding: "28px 24px 56px" }}>
-      <TeacherTab
+      {tab === "messages" && (
+        <TeacherMessagesTab
+          authorName="Виктория Петровна"
+          toast={() => {}}
+          familyMessages={familyMessages}
+          onReloadMessages={() => {}}
+        />
+      )}
+      {tab !== "messages" && <TeacherTab
         authorName="Виктория Петровна"
         greetingName="Виктория Петровна"
         toast={() => {}}
@@ -76,7 +92,8 @@ export default function TeacherDemoPage() {
         chatClosed={false}
         onReload={() => {}}
         onReloadMessages={() => {}}
-      />
+      />}
+      <BottomNav tab={tab} role="teacher" onTab={setTab} msgBadge={2} />
     </main>
   );
 }
