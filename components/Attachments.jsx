@@ -20,6 +20,66 @@ function isPhoto(f) {
   return (f?.type || "").startsWith("image/");
 }
 
+// Честное скачивание файла с другого домена (хранилище Supabase):
+// атрибут download браузеры игнорируют для чужих доменов, поэтому
+// качаем в память и отдаём как локальный файл. Не вышло — просто
+// откроем в новой вкладке, оттуда можно сохранить вручную.
+export async function downloadFile(url, name) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const blob = await res.blob();
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = name || decodeURIComponent(url.split("/").pop().split("?")[0]) || "файл";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(href), 4000);
+  } catch {
+    window.open(url, "_blank", "noopener");
+  }
+}
+
+// Круглая кнопка «скачать» в углу фото. Стили инлайном — кнопка
+// самодостаточна и не зависит от globals.css.
+export function PhotoDownloadBtn({ url, name, style }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        downloadFile(url, name);
+      }}
+      title="Скачать фото"
+      aria-label="Скачать фото"
+      style={{
+        position: "absolute",
+        right: 8,
+        bottom: 8,
+        width: 34,
+        height: 34,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: "none",
+        borderRadius: "50%",
+        background: "rgba(255,255,255,.92)",
+        color: "#203A73",
+        fontSize: 16,
+        lineHeight: 1,
+        cursor: "pointer",
+        boxShadow: "0 2px 8px rgba(69,54,24,.25)",
+        ...style,
+      }}
+    >
+      ⬇
+    </button>
+  );
+}
+
 // Иконка по типу файла
 function fileIcon(f) {
   const t = (f?.type || "").toLowerCase();
@@ -138,14 +198,28 @@ export function AttachList({ files }) {
       {photos.length > 0 && (
         <div className="att-photos">
           {photos.map((f, i) => (
-            <a href={f.url} target="_blank" rel="noreferrer" className="att-photo" key={f.url || i}>
-              <img src={f.url} alt={f.name || "Фото"} loading="lazy" />
-            </a>
+            <span style={{ position: "relative", display: "inline-block" }} key={f.url || i}>
+              <a href={f.url} target="_blank" rel="noreferrer" className="att-photo">
+                <img src={f.url} alt={f.name || "Фото"} loading="lazy" />
+              </a>
+              <PhotoDownloadBtn url={f.url} name={f.name} />
+            </span>
           ))}
         </div>
       )}
       {docs.map((f, i) => (
-        <a href={f.url} target="_blank" rel="noreferrer" className="att-doc" key={f.url || i} download={f.name}>
+        <a
+          href={f.url}
+          target="_blank"
+          rel="noreferrer"
+          className="att-doc"
+          key={f.url || i}
+          onClick={(e) => {
+            // download для чужого домена не работает — качаем сами
+            e.preventDefault();
+            downloadFile(f.url, f.name);
+          }}
+        >
           <span className="att-ico">{fileIcon(f)}</span>
           <span className="att-name">{f.name}</span>
           <span className="att-size">{fmtSize(f.size)}</span>

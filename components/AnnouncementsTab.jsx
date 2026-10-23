@@ -9,7 +9,7 @@ import { PostChatInline } from "./PostChat";
 import { shareText, shareUrl } from "@/lib/share";
 import { sendNewsPush } from "@/lib/push";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
-import { AttachPicker, AttachList } from "./Attachments";
+import { AttachPicker, AttachList, PhotoDownloadBtn } from "./Attachments";
 
 // ===== Редактор объявления (создание и правка) =====
 function AnnouncementEditor({ open, initial, author, teacher, onClose, onSaved, toast }) {
@@ -184,9 +184,12 @@ function AnnouncementCard({
       </div>
       <div className="news-body"><RichText text={a.body} /></div>
       {a.image_url && (
-        <a href={a.image_url} target="_blank" rel="noopener noreferrer" className="news-photo">
-          <img src={a.image_url} alt="Фото к объявлению" loading="lazy" />
-        </a>
+        <span style={{ position: "relative", display: "block" }}>
+          <a href={a.image_url} target="_blank" rel="noopener noreferrer" className="news-photo">
+            <img src={a.image_url} alt="Фото к объявлению" loading="lazy" />
+          </a>
+          <PhotoDownloadBtn url={a.image_url} name="Фото к объявлению.jpg" style={{ right: 10, bottom: 10 }} />
+        </span>
       )}
       <AttachList files={a.files} />
       {/* Открыл объявление — значит прочитал: отметка ставится автоматически,
