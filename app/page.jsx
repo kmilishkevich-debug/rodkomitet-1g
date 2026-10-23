@@ -12,6 +12,7 @@ import ScheduleTab from "@/components/ScheduleTab";
 import TeacherTab from "@/components/TeacherTab";
 import PhotosTab from "@/components/PhotosTab";
 import UploadModal from "@/components/UploadModal";
+import PushNag from "@/components/PushNag";
 import LogoutModal from "@/components/LogoutModal";
 import { useFamily, loadSeen, saveSeen } from "@/components/FamilyPicker";
 import { familyNs, applyFamiliesFromDb } from "@/components/data";
@@ -708,6 +709,9 @@ export default function Page() {
           </main>
           </div>
           <BottomNav tab={tab} role={role} moneySub={moneySub} onTab={showTab} newsBadge={newsBadge} pollsBadge={pollsBadge} notesBadge={notesBadge} />
+          {/* Напоминание «включите уведомления» — каждому, у кого пуши
+              ещё не включены, при каждом заходе, пока не включит */}
+          <PushNag role={role} familyN={family?.n} toast={toast} />
         </div>
       )}
       <UploadModal open={upload.open} name={upload.name} sum={upload.sum} family={family} onClose={closeUpload} toast={toast} />

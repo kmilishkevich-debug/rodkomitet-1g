@@ -5,6 +5,7 @@ import NavIcon from "./NavIcons";
 import { FAMILIES_COUNT, FAMILY_CANONICAL_NS, fmt, familyNs, canonicalN } from "./data";
 import { isLive, savePoll, deletePoll, castVote } from "@/lib/supabase";
 import { shareText, shareUrl } from "@/lib/share";
+import { sendVoteReminderPush } from "@/lib/push";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
 import { useRefreshPause, useDraftAutosave, readDraft, clearDraft, confirmDiscard, isDirty } from "@/lib/formGuard";
 
@@ -182,6 +183,23 @@ function PollCard({ p, committee, teacher, canEdit, family, author, toast, onEdi
   const [sel, setSel] = useState([]); // выбранные option_id (single/multi)
   const [moneySum, setMoneySum] = useState(p.amount ?? "");
   const [whoOpen, setWhoOpen] = useState(false);
+  const [reminding, setReminding] = useState(false);
+
+  // Пуш-напоминание родителям: голосование ещё идёт, проголосуйте.
+  // Уходит всем родителям (адресно «только непроголосовавшим» нельзя:
+  // не у всех подписок указана семья). Кто уже голосовал — просто
+  // увидит итоги, повторно голос не примется.
+  const remind = async () => {
+    if (!window.confirm("Отправить всем родителям пуш-напоминание об этом голосовании?")) return;
+    setReminding(true);
+    const res = await sendVoteReminderPush({
+      body: `«${p.question}» — если ещё не голосовали, отдайте голос, пожалуйста`,
+      url: `/?tab=votes&poll=${p.id}`,
+    });
+    setReminding(false);
+    if (res?.ok) toast(`Напоминание отправлено (устройств: ${res.sent ?? 0})`);
+    else toast("Не получилось отправить: " + (res?.error || "ошибка"));
+  };
 
   const submitVote = async (fam, extra) => {
     try {
@@ -368,6 +386,11 @@ function PollCard({ p, committee, teacher, canEdit, family, author, toast, onEdi
           <button className="news-read-count" onClick={() => setWhoOpen(!whoOpen)} aria-expanded={whoOpen}>
             <Ic id="i-eye" /> Кто как проголосовал {whoOpen ? "▴" : "▾"}
           </button>
+          {state === "open" && notVoted.length > 0 && (
+            <button className="btn small white" style={{ marginTop: 8 }} onClick={remind} disabled={reminding}>
+              <Ic id="i-bell" /> {reminding ? "Отправляю…" : `Напомнить непроголосовавшим (${notVoted.length})`}
+            </button>
+          )}
           {whoOpen && (
             <div className="vote-who">
               {famVotes.flatMap((v) => {
