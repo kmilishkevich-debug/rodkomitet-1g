@@ -259,7 +259,8 @@ function ActivePolls({ polls, family, onTab }) {
   );
 }
 
-// ===== «Новости класса» — карточка справа от расписания (ТЗ редизайна) =====
+// ===== «Новости класса» — карточка в верхней части главной =====
+// (28.10.2026 поднята из колонки у расписания, чтобы родители видели сразу)
 // Последние обычные (не важные) объявления: важные показаны отдельной
 // карточкой выше, поэтому здесь не дублируются.
 function DashNews({ announcements, reads, family, onTab }) {
@@ -1837,6 +1838,9 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
       )}
 
       <ImportantNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
+      {/* Новости класса — высоко на главной (просьба 28.10.2026), чтобы
+          родители сразу видели свежие объявления, не листая вниз */}
+      <DashNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
       <BdayBanner ev={bdayEv} />
       <ScheduleChangeBanner
         activeOvs={schedOvs}
@@ -1943,8 +1947,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
         </div>
         <div className="dash-col-side">
-          {/* Новости класса — справа от расписания (ТЗ): последние обычные объявления */}
-          <DashNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
+          {/* Новости класса переехали выше — к важным объявлениям (28.10.2026) */}
           <div className="card cash-card reveal d3">
             <div className="dash-card-head">
               <img src="/icons/icon-piggy.webp" className="head-3d" alt="" />

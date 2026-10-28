@@ -2839,6 +2839,11 @@ button.chat-react-chip:hover{background:#D9E7FD}
   .chat-react-opt:hover{transform:none}
 }
 
+/* Реакции на само объявление (28.10.2026): тот же набор чипов,
+   что в переписке, но в потоке карточки новости */
+.news-reacts{margin:10px 0 2px;justify-content:flex-start}
+.news-reacts .chat-react-add{opacity:1}
+
 /* ===== Правка и удаление своих сообщений (23.10.2026) =====
    Кнопки ✎ и ✕ в строке с автором и временем; .chat-edit —
    поле правки вместо облачка; «· изменено» — приглушённая отметка. */

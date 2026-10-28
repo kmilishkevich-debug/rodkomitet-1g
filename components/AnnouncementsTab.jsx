@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { Ic } from "./Art";
 import NavIcon from "./NavIcons";
-import { FAMILIES_COUNT, familyNs } from "./data";
-import { isLive, saveAnnouncement, deleteAnnouncement, markRead } from "@/lib/supabase";
+import { FAMILIES_COUNT, familyNs, canonicalN } from "./data";
+import { isLive, saveAnnouncement, deleteAnnouncement, markRead, setAnnouncementReaction } from "@/lib/supabase";
 import FamilyPicker, { RichText, fmtNewsDate, familyName } from "./FamilyPicker";
 import { PostChatInline } from "./PostChat";
 import { shareText, shareUrl } from "@/lib/share";
@@ -127,12 +127,41 @@ function AnnouncementEditor({ open, initial, author, teacher, onClose, onSaved, 
   );
 }
 
+// Набор реакций — тот же, что в переписке и обсуждениях
+const REACTIONS = ["❤️", "👍", "😊", "😂", "😮", "🙏"];
+
 // ===== Карточка объявления =====
 function AnnouncementCard({
   a, seeReads, canEdit, family, reads, toast, onEdit, onReload,
-  onNeedFamily, postComments, chatClosed, onReloadComments,
+  onNeedFamily, postComments, chatClosed, onReloadComments, reactKey,
 }) {
   const [readsOpen, setReadsOpen] = useState(false);
+  const [reactOpen, setReactOpen] = useState(false);
+
+  // Реакции на само объявление (28.10.2026): {"t":"❤️","f18":"👍"} →
+  // чипы по эмодзи со счётчиком, как в обсуждениях.
+  const rx = a.reactions && typeof a.reactions === "object" ? a.reactions : {};
+  const myR = reactKey ? rx[reactKey] : null;
+  const rxGroups = {};
+  Object.values(rx).forEach((e) => { rxGroups[e] = (rxGroups[e] || 0) + 1; });
+
+  const react = async (emoji) => {
+    setReactOpen(false);
+    const apply = async (key) => {
+      try {
+        // Повторное нажатие своей эмодзи — убрать реакцию
+        await setAnnouncementReaction(a.id, key, rx[key] === emoji ? null : emoji);
+        onReload();
+      } catch (e) {
+        console.error(e);
+        toast(/set_announcement_reaction/i.test(e?.message || "")
+          ? "База ещё без реакций — запустите announcement-reactions-setup.sql"
+          : "Не получилось поставить реакцию");
+      }
+    };
+    if (!reactKey) { onNeedFamily((f) => apply("f" + canonicalN(f.n))); return; }
+    await apply(reactKey);
+  };
   const myRead = family && reads.some((r) => r.announcement_id === a.id && familyNs(family.n).includes(r.family_n));
   const whoRead = reads.filter((r) => r.announcement_id === a.id).sort((x, y) => x.family_n - y.family_n);
 
@@ -192,6 +221,47 @@ function AnnouncementCard({
         </span>
       )}
       <AttachList files={a.files} />
+      {/* Реакции на объявление: чипы с эмодзи + кнопка «поставить» */}
+      <div className="chat-reacts news-reacts">
+        {Object.keys(rxGroups).map((e) => (
+          <button
+            key={e}
+            className={"chat-react-chip" + (myR === e ? " mine" : "")}
+            onClick={() => react(e)}
+            title={myR === e ? "Убрать свою реакцию" : `Поставить ${e}`}
+            aria-label={myR === e ? `Убрать свою реакцию ${e}` : `Поставить реакцию ${e}`}
+          >
+            {e}{rxGroups[e] > 1 && <span className="chat-react-cnt">{rxGroups[e]}</span>}
+          </button>
+        ))}
+        {!myR && (
+          <button
+            className="chat-react-add"
+            onClick={() => setReactOpen(!reactOpen)}
+            aria-label="Поставить реакцию"
+            aria-expanded={reactOpen}
+            title="Поставить реакцию"
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
+              <circle cx="7" cy="7" r="5.4" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M4.9 8.2a2.7 2.7 0 0 0 4.2 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              <circle cx="5.4" cy="5.7" r=".85" fill="currentColor" />
+              <circle cx="8.6" cy="5.7" r=".85" fill="currentColor" />
+              <path d="M13 10.2v4M11 12.2h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
+        {reactOpen && (
+          <span className="chat-react-picker" role="menu" aria-label="Выбор реакции">
+            {REACTIONS.map((e) => (
+              <button key={e} role="menuitem" className="chat-react-opt"
+                onClick={() => react(e)} aria-label={`Реакция ${e}`}>
+                {e}
+              </button>
+            ))}
+          </span>
+        )}
+      </div>
       {/* Открыл объявление — значит прочитал: отметка ставится автоматически,
           кнопки «Прочитано» больше нет. Список прочитавших видят комитет
           и учитель (только по своим объявлениям). */}
@@ -323,6 +393,10 @@ export default function AnnouncementsTab({
     setFamOpen(true);
   };
 
+  // Ключ участника для реакций на объявления: учитель — "t",
+  // семья — "f<номер>"; без выбранной семьи сначала попросим выбрать её
+  const reactKey = teacher ? "t" : family?.n ? "f" + canonicalN(family.n) : null;
+
   return (
     <section id="tab-announcements">
       <div className="section-cover reveal" style={{ background: "var(--blue)" }}>
@@ -372,7 +446,7 @@ export default function AnnouncementsTab({
           seeReads={committee || (teacher && a.author === author)}
           canEdit={canEdit} family={family}
           reads={reads} toast={toast} onEdit={openEditor} onReload={onReload}
-          onNeedFamily={needFamily}
+          onNeedFamily={needFamily} reactKey={reactKey}
           postComments={postComments} chatClosed={chatClosed} onReloadComments={onReloadComments}
         />
       ))}
@@ -388,7 +462,7 @@ export default function AnnouncementsTab({
               seeReads={committee || (teacher && a.author === author)}
               canEdit={canEdit} family={family}
               reads={reads} toast={toast} onEdit={openEditor} onReload={onReload}
-              onNeedFamily={needFamily}
+              onNeedFamily={needFamily} reactKey={reactKey}
               postComments={postComments} chatClosed={chatClosed} onReloadComments={onReloadComments}
             />
           ))}
