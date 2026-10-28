@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { canonicalN, familyLabel } from "./data";
+import { stickerById } from "./stickers";
 
 // ===== Карточка «Сообщения от родителей» — мини-мессенджер =====
 // ТЗ от 23.10.2026 (TZ_parent_messages.docx, 27 разделов): мягкая мятная
@@ -85,6 +86,11 @@ export function fullWhen(iso) {
 // Текста нет → тип содержимого: «Фотография», «3 фотографии» или имя
 // документа. Пустого превью у сообщения с вложением не бывает.
 export function previewOf(m) {
+  if (m?.deleted_at) return "Сообщение удалено";
+  if (m?.sticker) {
+    const st = stickerById(m.sticker);
+    return st ? `Стикер: ${st.label}` : "Стикер";
+  }
   const t = (m?.text || "").trim();
   if (t) return t;
   const files = Array.isArray(m?.files) ? m.files : [];

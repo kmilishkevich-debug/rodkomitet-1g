@@ -2860,3 +2860,396 @@ button.chat-react-chip:hover{background:#D9E7FD}
 .chat-msg.mine .chat-edit{align-items:flex-end}
 .chat-edit .chat-input{width:100%}
 .chat-edit-actions{display:flex;gap:6px;justify-content:flex-end}
+
+/* ===== Новый личный чат семьи и учителя (редизайн 28.10.2026) ===== */
+/* Светлый мессенджер по ТЗ: лавандовые исходящие, белые входящие,
+   время внутри пузыря, честные статусы, стикеры «Наш пушистик». */
+:root{
+  --chat-page-bg:#F4F0E7;
+  --chat-surface:#FFFFFF;
+  --chat-history-bg:#FAF8F3;
+  --chat-text:#171C43;
+  --chat-text-secondary:#626B83;
+  --chat-text-muted:#737D94;
+  --chat-primary:#245BFF;
+  --chat-primary-hover:#194CE6;
+  --chat-outgoing:#EAE5FF;
+  --chat-incoming:#FFFFFF;
+  --chat-border:#E8EBF2;
+  --chat-control-bg:#F3F4F8;
+  --chat-date-bg:#EFEEF3;
+  --chat-reaction-active:#E8EFFF;
+  --chat-error:#C83A4A;
+}
+
+.nchat-overlay{padding:24px}
+.nchat-modal{
+  position:relative;display:flex;flex-direction:column;
+  width:680px;max-width:calc(100vw - 48px);
+  height:min(880px,calc(100dvh - 48px));
+  background:var(--chat-surface);border-radius:28px;overflow:hidden;
+  box-shadow:0 20px 60px rgba(23,28,67,.12);
+  color:var(--chat-text);
+}
+
+/* --- Шапка --- */
+.nchat-head{
+  display:flex;align-items:center;gap:12px;flex:0 0 auto;
+  padding:14px 18px 10px;background:var(--chat-surface);
+}
+.nchat-back{
+  display:none;width:40px;height:40px;border:none;border-radius:50%;
+  background:transparent;color:var(--chat-text);cursor:pointer;
+  align-items:center;justify-content:center;flex:0 0 auto;
+}
+.nchat-back:active{background:var(--chat-control-bg)}
+.nchat-ava{
+  width:44px;height:44px;border-radius:50%;flex:0 0 auto;
+  background:var(--chat-primary);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:19px;font-weight:700;
+}
+.nchat-head-txt{flex:1;min-width:0}
+.nchat-name{
+  font-size:18px;font-weight:700;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.nchat-role{font-size:13px;color:var(--chat-text-secondary);margin-top:1px}
+.nchat-close{
+  width:40px;height:40px;border:none;border-radius:50%;flex:0 0 auto;
+  background:var(--chat-control-bg);color:var(--chat-text-secondary);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:background .15s;
+}
+.nchat-close:hover{background:var(--chat-border)}
+.nchat-privacy{
+  display:flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;
+  padding:0 18px 9px;font-size:12px;color:var(--chat-text-muted);
+  background:var(--chat-surface);border-bottom:1px solid var(--chat-border);
+}
+
+/* --- История --- */
+.nchat-thread{
+  flex:1;overflow-y:auto;background:var(--chat-history-bg);
+  padding:14px 16px 10px;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.nchat-empty{
+  margin:auto;max-width:360px;text-align:center;padding:40px 10px;
+  color:var(--chat-text-muted);font-size:14px;line-height:1.5;
+}
+
+/* Разделитель дат и «Новые сообщения» */
+.nchat-day{display:flex;justify-content:center;margin:20px 0}
+.nchat-day span{
+  background:var(--chat-date-bg);color:var(--chat-text-secondary);
+  border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;
+}
+.nchat-new{margin:14px 0}
+.nchat-new span{background:var(--chat-reaction-active);color:var(--chat-primary)}
+
+/* --- Сообщение --- */
+.nchat-msg{
+  position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:4px;
+  margin-top:16px;scroll-margin:70px;
+}
+.nchat-msg.follow{margin-top:6px}
+.nchat-msg.mine{justify-content:flex-end}
+.nchat-msg.theirs{justify-content:flex-start}
+
+.nchat-bubble{
+  position:relative;max-width:78%;padding:12px 16px;border-radius:18px;
+  font-size:16px;line-height:23px;font-weight:400;color:var(--chat-text);
+  display:flex;flex-direction:column;gap:6px;
+  word-break:break-word;overflow-wrap:anywhere;
+}
+.nchat-msg.mine .nchat-bubble{background:var(--chat-outgoing);border-bottom-right-radius:6px}
+.nchat-msg.theirs .nchat-bubble{
+  background:var(--chat-incoming);border:1px solid #ECEEF3;border-bottom-left-radius:6px;
+}
+.nchat-text{white-space:pre-wrap}
+.nchat-deleted{
+  color:var(--chat-text-muted);font-style:italic;font-size:14px;
+}
+
+/* Время и галочки внутри пузыря */
+.nchat-meta{
+  display:flex;align-items:center;gap:4px;align-self:flex-end;
+  margin:-2px -4px -4px 0;
+}
+.nchat-time{font-size:12px;color:var(--chat-text-muted)}
+.nchat-edited{font-size:12px;color:var(--chat-text-muted)}
+.nchat-checks{display:inline-flex;color:#9AA3B8}
+.nchat-checks.read{color:var(--chat-primary)}
+
+/* Подсветка при переходе по цитате */
+.nchat-flash .nchat-bubble,
+.nchat-flash .nchat-sticker-wrap{animation:nchatFlash 1.6s ease}
+@keyframes nchatFlash{
+  0%,60%{box-shadow:0 0 0 3px var(--chat-reaction-active);background-color:var(--chat-reaction-active)}
+  100%{box-shadow:none}
+}
+
+/* --- Цитата внутри пузыря --- */
+.nchat-quote{
+  display:flex;flex-direction:column;gap:1px;text-align:left;
+  border:none;border-left:3px solid var(--chat-primary);cursor:pointer;
+  background:rgba(23,28,67,.05);border-radius:8px;padding:6px 10px;
+  font:inherit;color:inherit;max-width:100%;
+}
+.nchat-quote-author{font-size:13px;font-weight:700;color:var(--chat-primary)}
+.nchat-quote-text{
+  font-size:13px;color:var(--chat-text-secondary);
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+.nchat-quote-dead{cursor:default;border-left-color:#C3C9D6}
+.nchat-quote-dead .nchat-quote-text{font-style:italic}
+
+/* --- Стикер-сообщение: без пузыря --- */
+.nchat-sticker-wrap{
+  display:flex;flex-direction:column;gap:3px;border-radius:18px;
+  max-width:180px;
+}
+.nchat-msg.mine .nchat-sticker-wrap{align-items:flex-end}
+.nchat-sticker{
+  max-width:180px;max-height:200px;object-fit:contain;display:block;
+}
+.nchat-sticker-meta{
+  display:flex;align-items:center;gap:4px;font-size:12px;
+  color:var(--chat-text-muted);padding:0 4px;
+}
+.nchat-sticker-miss{
+  background:var(--chat-date-bg);border-radius:14px;padding:10px 14px;
+  font-size:14px;color:var(--chat-text-secondary);
+}
+
+/* --- Кнопка «три точки» --- */
+.nchat-more{
+  width:30px;height:30px;border:none;border-radius:50%;flex:0 0 auto;
+  background:transparent;color:var(--chat-text-muted);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .12s,background .12s;order:-1;
+}
+.nchat-msg.theirs .nchat-more{order:1}
+.nchat-msg:hover .nchat-more,
+.nchat-more[aria-expanded="true"]{opacity:1}
+.nchat-more:hover{background:var(--chat-date-bg)}
+@media (hover:none){
+  .nchat-more{display:none} /* на телефоне меню открывается долгим нажатием */
+}
+
+/* --- Реакции под сообщением --- */
+.nchat-reacts{
+  flex-basis:100%;display:flex;gap:4px;margin-top:-2px;
+}
+.nchat-msg.mine .nchat-reacts{justify-content:flex-end;padding-right:8px}
+.nchat-msg.theirs .nchat-reacts{padding-left:8px}
+.nchat-react-chip{
+  height:26px;min-width:26px;padding:0 7px;border-radius:13px;
+  background:var(--chat-surface);border:1px solid var(--chat-border);
+  font-size:14px;line-height:24px;display:inline-flex;align-items:center;justify-content:center;
+}
+.nchat-react-chip.mine{
+  background:var(--chat-reaction-active);border-color:var(--chat-primary);cursor:pointer;
+}
+
+/* --- Контекстное меню --- */
+.nchat-menu{
+  position:absolute;top:calc(100% - 6px);z-index:30;min-width:220px;
+  background:var(--chat-surface);border-radius:16px;padding:8px;
+  box-shadow:0 12px 36px rgba(23,28,67,.18);border:1px solid var(--chat-border);
+}
+.nchat-menu.up{top:auto;bottom:calc(100% - 6px)}
+.nchat-msg.mine .nchat-menu{right:0}
+.nchat-msg.theirs .nchat-menu{left:0}
+.nchat-menu-reacts{
+  display:flex;gap:2px;justify-content:space-between;
+  padding:2px 2px 8px;border-bottom:1px solid var(--chat-border);margin-bottom:6px;
+}
+.nchat-menu-react{
+  width:38px;height:38px;border:none;border-radius:50%;background:transparent;
+  font-size:20px;cursor:pointer;transition:background .12s,transform .12s;
+}
+.nchat-menu-react:hover{background:var(--chat-control-bg);transform:scale(1.12)}
+.nchat-menu>button:not(.nchat-menu-react){
+  display:block;width:100%;text-align:left;border:none;background:transparent;
+  padding:9px 12px;border-radius:10px;font-size:14px;font-weight:600;
+  color:var(--chat-text);cursor:pointer;font-family:inherit;
+}
+.nchat-menu>button:not(.nchat-menu-react):hover{background:var(--chat-control-bg)}
+.nchat-menu>button.danger{color:var(--chat-error)}
+
+/* --- Правка на месте --- */
+.nchat-editbox{
+  display:flex;flex-direction:column;gap:6px;width:min(420px,86%);
+  background:var(--chat-surface);border:1px solid var(--chat-border);
+  border-radius:18px;padding:12px 14px;
+}
+.nchat-edit-note{font-size:12px;font-weight:700;color:var(--chat-primary)}
+.nchat-edit-input{
+  border:1px solid var(--chat-border);border-radius:12px;padding:8px 10px;
+  font:inherit;font-size:15px;resize:vertical;min-height:60px;color:var(--chat-text);
+}
+.nchat-edit-actions{display:flex;gap:6px;justify-content:flex-end}
+
+/* --- Статусная строка под последним исходящим --- */
+.nchat-status-line{
+  text-align:right;font-size:12px;color:var(--chat-text-muted);
+  margin:4px 6px 0;
+}
+.nchat-status-line.read{color:var(--chat-primary)}
+
+/* --- Кнопка «вниз», ошибка, превью ответа, вложения --- */
+.nchat-down{
+  position:absolute;right:18px;bottom:88px;z-index:20;
+  border:none;border-radius:999px;padding:9px 15px;cursor:pointer;
+  background:var(--chat-primary);color:#fff;font-size:14px;font-weight:700;
+  box-shadow:0 6px 18px rgba(36,91,255,.35);font-family:inherit;
+}
+.nchat-fail{
+  flex:0 0 auto;display:flex;align-items:center;gap:10px;
+  padding:8px 16px;font-size:13px;font-weight:600;color:var(--chat-error);
+  background:#FDF1F2;border-top:1px solid #F3D9DC;
+}
+.nchat-fail button{
+  border:1px solid var(--chat-error);background:var(--chat-surface);
+  color:var(--chat-error);border-radius:999px;padding:4px 12px;
+  font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+}
+.nchat-replybar{
+  flex:0 0 auto;display:flex;align-items:center;gap:10px;
+  padding:8px 16px;background:var(--chat-surface);
+  border-top:1px solid var(--chat-border);
+}
+.nchat-replybar-txt{
+  flex:1;min-width:0;display:flex;flex-direction:column;
+  border-left:3px solid var(--chat-primary);padding-left:10px;
+}
+.nchat-replybar-txt b{font-size:13px;color:var(--chat-primary)}
+.nchat-replybar-txt span{
+  font-size:13px;color:var(--chat-text-secondary);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.nchat-replybar>button{
+  width:30px;height:30px;border:none;border-radius:50%;flex:0 0 auto;
+  background:var(--chat-control-bg);color:var(--chat-text-secondary);cursor:pointer;
+}
+.nchat-attachbar{
+  flex:0 0 auto;padding:10px 16px;background:var(--chat-surface);
+  border-top:1px solid var(--chat-border);max-height:220px;overflow-y:auto;
+}
+
+/* --- Панель ввода --- */
+.nchat-inputbar{
+  flex:0 0 auto;display:flex;align-items:flex-end;gap:8px;
+  padding:10px 12px;background:var(--chat-surface);
+  border-top:1px solid var(--chat-border);
+}
+.nchat-plus,.nchat-stick-btn{
+  width:44px;height:44px;border:none;border-radius:50%;flex:0 0 auto;
+  background:var(--chat-control-bg);color:var(--chat-text-secondary);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:background .15s,color .15s;
+}
+.nchat-plus:hover,.nchat-stick-btn:hover{background:var(--chat-border)}
+.nchat-plus.on,.nchat-stick-btn.on{
+  background:var(--chat-reaction-active);color:var(--chat-primary);
+}
+.nchat-input{
+  flex:1;min-width:0;min-height:48px;max-height:135px;resize:none;
+  border:1px solid #E5E8F0;border-radius:24px;padding:12px 16px;
+  font-family:inherit;font-size:16px;line-height:23px;color:var(--chat-text);
+  background:var(--chat-surface);outline:none;
+}
+.nchat-input:focus{border-color:var(--chat-primary)}
+.nchat-input::placeholder{color:var(--chat-text-muted)}
+.nchat-send{
+  width:48px;height:48px;border:none;border-radius:50%;flex:0 0 auto;
+  background:var(--chat-primary);color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px rgba(36,91,255,.3);
+  transition:background .15s,opacity .15s;
+}
+.nchat-send:hover:not(:disabled){background:var(--chat-primary-hover)}
+.nchat-send:disabled{opacity:.4;cursor:default;box-shadow:none}
+
+/* --- Панель стикеров --- */
+.nchat-stickers{
+  flex:0 0 auto;height:300px;display:flex;flex-direction:column;
+  background:var(--chat-surface);border-top:1px solid var(--chat-border);
+}
+.nchat-stick-tabs{
+  display:flex;gap:6px;padding:10px 12px 6px;flex:0 0 auto;
+}
+.nchat-stick-tab{
+  height:36px;padding:0 14px;border:none;border-radius:999px;
+  background:var(--chat-control-bg);color:var(--chat-text-secondary);
+  font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:background .15s,color .15s;
+}
+.nchat-stick-tab.on{background:var(--chat-primary);color:#fff}
+.nchat-stick-grid{
+  flex:1;overflow-y:auto;display:grid;gap:12px;
+  grid-template-columns:repeat(3,1fr);padding:8px 14px 14px;
+  align-content:start;
+}
+@media (min-width:520px){
+  .nchat-stick-grid{grid-template-columns:repeat(4,1fr)}
+}
+.nchat-stick-cell{
+  border:none;background:transparent;border-radius:16px;padding:8px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .12s;min-height:90px;
+}
+.nchat-stick-cell:hover{background:#F3F5FC}
+.nchat-stick-cell:disabled{opacity:.5}
+.nchat-stick-cell img{max-width:100%;max-height:110px;object-fit:contain}
+.nchat-stick-empty{flex:1;display:flex;align-items:center;justify-content:center;
+  text-align:center;padding:20px;font-size:14px}
+.nchat-emoji-grid{
+  flex:1;overflow-y:auto;display:grid;gap:4px;
+  grid-template-columns:repeat(auto-fill,minmax(42px,1fr));
+  padding:8px 14px 14px;align-content:start;
+}
+.nchat-emoji{
+  border:none;background:transparent;border-radius:10px;height:42px;
+  font-size:24px;cursor:pointer;transition:background .12s;
+}
+.nchat-emoji:hover{background:var(--chat-control-bg)}
+
+/* --- «Информация о сообщении» --- */
+.nchat-info-overlay{
+  position:absolute;inset:0;z-index:40;background:rgba(23,28,67,.25);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.nchat-info{
+  background:var(--chat-surface);border-radius:20px;padding:20px 22px;
+  width:100%;max-width:340px;box-shadow:0 16px 48px rgba(23,28,67,.2);
+}
+.nchat-info h4{font-size:16px;margin-bottom:12px;color:var(--chat-text)}
+.nchat-info-row{
+  display:flex;justify-content:space-between;gap:12px;
+  font-size:14px;padding:7px 0;border-bottom:1px solid var(--chat-border);
+}
+.nchat-info-row span{color:var(--chat-text-secondary)}
+.nchat-info-row b{color:var(--chat-text);text-align:right}
+.nchat-info-note{font-size:12.5px;margin:10px 0 2px;line-height:1.45}
+
+/* --- Телефон: чат во весь экран --- */
+@media (max-width:640px){
+  .nchat-overlay{padding:0}
+  .nchat-modal{
+    width:100%;max-width:none;height:100dvh;border-radius:0;box-shadow:none;
+  }
+  .nchat-back{display:flex}
+  .nchat-close{display:none}
+  .nchat-bubble{max-width:86%}
+  .nchat-editbox{width:min(420px,92%)}
+  .nchat-stickers{height:280px}
+  .nchat-down{bottom:80px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .nchat-flash .nchat-bubble,.nchat-flash .nchat-sticker-wrap{animation:none}
+  .nchat-menu-react:hover{transform:none}
+}

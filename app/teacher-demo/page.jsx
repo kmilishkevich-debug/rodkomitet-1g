@@ -61,8 +61,16 @@ export default function TeacherDemoPage() {
   // четвёртая переписка — проверка обрезки до трёх строк на главной.
   const familyMessages = [
     { id: 1, family_n: 3, from_teacher: false, read_teacher: false, author: "Кристина Милишкевич", text: "Добрый день! Ева завтра будет после врача, можно прийти ко второму уроку?", created_at: `${today}T08:10:00` },
-    { id: 2, family_n: 7, from_teacher: true, read_teacher: true, author: "Виктория Петровна", text: "Конечно, выздоравливайте!", created_at: iso(-1) + "T15:30:00",
-      reactions: { family: "❤️" } },
+    // Семья №7 — витрина нового чата: цитата, стикер, правка, удаление,
+    // время прочтения (read_at) и непрочитанный ответ.
+    { id: 6, family_n: 7, from_teacher: false, read_teacher: true, author: "Елена Соловьёва", text: "Добрый день! Миша приболел, завтра нас не будет.", created_at: iso(-1) + "T15:12:00" },
+    { id: 2, family_n: 7, from_teacher: true, read_teacher: true, read_family: true, author: "Виктория Петровна", text: "Конечно, выздоравливайте!", created_at: iso(-1) + "T15:30:00",
+      reply_to: 6, reactions: { family: "❤️" } },
+    { id: 7, family_n: 7, from_teacher: false, read_teacher: true, author: "Елена Соловьёва", text: "", sticker: "thanks", created_at: iso(-1) + "T15:33:00" },
+    { id: 8, family_n: 7, from_teacher: true, read_family: true, read_at: `${today}T09:30:00`, author: "Виктория Петровна", text: "Передайте Мише, что мы его ждём! Домашнее задание пришлю вечером.", created_at: `${today}T09:12:00` },
+    { id: 11, family_n: 7, from_teacher: true, read_family: true, read_at: `${today}T09:30:00`, author: "Виктория Петровна", text: "", sticker: "good-day", created_at: `${today}T09:13:00` },
+    { id: 9, family_n: 7, from_teacher: false, read_teacher: true, author: "Елена Соловьёва", text: "", deleted_at: `${today}T09:35:00`, created_at: `${today}T09:34:00` },
+    { id: 10, family_n: 7, from_teacher: false, read_teacher: false, author: "Елена Соловьёва", text: "Спасибо большое! Обязательно передам 😊", edited_at: `${today}T09:41:00`, created_at: `${today}T09:40:00` },
     { id: 3, family_n: 12, from_teacher: false, read_teacher: false, author: "Анна К.", text: "И во сколько сбор?", created_at: `${today}T09:04:00`,
       reactions: { teacher: "👍" } },
     { id: 4, family_n: 12, from_teacher: false, read_teacher: false, author: "Анна К.", text: "Подскажите, что взять на экскурсию?", created_at: `${today}T09:05:00`,
