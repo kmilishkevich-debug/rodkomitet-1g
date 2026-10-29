@@ -340,15 +340,26 @@ export function PostChatModal({
   );
 }
 
-// ===== Раскрывающийся блок для родителей =====
+// ===== Раскрывающийся блок для родителей (и учителя в общей ленте) =====
 // Кнопка «Обсуждение (N)» под публикацией; по нажатию раскрывается чат.
 // family — выбранная семья ({n, child}); если её нет, onNeedFamily
 // откроет выбор семьи и после выбора можно писать.
+// teacher (29.10.2026) — учитель смотрит объявления в общей ленте, а не
+// только в своей модалке: без этого флага реакция просила «выбрать семью».
+// С флагом он участвует как в модалке: ключ реакций "t", пишет от своего
+// имени (authorName), правит свои и удаляет любые сообщения.
 export function PostChatInline({
   postKind, postId, comments, closedList, family, onNeedFamily, onSent, toast, pushUrl,
+  teacher, authorName,
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Учитель раскрыл обсуждение — родительские сообщения прочитаны
+  // (так же, как при открытии его модалки)
+  useEffect(() => {
+    if (teacher && open && postId) markPostCommentsRead(postKind, postId);
+  }, [teacher, open, postKind, postId, comments?.length]);
 
   if (comments === null || comments === undefined) return null; // таблицы ещё нет
 
@@ -356,19 +367,29 @@ export function PostChatInline({
   const closed = isChatClosed(closedList, postKind, postId);
 
   const send = async (body) => {
-    if (!family?.n) { onNeedFamily?.(); return false; }
+    if (!teacher && !family?.n) { onNeedFamily?.(); return false; }
     setBusy(true);
     try {
-      await sendPostComment({
-        post_kind: postKind, post_id: postId, family_n: family.n,
-        from_teacher: false, author: `Семья · ${familyLabel(family.n)}`, text: body,
-      });
+      await sendPostComment(
+        teacher
+          ? {
+              post_kind: postKind, post_id: postId, family_n: null,
+              from_teacher: true, author: authorName || "Учитель", text: body,
+            }
+          : {
+              post_kind: postKind, post_id: postId, family_n: family.n,
+              from_teacher: false, author: `Семья · ${familyLabel(family.n)}`, text: body,
+            }
+      );
       onSent?.();
-      // Учителю — пуш о новом сообщении (родителям пуши не шлём)
-      sendCommentPush({
-        body: body.length > 90 ? body.slice(0, 90) + "…" : body,
-        url: pushUrl || "/?tab=teacher",
-      }).catch(() => {});
+      // Учителю — пуш о новом сообщении (родителям пуши не шлём,
+      // а учитель сам себе — тем более)
+      if (!teacher) {
+        sendCommentPush({
+          body: body.length > 90 ? body.slice(0, 90) + "…" : body,
+          url: pushUrl || "/?tab=teacher",
+        }).catch(() => {});
+      }
       return true;
     } catch (e) {
       console.error(e);
@@ -393,20 +414,35 @@ export function PostChatInline({
         <div className="pc-panel">
           <ChatBody
             thread={thread}
-            closed={closed}
+            closed={teacher ? false /* учитель пишет всегда, даже в закрытое */ : closed}
             canWrite={true}
-            canDeleteMsg={(m) => !m.from_teacher && family?.n && familyNs(family.n).includes(m.family_n)}
-            canEditMsg={(m) => !m.from_teacher && !!family?.n && familyNs(family.n).includes(m.family_n)}
-            placeholder="Написать в обсуждение…"
-            emptyText="Сообщений пока нет. Напишите первым — увидят учитель и все семьи класса."
+            canDeleteMsg={
+              teacher
+                ? () => true
+                : (m) => !m.from_teacher && family?.n && familyNs(family.n).includes(m.family_n)
+            }
+            canEditMsg={
+              teacher
+                ? (m) => m.from_teacher /* учитель правит только свои */
+                : (m) => !m.from_teacher && !!family?.n && familyNs(family.n).includes(m.family_n)
+            }
+            placeholder={teacher ? "Ответить родителям…" : "Написать в обсуждение…"}
+            emptyText={
+              teacher
+                ? "Сообщений пока нет. Родители видят это обсуждение под публикацией и могут написать первыми."
+                : "Сообщений пока нет. Напишите первым — увидят учитель и все семьи класса."
+            }
             onSend={send}
             onDelete={async (id) => { await deletePostComment(id); onSent?.(); }}
             busy={busy}
             toast={toast}
-            reactKey={family?.n ? "f" + canonicalN(family.n) : null}
+            reactKey={teacher ? "t" : family?.n ? "f" + canonicalN(family.n) : null}
             onNeedFamily={onNeedFamily}
             onReacted={onSent}
           />
+          {teacher && closed && (
+            <p className="muted pc-closed-note">Обсуждение закрыто: родители видят чат, но писать не могут.</p>
+          )}
           {!closed && (
             <p className="muted pc-privacy">Видят все семьи класса и учитель</p>
           )}

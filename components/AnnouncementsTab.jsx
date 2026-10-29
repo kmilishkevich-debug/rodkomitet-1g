@@ -134,6 +134,7 @@ const REACTIONS = ["❤️", "👍", "😊", "😂", "😮", "🙏"];
 function AnnouncementCard({
   a, seeReads, canEdit, family, reads, toast, onEdit, onReload,
   onNeedFamily, postComments, chatClosed, onReloadComments, reactKey,
+  teacher, author,
 }) {
   const [readsOpen, setReadsOpen] = useState(false);
   const [reactOpen, setReactOpen] = useState(false);
@@ -285,13 +286,17 @@ function AnnouncementCard({
           ))}
         </div>
       )}
-      {/* Обсуждение объявления: общий чат семей и учителя */}
+      {/* Обсуждение объявления: общий чат семей и учителя. Учитель тоже
+          читает ленту здесь, поэтому ему — реакции и ответы от имени «t»
+          (раньше его просили «выбрать семью», 29.10.2026) */}
       <PostChatInline
         postKind="ann"
         postId={a.id}
         comments={postComments}
         closedList={chatClosed}
         family={family}
+        teacher={teacher}
+        authorName={author}
         onNeedFamily={() => onNeedFamily(() => {})}
         onSent={onReloadComments}
         toast={toast}
@@ -447,6 +452,7 @@ export default function AnnouncementsTab({
           canEdit={canEdit} family={family}
           reads={reads} toast={toast} onEdit={openEditor} onReload={onReload}
           onNeedFamily={needFamily} reactKey={reactKey}
+          teacher={teacher} author={author}
           postComments={postComments} chatClosed={chatClosed} onReloadComments={onReloadComments}
         />
       ))}
@@ -463,6 +469,7 @@ export default function AnnouncementsTab({
               canEdit={canEdit} family={family}
               reads={reads} toast={toast} onEdit={openEditor} onReload={onReload}
               onNeedFamily={needFamily} reactKey={reactKey}
+              teacher={teacher} author={author}
               postComments={postComments} chatClosed={chatClosed} onReloadComments={onReloadComments}
             />
           ))}
