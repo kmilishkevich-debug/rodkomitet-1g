@@ -2895,7 +2895,7 @@ button.chat-react-chip:hover{background:#D9E7FD}
 /* --- Шапка --- */
 .nchat-head{
   display:flex;align-items:center;gap:12px;flex:0 0 auto;
-  padding:14px 18px 10px;background:var(--chat-surface);
+  padding:12px 18px 6px;background:var(--chat-surface);
 }
 .nchat-back{
   display:none;width:40px;height:40px;border:none;border-radius:50%;
@@ -2904,19 +2904,19 @@ button.chat-react-chip:hover{background:#D9E7FD}
 }
 .nchat-back:active{background:var(--chat-control-bg)}
 .nchat-ava{
-  width:44px;height:44px;border-radius:50%;flex:0 0 auto;
-  background:var(--chat-primary);color:#fff;
+  width:46px;height:46px;border-radius:50%;flex:0 0 auto;
+  background:var(--chat-outgoing);color:var(--chat-primary);
   display:flex;align-items:center;justify-content:center;
-  font-size:19px;font-weight:700;
+  font-size:16px;font-weight:700;letter-spacing:.02em;
 }
 .nchat-head-txt{flex:1;min-width:0}
 .nchat-name{
-  font-size:18px;font-weight:700;line-height:1.25;
+  font-size:18px;font-weight:700;line-height:24px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.nchat-role{font-size:13px;color:var(--chat-text-secondary);margin-top:1px}
+.nchat-role{font-size:13px;line-height:18px;color:var(--chat-text-secondary);margin-top:1px}
 .nchat-close{
-  width:40px;height:40px;border:none;border-radius:50%;flex:0 0 auto;
+  width:44px;height:44px;border:none;border-radius:50%;flex:0 0 auto;
   background:var(--chat-control-bg);color:var(--chat-text-secondary);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
   transition:background .15s;
@@ -2924,7 +2924,7 @@ button.chat-react-chip:hover{background:#D9E7FD}
 .nchat-close:hover{background:var(--chat-border)}
 .nchat-privacy{
   display:flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;
-  padding:0 18px 9px;font-size:12px;color:var(--chat-text-muted);
+  padding:6px 18px;font-size:12px;line-height:16px;color:var(--chat-text-muted);
   background:var(--chat-surface);border-bottom:1px solid var(--chat-border);
 }
 
@@ -2940,18 +2940,18 @@ button.chat-react-chip:hover{background:#D9E7FD}
 }
 
 /* Разделитель дат и «Новые сообщения» */
-.nchat-day{display:flex;justify-content:center;margin:20px 0}
+.nchat-day{display:flex;justify-content:center;margin:16px 0}
 .nchat-day span{
   background:var(--chat-date-bg);color:var(--chat-text-secondary);
-  border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;
+  border-radius:999px;padding:5px 10px;font-size:12px;line-height:16px;font-weight:500;
 }
-.nchat-new{margin:14px 0}
+.nchat-new{margin:12px 0}
 .nchat-new span{background:var(--chat-reaction-active);color:var(--chat-primary)}
 
 /* --- Сообщение --- */
 .nchat-msg{
-  position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:4px;
-  margin-top:16px;scroll-margin:70px;
+  position:relative;display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px;
+  margin-top:14px;scroll-margin:70px;
 }
 .nchat-msg.follow{margin-top:6px}
 .nchat-msg.mine{justify-content:flex-end}
@@ -2959,7 +2959,7 @@ button.chat-react-chip:hover{background:#D9E7FD}
 
 .nchat-bubble{
   position:relative;max-width:78%;padding:12px 16px;border-radius:18px;
-  font-size:16px;line-height:23px;font-weight:400;color:var(--chat-text);
+  font-family:var(--font-ui);font-size:16px;line-height:24px;font-weight:500;color:var(--chat-text);
   display:flex;flex-direction:column;gap:6px;
   word-break:break-word;overflow-wrap:anywhere;
 }
@@ -2977,7 +2977,7 @@ button.chat-react-chip:hover{background:#D9E7FD}
   display:flex;align-items:center;gap:4px;align-self:flex-end;
   margin:-2px -4px -4px 0;
 }
-.nchat-time{font-size:12px;color:var(--chat-text-muted)}
+.nchat-time{font-size:12px;line-height:16px;color:var(--chat-text-muted)}
 .nchat-edited{font-size:12px;color:var(--chat-text-muted)}
 .nchat-checks{display:inline-flex;color:#9AA3B8}
 .nchat-checks.read{color:var(--chat-primary)}
@@ -3029,9 +3029,11 @@ button.chat-react-chip:hover{background:#D9E7FD}
   background:transparent;color:var(--chat-text-muted);cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   opacity:0;transition:opacity .12s,background .12s;order:-1;
+  align-self:flex-start;margin-top:4px;
 }
 .nchat-msg.theirs .nchat-more{order:1}
 .nchat-msg:hover .nchat-more,
+.nchat-more:focus-visible,
 .nchat-more[aria-expanded="true"]{opacity:1}
 .nchat-more:hover{background:var(--chat-date-bg)}
 @media (hover:none){
@@ -3142,7 +3144,7 @@ button.chat-react-chip:hover{background:#D9E7FD}
 /* --- Панель ввода --- */
 .nchat-inputbar{
   flex:0 0 auto;display:flex;align-items:flex-end;gap:8px;
-  padding:10px 12px;background:var(--chat-surface);
+  padding:12px;background:var(--chat-surface);
   border-top:1px solid var(--chat-border);
 }
 .nchat-plus,.nchat-stick-btn{
@@ -3156,13 +3158,13 @@ button.chat-react-chip:hover{background:#D9E7FD}
   background:var(--chat-reaction-active);color:var(--chat-primary);
 }
 .nchat-input{
-  flex:1;min-width:0;min-height:48px;max-height:135px;resize:none;
+  flex:1;min-width:0;min-height:48px;max-height:144px;resize:none;
   border:1px solid #E5E8F0;border-radius:24px;padding:12px 16px;
-  font-family:inherit;font-size:16px;line-height:23px;color:var(--chat-text);
+  font-family:var(--font-ui);font-size:16px;line-height:24px;font-weight:500;color:var(--chat-text);
   background:var(--chat-surface);outline:none;
 }
 .nchat-input:focus{border-color:var(--chat-primary)}
-.nchat-input::placeholder{color:var(--chat-text-muted)}
+.nchat-input::placeholder{color:var(--chat-text-muted);font-weight:400}
 .nchat-send{
   width:48px;height:48px;border:none;border-radius:50%;flex:0 0 auto;
   background:var(--chat-primary);color:#fff;cursor:pointer;
@@ -3175,35 +3177,39 @@ button.chat-react-chip:hover{background:#D9E7FD}
 
 /* --- Панель стикеров --- */
 .nchat-stickers{
-  flex:0 0 auto;height:300px;display:flex;flex-direction:column;
+  flex:0 0 auto;height:272px;display:flex;flex-direction:column;
   background:var(--chat-surface);border-top:1px solid var(--chat-border);
 }
 .nchat-stick-tabs{
   display:flex;gap:6px;padding:10px 12px 6px;flex:0 0 auto;
 }
 .nchat-stick-tab{
-  height:36px;padding:0 14px;border:none;border-radius:999px;
+  height:38px;padding:0 14px;border:1px solid transparent;border-radius:999px;
   background:var(--chat-control-bg);color:var(--chat-text-secondary);
-  font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+  font-size:14px;line-height:20px;font-weight:600;cursor:pointer;font-family:inherit;
   transition:background .15s,color .15s;
 }
 .nchat-stick-tab.on{background:var(--chat-primary);color:#fff}
+.nchat-stick-tab:focus{outline:none}
+.nchat-stick-tab:focus-visible{outline:2px solid var(--chat-primary);outline-offset:3px}
 .nchat-stick-grid{
-  flex:1;overflow-y:auto;display:grid;gap:12px;
-  grid-template-columns:repeat(3,1fr);padding:8px 14px 14px;
+  flex:1;overflow-y:auto;display:grid;gap:10px;
+  grid-template-columns:repeat(3,1fr);padding:6px 14px 12px;
   align-content:start;
 }
-@media (min-width:520px){
-  .nchat-stick-grid{grid-template-columns:repeat(4,1fr)}
+@media (min-width:560px){
+  .nchat-stick-grid{grid-template-columns:repeat(6,1fr)}
 }
 .nchat-stick-cell{
-  border:none;background:transparent;border-radius:16px;padding:8px;
+  border:none;background:transparent;border-radius:16px;padding:6px;
   cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:background .12s;min-height:90px;
+  transition:background .12s;
 }
 .nchat-stick-cell:hover{background:#F3F5FC}
 .nchat-stick-cell:disabled{opacity:.5}
-.nchat-stick-cell img{max-width:100%;max-height:110px;object-fit:contain}
+.nchat-stick-cell:focus{outline:none}
+.nchat-stick-cell:focus-visible{outline:2px solid var(--chat-primary);outline-offset:2px}
+.nchat-stick-cell img{max-width:100%;max-height:120px;object-fit:contain}
 .nchat-stick-empty{flex:1;display:flex;align-items:center;justify-content:center;
   text-align:center;padding:20px;font-size:14px}
 .nchat-emoji-grid{
@@ -3245,8 +3251,26 @@ button.chat-react-chip:hover{background:#D9E7FD}
   .nchat-close{display:none}
   .nchat-bubble{max-width:86%}
   .nchat-editbox{width:min(420px,92%)}
-  .nchat-stickers{height:280px}
+  .nchat-stickers{height:260px}
   .nchat-down{bottom:80px}
+}
+
+@media (hover:hover){
+  .nchat-thread,.nchat-stick-grid,.nchat-emoji-grid,.nchat-attachbar{
+    scrollbar-width:thin;scrollbar-color:#C9CEDB transparent;
+  }
+  .nchat-thread::-webkit-scrollbar,.nchat-stick-grid::-webkit-scrollbar,
+  .nchat-emoji-grid::-webkit-scrollbar,.nchat-attachbar::-webkit-scrollbar{width:7px}
+  .nchat-thread::-webkit-scrollbar-track,.nchat-stick-grid::-webkit-scrollbar-track,
+  .nchat-emoji-grid::-webkit-scrollbar-track,.nchat-attachbar::-webkit-scrollbar-track{background:transparent}
+  .nchat-thread::-webkit-scrollbar-thumb,.nchat-stick-grid::-webkit-scrollbar-thumb,
+  .nchat-emoji-grid::-webkit-scrollbar-thumb,.nchat-attachbar::-webkit-scrollbar-thumb{
+    background:#C9CEDB;border-radius:999px;
+  }
+  .nchat-thread::-webkit-scrollbar-button,.nchat-stick-grid::-webkit-scrollbar-button,
+  .nchat-emoji-grid::-webkit-scrollbar-button,.nchat-attachbar::-webkit-scrollbar-button{
+    display:none;height:0;
+  }
 }
 
 @media (prefers-reduced-motion:reduce){

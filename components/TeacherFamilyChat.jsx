@@ -66,6 +66,19 @@ function dayLabel(iso) {
   return d.getFullYear() === now.getFullYear() ? base : `${base} ${d.getFullYear()}`;
 }
 
+// «Головко Виктория Петровна» → «Виктория Петровна»: в шапке чата полное
+// ФИО не нужно, оно остаётся в данных и в подсказке при наведении
+function shortPerson(full) {
+  const w = (full || "").trim().split(/\s+/);
+  return w.length === 3 ? `${w[1]} ${w[2]}` : (full || "");
+}
+
+// «ВП» — инициалы для аватара (первые буквы двух первых слов)
+function initialsOf(name) {
+  const w = (name || "").trim().split(/\s+/).filter(Boolean);
+  return w.slice(0, 2).map((x) => x[0]).join("").toUpperCase() || "?";
+}
+
 // «28 октября 2026, 19:40» — для «Информации о сообщении»
 function fmtFull(iso) {
   if (!iso) return "";
@@ -105,6 +118,9 @@ export default function TeacherFamilyChat({
   const [menuFor, setMenuFor] = useState(null);   // id сообщения с открытым меню
   const [menuUp, setMenuUp] = useState(false);    // меню вверх, если сообщение внизу
   const [reactFor, setReactFor] = useState(null); // id сообщения с выбором реакции
+  // Своя реакция видна сразу, не дожидаясь перезагрузки сообщений:
+  // { [id]: эмодзи | null }, null = «убрала реакцию»
+  const [localReacts, setLocalReacts] = useState({});
   const [replyTo, setReplyTo] = useState(null);   // сообщение, на которое отвечаем
   const [infoFor, setInfoFor] = useState(null);   // «Информация о сообщении»
   const [editId, setEditId] = useState(null);
@@ -139,7 +155,7 @@ export default function TeacherFamilyChat({
     if (!open) return;
     setFiles([]); setAttachOpen(false); setPanelTab(null); setMenuFor(null);
     setReactFor(null); setEditId(null); setReplyTo(null); setInfoFor(null);
-    setFailed(null); setPendingNew(0);
+    setFailed(null); setPendingNew(0); setLocalReacts({});
     try { setText(localStorage.getItem(draftKey) || ""); } catch { setText(""); }
     const firstUnread = thread.find(isUnreadForMe);
     setUnreadMark(firstUnread ? firstUnread.id : null);
@@ -185,6 +201,15 @@ export default function TeacherFamilyChat({
     }
     lenRef.current = thread.length;
   }, [thread.length, open]);
+
+  // Панель стикеров сжимает историю: если пользователь был внизу,
+  // держим последнее сообщение видимым; если читал старое — не трогаем
+  useEffect(() => {
+    if (!open || !panelTab) return;
+    if (atBottomRef.current) {
+      requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ block: "nearest" }));
+    }
+  }, [panelTab, open]);
 
   if (!open) return null;
 
@@ -250,12 +275,17 @@ export default function TeacherFamilyChat({
   const react = async (m, emoji) => {
     setReactFor(null); setMenuFor(null);
     if (isDemo()) { toast?.("Демо: реакции здесь не сохраняются"); return; }
-    const next = m.reactions?.[mySide] === emoji ? null : emoji;
+    const cur = localReacts[m.id] !== undefined ? localReacts[m.id] : m.reactions?.[mySide];
+    const next = cur === emoji ? null : emoji;
+    // Показываем свою реакцию сразу, сервер догонит
+    setLocalReacts((r) => ({ ...r, [m.id]: next }));
     try {
       await setMessageReaction(m.id, mySide, next);
       onSent?.();
     } catch (e) {
       console.error(e);
+      // Не сохранилось — возвращаем как было
+      setLocalReacts((r) => { const c = { ...r }; delete c[m.id]; return c; });
       toast?.("Не получилось сохранить реакцию");
     }
   };
@@ -313,7 +343,8 @@ export default function TeacherFamilyChat({
 
   const autosize = (el) => {
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 23 * 5 + 20) + "px";
+    // 5 строк по 24px + вертикальные отступы поля, дальше — прокрутка внутри
+    el.style.height = Math.min(el.scrollHeight, 24 * 5 + 24) + "px";
   };
 
   const onKey = (e) => {
@@ -366,9 +397,11 @@ export default function TeacherFamilyChat({
   };
 
   // ===== Шапка =====
-  const headName = fromTeacher
+  // Полное имя — в подсказку и aria-label, короткое — на экран
+  const headFull = fromTeacher
     ? (familyChild || `Семья №${familyN}`)
     : (teacherName || "Классный руководитель");
+  const headName = fromTeacher ? headFull : (shortPerson(teacherName) || "Классный руководитель");
   const headRole = fromTeacher
     ? `Родители · семья №${familyN || "—"} · 1 «Г»`
     : "Классный руководитель · 1 «Г»";
@@ -392,7 +425,7 @@ export default function TeacherFamilyChat({
 
   return (
     <div className="overlay nchat-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="nchat-modal" role="dialog" aria-modal="true" aria-label={`Переписка: ${headName}`}
+      <div className="nchat-modal" role="dialog" aria-modal="true" aria-label={`Переписка: ${headFull}`}
         onKeyDown={onRootKey}>
 
         {/* ===== Шапка ===== */}
@@ -402,9 +435,9 @@ export default function TeacherFamilyChat({
               <path d="M12.5 4 6.5 10l6 6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <span className="nchat-ava" aria-hidden="true">{(headName || "?").trim()[0]}</span>
+          <span className="nchat-ava" aria-hidden="true">{initialsOf(headName)}</span>
           <div className="nchat-head-txt">
-            <div className="nchat-name" title={headName}>{headName}</div>
+            <div className="nchat-name" title={headFull}>{headName}</div>
             <div className="nchat-role">{headRole}</div>
           </div>
           <button className="nchat-close" onClick={onClose} aria-label="Закрыть переписку">
@@ -442,7 +475,7 @@ export default function TeacherFamilyChat({
 
           {thread.map((m) => {
             const mine = fromTeacher ? m.from_teacher : !m.from_teacher;
-            const myR = m.reactions?.[mySide];
+            const myR = localReacts[m.id] !== undefined ? localReacts[m.id] : m.reactions?.[mySide];
             const theirR = m.reactions?.[otherSide];
             const read = fromTeacher ? m.read_family : m.read_teacher;
             const day = dayKey(m.created_at);
@@ -591,19 +624,19 @@ export default function TeacherFamilyChat({
                     </div>
                   )}
                 </div>
+
+                {/* Статусная подпись — сразу под своим сообщением (ТЗ п. 10) */}
+                {lastMine && !lastMineRead && m.id === lastMine.id && (
+                  <div className="nchat-status-line">Отправлено</div>
+                )}
+                {lastReadMine && m.id === lastReadMine.id && (
+                  <div className="nchat-status-line read">
+                    Прочитано{lastReadMine.read_at ? ` · ${fmtClock(lastReadMine.read_at)}` : ""}
+                  </div>
+                )}
               </div>
             );
           })}
-
-          {/* Статусная подпись под исходящими (ТЗ п. 10) */}
-          {lastMine && !lastMineRead && (
-            <div className="nchat-status-line">Отправлено</div>
-          )}
-          {lastMineRead && (
-            <div className="nchat-status-line read">
-              Прочитано{lastReadMine?.read_at ? ` · ${fmtClock(lastReadMine.read_at)}` : ""}
-            </div>
-          )}
           <div ref={bottomRef} />
         </div>
 
