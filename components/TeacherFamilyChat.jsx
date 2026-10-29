@@ -4,7 +4,7 @@ import {
   sendFamilyMessage, markThreadRead, setMessageReaction,
   updateFamilyMessage, deleteFamilyMessage,
 } from "@/lib/supabase";
-import { sendManualPush, sendFamilyChatPush } from "@/lib/push";
+import { sendTeacherChatPush, sendFamilyChatPush } from "@/lib/push";
 import { useRefreshPause } from "@/lib/formGuard";
 import { familyNs } from "./data";
 import { AttachPicker, AttachList } from "./Attachments";
@@ -250,9 +250,10 @@ export default function TeacherFamilyChat({
           ? (body.length > 90 ? body.slice(0, 90) + "…" : body)
           : `📎 ${files.length === 1 ? "Вложение" : "Вложения"} (${files.length})`;
       if (fromTeacher) {
-        sendManualPush({
-          title: "Сообщение от учителя", body: preview, url: "/?tab=dashboard",
-          audience: "family", familyNs: familyNs(familyN),
+        // Через свой роут без JWT: при протухшей сессии учителя пуш
+        // через sendManualPush молча пропадал (29.10.2026)
+        sendTeacherChatPush({
+          body: preview, url: "/?tab=dashboard", familyNs: familyNs(familyN),
         }).catch(() => {});
       } else {
         sendFamilyChatPush({ body: preview, url: "/" }).catch(() => {});
