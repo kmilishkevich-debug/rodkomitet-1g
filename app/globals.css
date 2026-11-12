@@ -2214,37 +2214,6 @@ body:has(.teacher-dashboard) nav.topnav .nvi-host.active .nvi{
   .qa-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
   .qa-item{min-height:60px;padding:8px 14px}
 }
-
-/* ===== Верхний ряд главной (референс 12.11.2026): приветствие слева,
-   карточка «Быстрые действия» с цветными плитками 2×2 — справа ===== */
-.dash-top{margin:10px 0 16px}
-.dash-top .home-hero{margin:0 0 16px}
-.qa-panel.card{padding:16px 16px 14px;margin:0 0 16px}
-.qa-title{margin:0 0 12px;font-size:17px}
-/* Пастельные плитки действий — как на референсе */
-.qa-item.qa-teacher{background:#E7F6EE;border-color:#D4EDDF}
-.qa-item.qa-absence{background:#F1EDFD;border-color:#E3DCF8}
-.qa-item.qa-family{background:#FFF1E6;border-color:#F8E3D1}
-.qa-item.qa-fees,.qa-item.qa-committee{background:#E8F1FF;border-color:#D8E6FB}
-@media(min-width:900px){
-  .dash-top{display:grid;grid-template-columns:58fr 42fr;gap:26px;align-items:stretch}
-  .dash-top .home-hero{margin:0;min-width:0}
-  .dash-top .home-hero .welcome.compact{height:100%;box-sizing:border-box;margin:0}
-  /* Сцена с маскотом поуже — герой делит ряд с быстрыми действиями */
-  .dash-top .home-hero .welcome.compact .welcome-visual{width:300px;min-height:260px}
-  .dash-top .qa-panel.card{margin:0;display:flex;flex-direction:column;min-width:0}
-  /* Внутри карточки плитки 2×2, а не четыре в ряд */
-  .dash-top .qa-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;flex:1;align-content:stretch}
-  .dash-top .qa-item{min-height:76px}
-}
-
-/* «Инструменты комитета» внизу главной (референс 12.11.2026) */
-.com-tools{margin-bottom:16px}
-.com-tools-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
-@media(min-width:900px){
-  .com-tools-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .com-tools-grid .com-menu-item{flex-direction:column;align-items:flex-start;gap:8px;min-height:84px;padding:12px 14px}
-}
 @keyframes qaFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes qaPopIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
 .qa-overlay{animation:qaFadeIn .2s ease}

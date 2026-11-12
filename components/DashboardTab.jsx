@@ -1595,7 +1595,7 @@ function QuickActions({ items, wide }) {
   return (
     <div className="qa-grid reveal d1">
       {items.map((it) => (
-        <button className={"qa-item qa-" + it.key} key={it.key} onClick={it.act} aria-label={it.aria || it.label}>
+        <button className="qa-item" key={it.key} onClick={it.act} aria-label={it.aria || it.label}>
           <span className="qa-ico" aria-hidden="true">{it.ico}</span>
           {it.badge > 0 && <span className="qa-badge">{it.badge > 99 ? "99+" : it.badge}</span>}
           <span className="qa-label">{it.label}</span>
@@ -1945,29 +1945,26 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
     <section id="tab-dashboard">
       <div className="greet-date">{todayLine()}</div>
 
-      {/* Верхний ряд (референс 12.11.2026): приветствие с маскотом слева,
-          карточка «Быстрые действия» с плитками — справа. Сам маскот
-          не меняется — только обёртка. */}
-      <div className="dash-top">
-        <div className="home-hero">
-          <div className="welcome compact reveal d1">
-            <div className="welcome-copy">
-              <h1 className="welcome-h1">
-                <span className="welcome-greet">{greetWord()}{greetName}!</span>
-                <span className="blue welcome-headline">{headline}</span>
-              </h1>
-              <p className="welcome-sub">{subline}</p>
-            </div>
-            <div className="welcome-visual">
-              <ClassMascot ref={mascotRef} cues={cues} greetToken={greetToken} />
-            </div>
+      {/* Компактное приветствие с маскотом (ТЗ §8 п.1, §9): текст слева,
+          маскот справа. Сам маскот не меняется — только обёртка. */}
+      <div className="home-hero">
+        <div className="welcome compact reveal d1">
+          <div className="welcome-copy">
+            <h1 className="welcome-h1">
+              <span className="welcome-greet">{greetWord()}{greetName}!</span>
+              <span className="blue welcome-headline">{headline}</span>
+            </h1>
+            <p className="welcome-sub">{subline}</p>
+          </div>
+          <div className="welcome-visual">
+            <ClassMascot ref={mascotRef} cues={cues} greetToken={greetToken} />
           </div>
         </div>
+      </div>
 
-        <div className="qa-panel card reveal d1">
-          <h2 className="sec-title qa-title">Быстрые действия</h2>
-          <QuickActions items={quickItems} />
-        </div>
+      {/* Четыре быстрых действия в ряд (ТЗ §8 п.2, §9) */}
+      <div className="qa-panel reveal d1">
+        <QuickActions items={quickItems} />
       </div>
 
       {/* Плашка-напоминание про уведомления: висит каждый заход, пока
@@ -2005,14 +2002,13 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         onReloadComments={onReloadComments}
       />
 
-      {/* Две основные колонки (референс 12.11.2026): «Новости класса» слева,
-          «Сегодня в школе» справа */}
+      {/* Две основные колонки (ТЗ §8 п.4): «Сегодня в школе» и «Новости класса» */}
       <div className="dash-cols">
-        <div className="dash-col-main">
-          <DashNews announcements={announcements} reads={reads} family={family} onTab={onTab} excludeIds={attnAnnIds} />
-        </div>
-        <div className="dash-col-side" id="home-schedule">
+        <div className="dash-col-main" id="home-schedule">
           <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
+        </div>
+        <div className="dash-col-side">
+          <DashNews announcements={announcements} reads={reads} family={family} onTab={onTab} excludeIds={attnAnnIds} />
         </div>
       </div>
 
@@ -2076,40 +2072,6 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
 
         {family && <NotesWidget family={family} notes={notes} onReload={onReloadNotes} toast={toast} />}
       </div>
-
-      {/* «Инструменты комитета» (референс 12.11.2026): частые действия комитета
-          прямо на главной — те же, что в меню «Комитет» из быстрых действий */}
-      {committee && (
-        <div className="card com-tools reveal d3">
-          <div className="dash-card-head">
-            <img src="/icons/icon-note-plus.webp" className="head-3d" alt="" />
-            <div className="dash-card-titles">
-              <h2 className="sec-title">Инструменты комитета</h2>
-              <div className="dash-card-sub">Объявления, напоминания, события и сборы</div>
-            </div>
-          </div>
-          <div className="com-tools-grid">
-            <button
-              className="com-menu-item"
-              onClick={() => {
-                try { sessionStorage.setItem("rk1g-open-newann", "1"); } catch {}
-                onTab("announcements");
-              }}
-            >
-              <img src="/icons/icon-note-plus.webp" alt="" /> Создать объявление
-            </button>
-            <button className="com-menu-item" onClick={() => setRemindOpen(true)}>
-              <img src="/icons/icon-calendar.webp" alt="" /> Напомнить семье
-            </button>
-            <button className="com-menu-item" onClick={() => onTab("calendar")}>
-              <img src="/icons/icon-calendar-clock.webp" alt="" /> Событие в календарь
-            </button>
-            <button className="com-menu-item" onClick={() => onTab("fees")}>
-              <img src="/icons/icon-wallet.webp" alt="" /> Сборы и взносы
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Привязка семьи — только для комитета: у учителя «Главной» больше нет,
           да и своей семьи в списке класса у него не бывает */}
