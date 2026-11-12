@@ -138,6 +138,22 @@ function AnnouncementCard({
 }) {
   const [readsOpen, setReadsOpen] = useState(false);
   const [reactOpen, setReactOpen] = useState(false);
+  const [pushing, setPushing] = useState(false);
+
+  // Пуш по уже изданному объявлению (12.11.2026): объявления, созданные
+  // мимо редактора (например, SQL-файлом) или давно, можно разослать вручную.
+  // Роут /api/push/news сам ставит заголовок и шлёт только родителям.
+  const sendPush = async () => {
+    if (!window.confirm(`Отправить пуш родителям об объявлении «${a.title}»?`)) return;
+    setPushing(true);
+    const res = await sendNewsPush({
+      body: a.title + (a.body ? " — " + a.body : ""),
+      url: `/?tab=announcements&ann=${a.id}`,
+    });
+    setPushing(false);
+    if (res?.ok === false) toast("Пуш не отправился: " + (res.error || "ошибка"));
+    else toast("Пуш отправлен родителям");
+  };
 
   // Реакции на само объявление (28.10.2026): {"t":"❤️","f18":"👍"} →
   // чипы по эмодзи со счётчиком, как в обсуждениях.
@@ -204,6 +220,9 @@ function AnnouncementCard({
         </div>
         {canEdit && (
           <div className="news-tools">
+            {a.status === "active" && (
+              <button className="icon-btn" title="Отправить пуш родителям" onClick={sendPush} disabled={pushing}><Ic id="i-bell" /></button>
+            )}
             <button className="icon-btn" title="Изменить" onClick={() => onEdit(a)}><Ic id="i-edit" /></button>
             {a.status === "active"
               ? <button className="icon-btn" title="В архив" onClick={() => archive("archived")}><Ic id="i-eye" /></button>
