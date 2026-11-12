@@ -487,6 +487,8 @@ function BulkModal({ column, rows, isGpd, onClose, onApply, onClear, saving }) {
 function CollectionModal({ coll, rows, committee, onClose, onSave, saving }) {
   const dkey = "coll:" + (coll ? coll.id : "new");
   const allNs = rows.map((r) => r.n);
+  // Ключ семьи — № первой строки (у близнецов обе строки дают один ключ)
+  const famKey = (n) => Math.min(...familyNs(n));
   const base = {
     title: coll ? coll.title : "",
     amount: coll && coll.amount ? String(coll.amount) : "",
@@ -494,6 +496,10 @@ function CollectionModal({ coll, rows, committee, onClose, onSave, saving }) {
     parts: coll && Array.isArray(coll.participants) && coll.participants.length
       ? coll.participants.filter((n) => allNs.includes(n))
       : allNs,
+    // Свои суммы семей: { "№ семьи": "строка-сумма" } — пусто = общая сумма
+    amts: coll && coll.amounts && typeof coll.amounts === "object"
+      ? Object.fromEntries(Object.entries(coll.amounts).map(([k, v]) => [k, String(v)]))
+      : {},
     teacherVisible: coll ? !!coll.teacher_visible : false,
     markPaid: false, doPush: true, doAnnounce: true,
   };
@@ -503,6 +509,7 @@ function CollectionModal({ coll, rows, committee, onClose, onSave, saving }) {
   const [amount, setAmount] = useState(start.amount);
   const [deadline, setDeadline] = useState(start.deadline);
   const [parts, setParts] = useState(start.parts);
+  const [amts, setAmts] = useState(start.amts);
   const [teacherVisible, setTeacherVisible] = useState(start.teacherVisible);
   const [markPaid, setMarkPaid] = useState(start.markPaid);
   const [doPush, setDoPush] = useState(start.doPush);
@@ -510,7 +517,7 @@ function CollectionModal({ coll, rows, committee, onClose, onSave, saving }) {
   const [restored] = useState(!!saved);
 
   useRefreshPause(true);
-  const values = { title, amount, deadline, parts, teacherVisible, markPaid, doPush, doAnnounce };
+  const values = { title, amount, deadline, parts, amts, teacherVisible, markPaid, doPush, doAnnounce };
   const dirty = isDirty(values, base);
   useDraftAutosave(true, dkey, values, dirty);
 
@@ -544,13 +551,33 @@ function CollectionModal({ coll, rows, committee, onClose, onSave, saving }) {
           <button type="button" className="btn small white" onClick={() => setParts(allNs)}>Все</button>
           <button type="button" className="btn small white" onClick={() => setParts([])}>Никто</button>
         </div>
-        <div style={{ maxHeight: 180, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 10, padding: "6px 10px", marginBottom: 10 }}>
-          {rows.map((r) => (
-            <label key={r.n} style={{ display: "flex", gap: 8, alignItems: "center", padding: "3px 0", cursor: "pointer" }}>
-              <input type="checkbox" checked={parts.includes(r.n)} onChange={() => togglePart(r.n)} />
-              <span>{r.n}. {r.child}</span>
-            </label>
-          ))}
+        <div style={{ maxHeight: 180, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 10, padding: "6px 10px", marginBottom: 6 }}>
+          {rows.map((r) => {
+            const fk = famKey(r.n);
+            // Поле «своя сумма» — на первой строке семьи (у близнецов одно на двоих)
+            const first = fk === r.n;
+            const inPart = parts.includes(r.n);
+            return (
+              <label key={r.n} style={{ display: "flex", gap: 8, alignItems: "center", padding: "3px 0", cursor: "pointer" }}>
+                <input type="checkbox" checked={inPart} onChange={() => togglePart(r.n)} />
+                <span style={{ flex: 1 }}>{r.n}. {r.child}</span>
+                {inPart && first && (
+                  <input
+                    type="number" step="0.01" inputMode="decimal"
+                    value={amts[fk] ?? ""}
+                    placeholder={amount || "общая"}
+                    title="Своя сумма этой семьи (пусто — общая)"
+                    style={{ width: 76, padding: "3px 6px", border: "1px solid #e2e8f0", borderRadius: 8 }}
+                    onClick={(e) => e.preventDefault()}
+                    onChange={(e) => setAmts((a) => ({ ...a, [fk]: e.target.value }))}
+                  />
+                )}
+              </label>
+            );
+          })}
+        </div>
+        <div className="muted" style={{ marginBottom: 10 }}>
+          Поле справа — своя сумма семьи (например, едет родитель или двое детей). Пусто = общая сумма.
         </div>
         {committee && (
           <label style={lbRow}>
@@ -580,11 +607,20 @@ function CollectionModal({ coll, rows, committee, onClose, onSave, saving }) {
             className="btn small teal" disabled={saving}
             onClick={() => {
               clearDraft(dkey);
+              const baseAmt = parseFloat(String(amount).replace(",", ".")) || 0;
+              // Свои суммы: берём только участвующие семьи и только отличные от общей
+              const partFams = new Set(parts.map(famKey));
+              const amounts = {};
+              Object.entries(amts).forEach(([k, v]) => {
+                const num = parseFloat(String(v).replace(",", "."));
+                if (partFams.has(Number(k)) && num > 0 && num !== baseAmt) amounts[k] = num;
+              });
               onSave({
                 title: title.trim(),
-                amount: parseFloat(String(amount).replace(",", ".")) || 0,
+                amount: baseAmt,
                 deadline: deadline || null,
                 participants: parts.length === rows.length ? null : [...parts].sort((x, y) => x - y),
+                amounts: Object.keys(amounts).length ? amounts : null,
                 teacherVisible, markPaid, doPush, doAnnounce,
               });
             }}
@@ -627,7 +663,7 @@ function CollPayModal({ coll, fam, child, onClose, onSave, onDeletePay, saving }
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && onClose()}>
       <div className="modal">
         <h3>{coll.title}</h3>
-        <div className="muted">{child} · {fmt(coll.amount)} BYN с семьи · уже сдано {fmt(fam.paid)} BYN</div>
+        <div className="muted">{child} · {fmt(fam.target ?? coll.amount)} BYN с семьи · уже сдано {fmt(fam.paid)} BYN</div>
         <label className="fee-lb">
           {editPay ? "Правка платежа от " + dateRu(editPay.paid_at) + " — сумма, BYN" : "Сумма, BYN"}
         </label>
@@ -736,7 +772,7 @@ function ClaimModal({ coll, fam, child, reqs, onClose, onSave, saving }) {
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && !saving && onClose()}>
       <div className="modal">
         <h3>Я перевёл(а) — {coll.title}</h3>
-        <div className="muted">{child} · {fmt(coll.amount)} BYN с семьи · осталось {fmt(fam.due)} BYN</div>
+        <div className="muted">{child} · {fmt(fam.target ?? coll.amount)} BYN с семьи · осталось {fmt(fam.due)} BYN</div>
         {hasReqs && (
           <div className="muted" style={{ marginTop: 6 }}>
             Перевод на карту{reqs.bank ? " (" + reqs.bank + ")" : ""}:
@@ -1137,10 +1173,14 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
       f.ns.push(r.n);
       f.children.push(r.child);
     });
-    fams.forEach((f) => {
+    // Своя сумма семьи (поле amounts, ключ — № первой строки семьи) или общая
+    const amtOf = (k) =>
+      coll.amounts && coll.amounts[String(k)] != null ? Number(coll.amounts[String(k)]) : Number(coll.amount);
+    fams.forEach((f, k) => {
       f.part = f.ns.some(isPart); // семья участвует, если участвует любой её ребёнок
+      f.target = f.part ? amtOf(k) : 0;
       f.paid = round2((coll.payments || []).filter((p) => f.children.includes(p.child)).reduce((s, p) => s + p.amount, 0));
-      f.due = f.part ? Math.max(0, round2(coll.amount - f.paid)) : 0;
+      f.due = f.part ? Math.max(0, round2(f.target - f.paid)) : 0;
     });
     const famList = [...fams.values()];
     const partCount = famList.filter((f) => f.part).length;
@@ -1299,7 +1339,7 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
           const st = !info.part ? "не участвует" : info.fam.due <= 0.005 ? "сдано" : info.fam.paid > 0.005 ? "частично" : "не сдано";
           return [
             r.n, r.child, info.gpd ? "да" : "нет", "№" + famOf(r.n),
-            info.part ? info.fam.paid : "", info.part ? info.fam.due : "", info.part ? coll.amount : "",
+            info.part ? info.fam.paid : "", info.part ? info.fam.due : "", info.part ? info.fam.target : "",
             [...info.methods].map((m) => METHOD_LABEL[m]).join(", ") || "—",
             info.pays.map((p) => dateRu(p.paid_at)).join(", "),
             st,
@@ -1333,14 +1373,25 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
     setSaving(true);
     try {
       const old = collModal.coll;
+      // Колонки amounts может ещё не быть в базе (campaign-amounts-setup.sql
+      // не запускали) — тогда сохраняем без своих сумм и подсказываем про SQL
+      const noAmountsCol = (e) => /amounts/i.test(e && e.message ? e.message : "");
       if (old) {
         const patch = {
           title: vals.title, amount: vals.amount,
           deadline: vals.deadline, participants: vals.participants,
+          amounts: vals.amounts,
         };
         // Видимость учителю меняет только комитет — иначе не трогаем поле
         if (committee) patch.teacher_visible = vals.teacherVisible;
-        await updateFeeCampaign(old.id, patch);
+        try {
+          await updateFeeCampaign(old.id, patch);
+        } catch (e) {
+          if (!noAmountsCol(e)) throw e;
+          const { amounts, ...rest } = patch;
+          await updateFeeCampaign(old.id, rest);
+          if (vals.amounts) toast("Свои суммы семей не сохранились — запустите campaign-amounts-setup.sql в Supabase");
+        }
         if (vals.title !== old.title) {
           await addFeeEdit({
             target: "Целевые сборы", child: vals.title,
@@ -1356,15 +1407,25 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
         }
         toast("Сбор обновлён");
       } else {
-        const created = await createFeeCampaign({
+        const payload = {
           title: vals.title, amount: vals.amount,
           deadline: vals.deadline, participants: vals.participants,
+          amounts: vals.amounts,
           sort: (colls || []).length + 1,
           // Новый сбор скрыт от учителя, пока комитет не поставил галочку;
           // created_by — чтобы учитель видел сборы, которые создал сам
           teacher_visible: committee ? vals.teacherVisible : false,
           created_by: editor,
-        });
+        };
+        let created;
+        try {
+          created = await createFeeCampaign(payload);
+        } catch (e) {
+          if (!noAmountsCol(e)) throw e;
+          const { amounts, ...rest } = payload;
+          created = await createFeeCampaign(rest);
+          if (vals.amounts) toast("Свои суммы семей не сохранились — запустите campaign-amounts-setup.sql в Supabase");
+        }
         await addFeeEdit({
           target: "Целевые сборы", child: vals.title, field: "Создан сбор",
           old_amount: null, new_amount: vals.amount, editor,
@@ -1382,18 +1443,22 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
               return true;
             })
             .map((r) => ({
-              campaign_id: created.id, child: r.child, amount: vals.amount,
+              campaign_id: created.id, child: r.child,
+              // Семья со своей суммой (едет родитель, двое детей) платит её
+              amount: (vals.amounts && vals.amounts[String(famOf(r.n))]) || vals.amount,
               method: "transfer", note: "отмечено при создании сбора",
             }));
           if (pays.length) await addCampaignPayment(pays);
           extra += ", оплата проставлена всем";
         }
         const when = vals.deadline ? " до " + dateRu(vals.deadline) : "";
+        // У части семей своя сумма — упоминаем это в объявлении и пуше
+        const amtNote = vals.amounts ? " (у некоторых семей сумма своя — она видна в карточке сбора)" : "";
         if (vals.doAnnounce) {
           try {
             await saveAnnouncement({
               title: "Новый сбор: " + vals.title,
-              body: "Сдаём по " + fmt(vals.amount) + " BYN с семьи" + when + ". Подробности — во вкладке «Деньги → Сборы».",
+              body: "Сдаём по " + fmt(vals.amount) + " BYN с семьи" + amtNote + when + ". Подробности — во вкладке «Деньги → Сборы».",
               important: false, pinned: false, image_url: null,
               teacher_visible: true, author: editor, status: "active",
             });
@@ -1405,7 +1470,7 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
         if (vals.doPush) {
           const res = await sendManualPush({
             title: "Новый сбор: " + vals.title,
-            body: "Сдаём по " + fmt(vals.amount) + " BYN с семьи" + when,
+            body: "Сдаём по " + fmt(vals.amount) + " BYN с семьи" + amtNote + when,
             url: "/?tab=fees", audience: "all",
           }).catch(() => null);
           extra += res && res.ok ? ", пуш отправлен" : ", пуш отправить не вышло";
@@ -1751,6 +1816,10 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
           const myFam = myNs.length ? cc.fams.get(famOf(myNs[0])) : null;
           const open = !!collOpen[coll.id];
           const closed = coll.status === "closed";
+          // Если у семей разные суммы (поле amounts) — показываем диапазон
+          const famTargets = [...cc.fams.values()].filter((f) => f.part).map((f) => f.target);
+          const minT = famTargets.length ? Math.min(...famTargets) : Number(coll.amount);
+          const maxT = famTargets.length ? Math.max(...famTargets) : Number(coll.amount);
           return (
             <div
               key={coll.id}
@@ -1759,7 +1828,7 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
               <div className="fee-head">
                 <div>
                   <strong>{coll.title}</strong>{" "}
-                  <span className="chip blue">{fmt(coll.amount)} BYN с семьи</span>{" "}
+                  <span className="chip blue">{minT === maxT ? fmt(minT) : fmt(minT) + "–" + fmt(maxT)} BYN с семьи</span>{" "}
                   {closed && <span className="chip gray">сбор закрыт</span>}{" "}
                   {!closed && coll.deadline && <span className="chip amber">сдать до {dateRu(coll.deadline)}</span>}
                   <div className="fee-meta">
@@ -1901,7 +1970,7 @@ export default function FeesTab({ committee, teacher, toast, onOpenUpload, autho
                             } else if (fam.due <= 0.005) {
                               cell = (
                                 <span className="chip green">
-                                  сдано{fam.paid > coll.amount + 0.005 ? " · излишек " + fmt(round2(fam.paid - coll.amount)) : ""}
+                                  сдано{fam.paid > fam.target + 0.005 ? " · излишек " + fmt(round2(fam.paid - fam.target)) : ""}
                                 </span>
                               );
                             } else if (fam.paid > 0) {
