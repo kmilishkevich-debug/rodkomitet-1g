@@ -16,7 +16,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#F6F4FB",
+  themeColor: "#F6F1E7",
 };
 
 export default function RootLayout({ children }) {
@@ -24,11 +24,8 @@ export default function RootLayout({ children }) {
     <html lang="ru">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        {/* Редизайн 30.10.2026 (ТЗ §5): заголовки — Manrope, текст — Golos Text.
-            Оба шрифта с кириллицей, display=swap. Локальные WOFF2 не кладём,
-            чтобы не раздувать репозиторий: CDN Google Fonts уже используется. */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Golos+Text:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&family=Onest:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
       </head>

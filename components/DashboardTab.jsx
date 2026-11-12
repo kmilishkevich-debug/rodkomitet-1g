@@ -217,36 +217,6 @@ function ImportantNews({ announcements, reads, family, onTab }) {
   );
 }
 
-// ===== «Требует внимания» (ТЗ §10): до двух персональных действий,
-// остальные раскрываются внутри блока — без карусели и мёртвых ссылок =====
-function AttentionArea({ items }) {
-  const [all, setAll] = useState(false);
-  if (!items.length) return null;
-  const shown = all ? items : items.slice(0, 2);
-  return (
-    <div className="card attn-area reveal d1">
-      <div className="attn-area-head">
-        <h2 className="sec-title">Требует внимания</h2>
-        {items.length > 2 && (
-          <button className="attn-more" onClick={() => setAll((a) => !a)} aria-expanded={all}>
-            {all ? "Свернуть" : `Все задачи (${items.length})`}
-          </button>
-        )}
-      </div>
-      {shown.map((it) => (
-        <div className="attn-row" key={it.id}>
-          <span className={"attn-kind " + (it.tone || "")}>{it.kind}</span>
-          <div className="attn-row-body">
-            <div className="attn-row-title">{it.title}</div>
-            {it.sub && <div className="attn-row-sub">{it.sub}</div>}
-          </div>
-          <button className="pill-btn blue attn-row-btn" onClick={it.act}>{it.cta}</button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ===== Активные голосования на главной (ТЗ §8): сиреневая подложка, персональный статус =====
 function ActivePolls({ polls, family, onTab }) {
   const open = (polls || []).filter((p) => pollState(p) === "open");
@@ -293,14 +263,9 @@ function ActivePolls({ polls, family, onTab }) {
 // (28.10.2026 поднята из колонки у расписания, чтобы родители видели сразу)
 // Последние обычные (не важные) объявления: важные показаны отдельной
 // карточкой выше, поэтому здесь не дублируются.
-function DashNews({ announcements, reads, family, onTab, excludeIds = [] }) {
-  // До трёх актуальных объявлений (ТЗ §12); показанные в «Требует внимания»
-  // исключаем по ID — в полном разделе «Объявления» они, конечно, остаются.
-  // Закреплённые — первыми. Важные здесь тоже показываем (если уже прочитаны,
-  // в области внимания их нет, а скрывать их совсем было бы нечестно).
+function DashNews({ announcements, reads, family, onTab }) {
   const regular = (announcements || [])
-    .filter((a) => a.status === "active" && !excludeIds.includes(a.id))
-    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+    .filter((a) => a.status === "active" && !a.important)
     .slice(0, 3);
   return (
     <div className="card dash-news reveal d3">
@@ -315,17 +280,13 @@ function DashNews({ announcements, reads, family, onTab, excludeIds = [] }) {
       {regular.map((a) => {
         const read = isReadBy(a, reads, family);
         return (
-          <button className={"dash-news-row" + (a.important ? " imp" : "")} key={a.id} onClick={() => readAndGo(a, reads, family, onTab)}>
+          <button className="dash-news-row" key={a.id} onClick={() => readAndGo(a, reads, family, onTab)}>
             {/* Объёмная иконка строки (как на референсе); у непрочитанного — синяя точка-метка */}
             <span className={"dash-news-ico" + (read ? "" : " unread")} aria-hidden="true">
               <img src="/icons/icon-envelope.webp" alt="" />
             </span>
             <span className="dash-news-body">
-              <span className="dash-news-title">
-                {a.pinned && <span title="Закреплено">📌 </span>}
-                {a.important && <span className="dash-news-impbadge">Важное</span>}
-                {a.title}
-              </span>
+              <span className="dash-news-title">{a.pinned && <span title="Закреплено">📌 </span>}{a.title}</span>
               {a.body && <span className="dash-news-sub">{snippet(a.body, 90)}</span>}
               <span className="dash-news-meta">
                 {a.author || "Комитет"} · {fmtNewsDate(a.created_at)}
@@ -396,7 +357,7 @@ function kidsOfMonth(list, y, m) {
 }
 
 // Блок «Дни рождения»: напоминания + все именинники месяца с переключением месяцев
-export function BirthdaysWidget({ committee, ev, list, onTab }) {
+function BirthdaysWidget({ committee, ev, list, onTab }) {
   // Стартовый месяц — тот, где ближайший день рождения (включая сегодня)
   const [view, setView] = useState(() => {
     const nearest = upcomingBirthdays(list, new Date(), 1)[0];
@@ -637,7 +598,7 @@ function HolidayForm({ initial, authorName, onDone, onCancel, toast }) {
 // Карточка «Предстоящие праздники»: праздники и каникулы из class_holidays
 // плюс события класса от учителя (class_events) — одной лентой.
 // Сама ходит в базу: fetchHolidays вернёт null, пока не запущен holidays-setup.sql.
-export function HolidaysWidget({ committee, role, events, authorName, toast, onTab }) {
+function HolidaysWidget({ committee, role, events, authorName, toast, onTab }) {
   const canEdit = committee || role === "teacher";
   const [rows, setRows] = useState(null);     // записи class_holidays (null = нет таблицы)
   const [showAll, setShowAll] = useState(false);
@@ -897,14 +858,6 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo, fullL
   const todayIso = demo ? demo.today : minskIso();
   const [view, setView] = useState({ y: now.getFullYear(), m: now.getMonth() });
   const [selected, setSelected] = useState(null); // ISO выбранного дня или null
-  // Фильтры «Все / Дни рождения / Праздники» (ТЗ §16): действуют на точки
-  // в сетке, недельную ленту и список событий. События и напоминания — в «Все».
-  const [filter, setFilter] = useState("all");
-  const passes = (it) =>
-    filter === "all" ||
-    (filter === "bday" ? it.type === "bday" : it.type === "holiday" || it.type === "vacation");
-  // Недельная лента для телефона (ТЗ §16): смещение в неделях от текущей
-  const [week, setWeek] = useState(0);
   // Праздники и каникулы комитета — календарь сам ходит в базу (как HolidaysWidget)
   const [hols, setHols] = useState(demo ? demo.hols : null);
   const [loading, setLoading] = useState(!demo);
@@ -964,34 +917,7 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo, fullL
   });
   monthItems.push(...bdayItemsFor(view.y, view.m));
   const byDate = {};
-  monthItems.filter(passes).forEach((it) => { (byDate[it.date] = byDate[it.date] || []).push(it); });
-
-  // Записи произвольной даты (для недельной ленты): события + диапазоны + ДР
-  const itemsOn = (iso) => {
-    const [y, m] = iso.split("-").map(Number);
-    return [
-      ...baseItems.filter((it) => it.date === iso || (it.endDate && it.date <= iso && iso <= it.endDate)),
-      ...bdayItemsFor(y, m - 1).filter((it) => it.date === iso),
-    ].filter(passes);
-  };
-  // Неделя с понедельника (ТЗ §16): текущая + смещение кнопками
-  const weekDays = (() => {
-    const t = new Date(todayIso + "T00:00:00");
-    t.setDate(t.getDate() - ((t.getDay() + 6) % 7) + week * 7);
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(t);
-      d.setDate(d.getDate() + i);
-      return {
-        iso: ccalIso(d.getFullYear(), d.getMonth(), d.getDate()),
-        d: d.getDate(), m: d.getMonth(), dow: i,
-      };
-    });
-  })();
-  // Подпись диапазона недели: на границе месяцев — с обоими месяцами
-  const wkA = weekDays[0], wkB = weekDays[6];
-  const weekLabel = wkA.m === wkB.m
-    ? `${wkA.d}–${wkB.d} ${CCAL_MON_ABBR[wkA.m]}`
-    : `${wkA.d} ${CCAL_MON_ABBR[wkA.m]} — ${wkB.d} ${CCAL_MON_ABBR[wkB.m]}`;
+  monthItems.forEach((it) => { (byDate[it.date] = byDate[it.date] || []).push(it); });
 
   const firstDow = (new Date(view.y, view.m, 1).getDay() + 6) % 7; // 0 = понедельник
   const dim = new Date(view.y, view.m + 1, 0).getDate();
@@ -1013,9 +939,11 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo, fullL
     setView({ y: now.getFullYear(), m: now.getMonth() });
     setSelected(null);
   };
-  // «Весь календарь» открывает вкладку «Календарь» (там и дни рождения,
-  // и полная лента праздников с редактированием)
-  const goFull = () => onTab && onTab("calendar");
+  // «Весь календарь» ведёт к полной ленте «Предстоящие праздники» ниже
+  const goFull = () => {
+    const el = document.getElementById("holidays-full-title");
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); el.focus({ preventScroll: true }); }
+  };
 
   // Дни рождения одной даты показываем одной карточкой со всеми именами
   const groupBd = (list) => {
@@ -1034,12 +962,12 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo, fullL
     const [sy, sm] = selected.split("-").map(Number);
     const dayItems = [
       // Диапазон (каникулы) попадает в день, если выбранная дата внутри него
-      ...baseItems.filter((it) => (it.date === selected ||
-        (it.endDate && it.date <= selected && selected <= it.endDate)) && passes(it)),
-      ...groupBd(bdayItemsFor(sy, sm - 1).filter((it) => it.date === selected && passes(it))),
+      ...baseItems.filter((it) => it.date === selected ||
+        (it.endDate && it.date <= selected && selected <= it.endDate)),
+      ...groupBd(bdayItemsFor(sy, sm - 1).filter((it) => it.date === selected)),
     ].sort((a, b) => (ccalTimeKey(a.time) || "") < (ccalTimeKey(b.time) || "") ? -1 : 1);
     const sd = new Date(selected + "T00:00:00");
-    sideTitle = `События ${sd.getDate()} ${MONTHS[sd.getMonth()]}`;
+    sideTitle = `${sd.getDate()} ${MONTHS[sd.getMonth()]}, ${DAYS[sd.getDay()].toLowerCase()}`;
     sideItems = dayItems;
     if (!dayItems.length) sideEmpty = "На этот день событий нет";
   } else {
@@ -1055,7 +983,7 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo, fullL
         turns: bornYear >= 2000 && bornYear <= y ? y - bornYear : null,
       };
     });
-    sideItems = [...baseItems.filter((it) => (it.endDate || it.date) >= todayIso && passes(it)), ...groupBd(nextBd.filter(passes))]
+    sideItems = [...baseItems.filter((it) => (it.endDate || it.date) >= todayIso), ...groupBd(nextBd)]
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(0, 4);
     if (!sideItems.length) sideEmpty = "Ближайших событий пока нет";
@@ -1076,64 +1004,8 @@ export function ClassCalendar({ events, notes, bdays, family, onTab, demo, fullL
             + Событие
           </button>
         )}
-        {/* Во вкладке «Календарь» и кабинете учителя ссылка на саму себя не нужна */}
+        {/* В кабинете учителя ленты «Предстоящие праздники» нет — ссылку прячем */}
         {fullLink && <button className="ccal2-link" onClick={goFull}>Весь календарь <CcalArrow /></button>}
-      </div>
-      {/* Фильтры (ТЗ §16): на узком экране прокручивается только эта строка */}
-      <div className="ccal2-filters" role="group" aria-label="Фильтр событий">
-        {[["all", "Все"], ["bday", "Дни рождения"], ["holiday", "Праздники"]].map(([v, lbl]) => (
-          <button
-            key={v}
-            className={"ccal2-filter" + (filter === v ? " on" : "")}
-            aria-pressed={filter === v}
-            onClick={() => setFilter(v)}
-          >
-            {lbl}
-          </button>
-        ))}
-      </div>
-      {/* Недельная лента — только на телефоне (ТЗ §16): кнопки переключают
-          неделю явно, выбор дня работает как в месячной сетке */}
-      <div className="ccal2-weekwrap">
-        <div className="ccal2-nav" role="group" aria-label="Переключение недели">
-          <button className="ccal2-nav-btn" aria-label="Предыдущая неделя" onClick={() => setWeek((w) => w - 1)}>
-            <CcalChevron dir="left" />
-          </button>
-          <div className="ccal2-month">{weekLabel}</div>
-          <button className="ccal2-nav-btn" aria-label="Следующая неделя" onClick={() => setWeek((w) => w + 1)}>
-            <CcalChevron dir="right" />
-          </button>
-        </div>
-        <div className="ccal2-week">
-          {weekDays.map((c) => {
-            const items = itemsOn(c.iso);
-            return (
-              <button
-                key={c.iso}
-                className={
-                  "ccal2-day wk" +
-                  (c.iso === todayIso ? " today" : "") +
-                  (c.iso === selected ? " sel" : "") +
-                  (c.dow >= 5 ? " wkend" : "") +
-                  (items.length && c.iso !== todayIso ? " ev-" + ccalTone(items[0].type) : "")
-                }
-                aria-label={`${c.d} ${MONTHS[c.m]}, ${DAYS[new Date(c.iso + "T00:00:00").getDay()].toLowerCase()}, ${ccalCountWord(items.length)}`}
-                aria-pressed={c.iso === selected}
-                onClick={() => setSelected(c.iso === selected ? null : c.iso)}
-              >
-                <span className="ccal2-wkdow">{CCAL_DOW[c.dow]}</span>
-                <span className="ccal2-num">{c.d}</span>
-                {items.length > 0 && c.iso !== todayIso && (
-                  <span className="ccal2-dots" aria-hidden="true">
-                    {[...new Set(items.map((it) => ccalTone(it.type)))].slice(0, 3).map((t, j, arr) => (
-                      <span className={"ccal2-dot " + t + (arr.length > 1 ? " many" : "")} key={t} />
-                    ))}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
       </div>
       <div className="ccal2-cols">
         {/* Левая панель: навигация по месяцам, сетка, легенда */}
@@ -1421,12 +1293,9 @@ function NotesWidget({ family, notes, onReload, toast }) {
   const [text, setText] = useState("");
   const [date, setDate] = useState("");
   const [saving, setSaving] = useState(false);
-  // На главной — до трёх записей, остальные раскрываются на месте (ТЗ §17)
-  const [showAll, setShowAll] = useState(false);
   const todayIso = minskIso();
   // Заметки от учителя живут в отдельной карточке «От учителя» — здесь их не дублируем
   const list = sortNotes((notes || []).filter((n) => !n.from_teacher), todayIso);
-  const shownNotes = showAll ? list : list.slice(0, 3);
   const add = async () => {
     const t = text.trim();
     if (!t) { toast("Напишите текст заметки"); return; }
@@ -1449,7 +1318,7 @@ function NotesWidget({ family, notes, onReload, toast }) {
     try { await deleteFamilyNote(n.id); onReload(); toast("Заметка удалена"); } catch (e) { console.error(e); toast("Не получилось удалить"); }
   };
   return (
-    <div className="card notes-widget reveal d2" id="home-notes">
+    <div className="card notes-widget reveal d2">
       <div className="dash-card-head">
         <img src="/icons/icon-book.webp" className="head-3d" alt="" />
         <div className="dash-card-titles">
@@ -1482,7 +1351,7 @@ function NotesWidget({ family, notes, onReload, toast }) {
           Пока пусто. Добавьте заметку — а если указать дату, в этот день на «Главной» появится напоминание.
         </div>
       )}
-      {shownNotes.map((n) => {
+      {list.map((n) => {
         const overdue = !n.done && n.remind_date && n.remind_date < todayIso;
         const today = !n.done && n.remind_date === todayIso;
         return (
@@ -1505,11 +1374,6 @@ function NotesWidget({ family, notes, onReload, toast }) {
           </div>
         );
       })}
-      {list.length > 3 && (
-        <button className="attn-more" onClick={() => setShowAll((a) => !a)} aria-expanded={showAll}>
-          {showAll ? "Свернуть" : `Показать все (${list.length})`}
-        </button>
-      )}
     </div>
   );
 }
@@ -1657,9 +1521,6 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   const [chatOpen, setChatOpen] = useState(false);
   const [absOpen, setAbsOpen] = useState(false);
   const [famSumOpen, setFamSumOpen] = useState(false);
-  // Меню «Комитет» из быстрых действий и окно «Напомнить семье» (ТЗ §9)
-  const [comOpen, setComOpen] = useState(false);
-  const [remindOpen, setRemindOpen] = useState(false);
   // Персональное приветствие: у комитета/учителя — имя из базы; у семьи — по ребёнку («семья Тимофея»)
   const greetName = authorName
     ? `, ${authorName}`
@@ -1724,7 +1585,7 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         const parts = Array.isArray(c.participants) && c.participants.length ? c.participants : null;
         if (parts && !ns.some((n) => parts.includes(n))) return null; // семья не участвует
         const paid = (c.payments || []).filter((p) => kids.includes(p.child)).reduce((s, p) => s + p.amount, 0);
-        // Своя сумма семьи (поле amounts, ключ — № первой строки семьи) или общая
+        // Своя сумма семьи (amounts, ключ — № первой строки семьи) или общая
         const famKey = String(Math.min(...ns));
         const target = c.amounts && c.amounts[famKey] != null ? Number(c.amounts[famKey]) : Number(c.amount);
         const due = Math.round((target - paid) * 100) / 100;
@@ -1847,109 +1708,83 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
   const feesBadge = (myFeeDue ? 1 : 0) + myCollDues.filter((d) => !d.pending).length;
   // Открыть чат/отсутствия/сводку: без выбранной семьи сначала просим выбрать её
   const needFamily = (fn) => () => { if (!family) { setFamOpen(true); return; } fn(); };
-  // Нижнее меню телефона (кнопки «Чат» и «Моя семья» в «Ещё») не умеет открывать
-  // окошки напрямую — оно ведёт на главную и оставляет флажок в sessionStorage,
-  // а если главная уже открыта — будит её событием «rk1g-open». Здесь флажок
-  // считываем ровно один раз и открываем нужное окно (ТЗ §7).
-  useEffect(() => {
-    const consume = () => {
-      let want = null;
-      try {
-        want = sessionStorage.getItem("rk1g-open");
-        if (want) sessionStorage.removeItem("rk1g-open");
-      } catch {}
-      if (!want || role === "teacher") return;
-      if (!family) { setFamOpen(true); return; }
-      if (want === "chat") setChatOpen(true);
-      else if (want === "family") setFamSumOpen(true);
-    };
-    consume(); // флажок, оставленный до перехода на главную
-    window.addEventListener("rk1g-open", consume);
-    return () => window.removeEventListener("rk1g-open", consume);
-  }, [role, family]);
-  // Четыре быстрых действия (ТЗ §9): учителю, отсутствие, мой ребёнок,
-  // «Комитет» (меню комитета) или «Сборы» для обычного родителя.
   const quickItems = [
-    { key: "teacher", label: "Написать учителю", aria: "Написать учителю",
+    { key: "teacher", label: "Учителю", aria: "Написать учителю",
       ico: <img src="/icons/icon-envelope.webp" alt="" />,
       badge: teacherUnread, act: needFamily(() => setChatOpen(true)) },
-    { key: "absence", label: "Сообщить об отсутствии", aria: "Сообщить об отсутствии ребёнка",
+    { key: "absence", label: "Отсутствие", aria: "Отметить отсутствие ребёнка",
       ico: <img src="/icons/icon-calendar.webp" alt="" />,
       badge: 0, act: needFamily(() => setAbsOpen(true)) },
-    { key: "family", label: "Мой ребёнок", aria: "Сводка семьи",
+    { key: "family", label: "Моя семья", aria: "Сводка семьи",
       ico: <img src="/icons/icon-people.webp" alt="" />,
       badge: 0, act: needFamily(() => setFamSumOpen(true)) },
-    committee
-      ? { key: "committee", label: "Комитет", aria: "Меню комитета",
-          ico: <img src="/icons/icon-note-plus.webp" alt="" />,
-          badge: 0, act: () => setComOpen(true) }
-      : { key: "fees", label: "Сборы", aria: "Сборы и взносы",
-          ico: <img src="/icons/icon-wallet.webp" alt="" />,
-          badge: feesBadge, act: () => onTab("fees") },
-  ];
-  // ===== «Требует внимания» (ТЗ §10): только реальные персональные действия.
-  // Приоритет: просроченное → ближайший срок → непрочитанное важное.
-  // sort-ключ: "0"+дата у просроченного, "1"+дата у срочного, "2…"/"3…" у бессрочных.
-  const todayIsoMain = minskIso();
-  const attnItems = [];
-  if (family) sortNotes((notes || []).filter((n) => !n.from_teacher && !n.done && n.remind_date && n.remind_date <= todayIsoMain), todayIsoMain)
-    .forEach((n) => attnItems.push({
-      id: "note-" + n.id, kind: "Напоминание", tone: "blue",
-      title: n.text,
-      sub: n.remind_date < todayIsoMain ? `просрочено · ${fmtNoteDate(n.remind_date)}` : "сегодня",
-      cta: "К заметкам", sort: (n.remind_date < todayIsoMain ? "0" : "1") + n.remind_date,
-      act: () => {
-        const el = document.getElementById("home-notes");
+    // «Фото» заняли место «Взносов»: до денег всё равно ведут «Платёж» и верхнее меню
+    { key: "photos", label: "Фото", aria: "Фото класса",
+      ico: <NavIcon name="photos" uid="qa-photos" size={38} />,
+      badge: 0, act: () => onTab("photos") },
+    { key: "votes", label: "Голосования",
+      ico: <NavIcon name="votes" uid="qa-votes" size={38} />,
+      badge: pollsNoAnswer.length, act: () => onTab("votes") },
+    { key: "ann", label: "Объявления",
+      ico: <NavIcon name="announcements" uid="qa-ann" size={38} />,
+      badge: annUnread, act: () => onTab("announcements") },
+    { key: "sched", label: "Расписание",
+      ico: <img src="/icons/icon-calendar-clock.webp" alt="" />,
+      badge: schedOvs.length, act: () => onTab("schedule") },
+    // «Календарь» прокручивает к встроенному календарю класса и переводит фокус
+    // к его заголовку (ТЗ §9). Иконка — календарь, а не хлопушка.
+    { key: "calendar", label: "Календарь", aria: "Календарь класса",
+      ico: <img src="/icons/icon-calendar.webp" alt="" />,
+      badge: 0, act: () => {
+        const el = document.getElementById("class-calendar-title");
+        // При prefers-reduced-motion прокручиваем без анимации
         const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
         el?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-      },
-    }));
-  if (myFeeDue) attnItems.push({
-    id: "feedue", kind: "Сбор", tone: "gold",
-    title: `Годовой взнос: осталось сдать ${fmt(myFeeDue.due)} BYN`,
-    sub: `Внесено ${fmt(myFeeDue.paid)} из ${fmt(myFeeDue.target)} BYN с семьи` + (reqsLine ? ` · ${reqsLine}` : ""),
-    cta: "К взносам", sort: "2", act: () => onTab("fees"),
-  });
-  myCollDues.forEach((d) => attnItems.push({
-    id: "coll-" + d.title, kind: "Сбор", tone: d.pending ? "blue" : "gold",
-    title: d.pending ? `Заявка по сбору «${d.title}» на проверке` : `Сбор «${d.title}»: сдать ${fmt(d.due)} BYN`,
-    sub: d.pending
-      ? (d.pending === "cash" ? "Вы передадите наличными — комитет отметит платёж" : "Ваш чек на проверке — комитет подтвердит платёж")
-      : (d.paid > 0 ? `Сдано ${fmt(d.paid)} BYN` : "Ещё не сдано") +
-        (d.deadline ? ` · до ${fmtDateRu(d.deadline)}` : "") +
-        (reqsLine ? ` · ${reqsLine}` : ""),
-    cta: "К сборам",
-    sort: d.pending ? "9" : d.deadline ? (d.deadline < todayIsoMain ? "0" : "1") + d.deadline : "2",
-    act: () => onTab("fees"),
-  }));
-  pollsNoAnswer.forEach((p) => attnItems.push({
-    id: "poll-" + p.id, kind: "Голосование", tone: "lav",
-    title: snippet(p.question, 80),
-    sub: p.deadline ? `голосуем до ${fmtDeadline(p.deadline)}` : "срок не ограничен",
-    cta: "Проголосовать",
-    sort: p.deadline ? "1" + p.deadline : "2",
-    act: () => goFocus("poll", p.id, "votes", onTab),
-  }));
-  impUnread.forEach((a) => attnItems.push({
-    id: "imp-" + a.id, kind: "Важное", tone: "gold",
-    title: a.title, sub: `${a.author || "Комитет"} · не прочитано`,
-    cta: "Прочитать", sort: "3" + (a.created_at || ""),
-    act: () => readAndGo(a, reads, family, onTab),
-  }));
-  attnItems.sort((a, b) => a.sort.localeCompare(b.sort));
-  // Публикации из «Требует внимания» не дублируем в превью новостей (ТЗ §8, §12)
-  const attnAnnIds = impUnread.map((a) => a.id);
-  // Карточка голосования на главной есть, только пока идёт хоть одно (ТЗ §14)
-  const hasOpenPolls = (polls || []).some((p) => pollState(p) === "open");
+        el?.focus({ preventScroll: true });
+      } },
+    { key: "pay", label: "Платёж", aria: "Отметить платёж",
+      ico: <img src="/icons/icon-wallet.webp" alt="" />,
+      badge: 0, act: () => onTab("fees") },
+  ];
+  // «Создать объявление» — отдельной широкой строкой под сеткой, только комитету
+  const quickWide = committee
+    ? { key: "newann", label: "Создать объявление", aria: "Создать объявление",
+        ico: <img src="/icons/icon-note-plus.webp" alt="" />,
+        act: () => {
+          try { sessionStorage.setItem("rk1g-open-newann", "1"); } catch {}
+          onTab("announcements");
+        } }
+    : null;
+  // Строка-подсказка с самым срочным: ответ учителя → долг → голосование
+  let urgent = null;
+  if (teacherUnread > 0) {
+    urgent = {
+      text: teacherUnread === 1 ? "Ответ учителя не прочитан" : `Непрочитанных сообщений от учителя: ${teacherUnread}`,
+      act: needFamily(() => setChatOpen(true)),
+    };
+  } else if (myFeeDue) {
+    urgent = { text: `Долг по годовому взносу: ${fmt(myFeeDue.due)} BYN`, act: () => onTab("fees") };
+  } else {
+    const firstDue = myCollDues.find((d) => !d.pending);
+    if (firstDue) {
+      urgent = { text: `Долг по сбору «${firstDue.title}»: ${fmt(firstDue.due)} BYN`, act: () => onTab("fees") };
+    } else if (pollsNoAnswer.length) {
+      urgent = {
+        text: `Новое голосование: ${snippet(pollsNoAnswer[0].question, 60)}`,
+        act: () => goFocus("poll", pollsNoAnswer[0].id, "votes", onTab),
+      };
+    }
+  }
   return (
     <section id="tab-dashboard">
       <div className="greet-date">{todayLine()}</div>
 
-      {/* Компактное приветствие с маскотом (ТЗ §8 п.1, §9): текст слева,
-          маскот справа. Сам маскот не меняется — только обёртка. */}
+      {/* Шапка главной: на широких экранах — приветствие слева, быстрые действия
+          справа в своей панели; на телефоне — друг под другом */}
       <div className="home-hero">
         <div className="welcome compact reveal d1">
           <div className="welcome-copy">
+            {/* Приветствие и главная мысль дня — двумя абзацами, с воздухом между ними */}
             <h1 className="welcome-h1">
               <span className="welcome-greet">{greetWord()}{greetName}!</span>
               <span className="blue welcome-headline">{headline}</span>
@@ -1960,34 +1795,24 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
             <ClassMascot ref={mascotRef} cues={cues} greetToken={greetToken} />
           </div>
         </div>
+        <div className="qa-panel reveal d1">
+          <QuickActions items={quickItems} wide={quickWide} />
+        </div>
       </div>
-
-      {/* Четыре быстрых действия в ряд (ТЗ §8 п.2, §9) */}
-      <div className="qa-panel reveal d1">
-        <QuickActions items={quickItems} />
-      </div>
+      {urgent && (
+        <button className="qa-urgent reveal d1" onClick={urgent.act}>
+          <span className="qa-urgent-ico" aria-hidden="true">❗</span>
+          <span>{urgent.text}</span>
+          <span className="qa-urgent-arrow" aria-hidden="true">›</span>
+        </button>
+      )}
 
       {/* Плашка-напоминание про уведомления: висит каждый заход, пока
           родитель их не включит (модалку PushNag можно закрыть — эту нет) */}
       {role !== "teacher" && <PushBanner role={role} familyN={family?.n} toast={toast} />}
 
-      {/* «Требует внимания» (ТЗ §8 п.3, §10): долги, напоминания,
-          голосования без ответа и непрочитанное важное — максимум два,
-          остальные раскрываются внутри блока */}
-      <AttentionArea items={attnItems} />
-
-      {/* Информационные баннеры дня: изменения расписания и именинники */}
-      <ScheduleChangeBanner
-        activeOvs={schedOvs}
-        focusIso={schedIso}
-        focusLabel={schedFocus.label}
-        endTime={schedEnd}
-        toast={toast}
-        onTab={onTab}
-      />
-      <BdayBanner ev={bdayEv} />
-
-      {/* «Важное от учителя»: домашние задания, события и заметки учителя */}
+      {/* Порядок секций — как на новом макете: сначала «Важное от учителя»,
+          затем объявления класса и баннеры, а финансовые напоминания — после них. */}
       <TeacherBoard
         homework={homework}
         events={events}
@@ -2002,86 +1827,85 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         onReloadComments={onReloadComments}
       />
 
-      {/* Две основные колонки (ТЗ §8 п.4): «Сегодня в школе» и «Новости класса» */}
-      <div className="dash-cols">
-        <div className="dash-col-main" id="home-schedule">
-          <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
-        </div>
-        <div className="dash-col-side">
-          <DashNews announcements={announcements} reads={reads} family={family} onTab={onTab} excludeIds={attnAnnIds} />
-        </div>
-      </div>
-
-      {/* Ряд «Чат с учителем» и «Голосование» (ТЗ §8 п.5, §13–14).
-          Карточка голосований исчезает, когда активных нет, — чат занимает ряд целиком */}
-      <div className={"dash-duo" + (hasOpenPolls && role !== "teacher" ? "" : " solo")}>
-        {role !== "teacher" && (
-          <div className="dash-duo-col">
-            <ParentTeacherCard
-              familyMessages={familyMessages}
-              family={family}
-              teacherName={teacherName}
-              onOpenChat={needFamily(() => setChatOpen(true))}
-              onRetry={onReloadMessages}
-            />
-          </div>
-        )}
-        {hasOpenPolls && (
-          <div className="dash-duo-col">
-            <ActivePolls polls={polls} family={family} onTab={onTab} />
-          </div>
-        )}
-      </div>
-
-      {/* Нижняя сетка (ТЗ §8 п.6): календарь и события слева, справа стопкой
-          «Фонд класса» и «Мои заметки». В DOM фонд идёт первым — на телефоне
-          порядок фонд → календарь → заметки, как в ТЗ. */}
-      <div className="dash-bottom">
-        <div className="card cash-card reveal d3">
-          <div className="dash-card-head">
-            <img src="/icons/icon-piggy.webp" className="head-3d" alt="" />
-            <div className="dash-card-titles">
-              <h2 className="sec-title">Фонд класса</h2>
-              <div className="dash-card-sub">Главный сбор · {FAMILIES_COUNT} семей</div>
-            </div>
-          </div>
-          {/* Остаток только по главному сбору: ведомость + разовые поступления.
-              Фонд ГПД и целевые сборы не смешиваем (ТЗ §15) — они во вкладке «Взносы» */}
-          <div className="cash-hero">
-            <div className="cash-hero-main">
-              <div className="cash-hero-lbl">Остаток общего фонда</div>
-              <div className="cash-hero-val">{fmt(cashMain)} BYN</div>
-              <div className="cash-hero-note">
-                {isLive && extras === null ? "поступления обновляются…" : "Главный сбор · без фонда ГПД и целевых сборов"}
-              </div>
-            </div>
-            <img src="/icons/icon-wallet.webp" className="cash-hero-3d" alt="" />
-          </div>
-          <div className="cash-links">
-            <button className="pill-btn blue" onClick={() => onTab("fees")}>Сборы</button>
-            <button className="pill-btn" onClick={() => onTab("expenses")}>Расходы</button>
-          </div>
-        </div>
-
-        {/* Календарь и ближайшие события — одна смысловая область (ТЗ §16).
-            Прежние отдельные списки дней рождения и праздников переехали
-            во вкладку «Календарь» — здесь их дубликатов больше нет. */}
-        <ClassCalendar
-          events={events} notes={notes} bdays={bdays} family={family} onTab={onTab}
+      {/* Переписка с учителем — в новом дизайне мини-мессенджера (23.10.2026):
+          последнее сообщение, счётчик непрочитанных, кнопка «Написать учителю».
+          Без выбранной семьи клик сначала попросит выбрать её. */}
+      {role !== "teacher" && (
+        <ParentTeacherCard
+          familyMessages={familyMessages}
+          family={family}
+          teacherName={teacherName}
+          onOpenChat={needFamily(() => setChatOpen(true))}
+          onRetry={onReloadMessages}
         />
+      )}
 
-        {family && <NotesWidget family={family} notes={notes} onReload={onReloadNotes} toast={toast} />}
-      </div>
+      <ImportantNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
+      {/* Новости класса — высоко на главной (просьба 28.10.2026), чтобы
+          родители сразу видели свежие объявления, не листая вниз */}
+      <DashNews announcements={announcements} reads={reads} family={family} onTab={onTab} />
+      <BdayBanner ev={bdayEv} />
+      <ScheduleChangeBanner
+        activeOvs={schedOvs}
+        focusIso={schedIso}
+        focusLabel={schedFocus.label}
+        endTime={schedEnd}
+        toast={toast}
+        onTab={onTab}
+      />
 
-      {/* Привязка семьи — только для комитета: у учителя «Главной» больше нет,
-          да и своей семьи в списке класса у него не бывает */}
-      {!family && committee && <BindFamilyCard setFamily={setFamily} toast={toast} />}
+      {/* Яркое напоминание о годовом взносе: видно только семье, которая ещё не сдала.
+          «Сдал» = отметка комитета в ведомости (загруженный чек сам по себе не считается). */}
+      {myFeeDue && (
+        <div className="attn-card pay-due-card reveal d1">
+          <div className="attn-ico"><Ic id="i-coin" /></div>
+          <div className="attn-body">
+            <div className="attn-title">Пожалуйста, сдайте годовой взнос — осталось {fmt(myFeeDue.due)} BYN</div>
+            <div className="attn-sub">
+              Внесено {fmt(myFeeDue.paid)} из {fmt(myFeeDue.target)} BYN с семьи
+              {reqsLine ? <><br />{reqsLine}</> : null}
+            </div>
+          </div>
+          <button className="pill-btn" onClick={() => onTab("fees")}>К взносам</button>
+        </div>
+      )}
 
-      <PushSettings committee={committee} role={role} familyN={family?.n} toast={toast} />
+      {/* Напоминание о целевых сборах: висит, пока семья не сдаст полную сумму.
+          Пока заявка семьи на проверке — плашка спокойная, не тревожная. */}
+      {myCollDues.map((d) => (
+        <div key={d.title} className={"attn-card reveal d1" + (d.pending ? "" : " pay-due-card")}>
+          <div className={"attn-ico" + (d.pending ? " blue" : "")}><Ic id="i-coin" /></div>
+          <div className="attn-body">
+            <div className="attn-title">
+              {d.pending ? `Заявка по сбору «${d.title}» на проверке` : `Вы ещё не сдали на «${d.title}»`}
+            </div>
+            <div className="attn-sub">
+              {d.pending
+                ? d.pending === "cash"
+                  ? "Вы передадите наличными — комитет отметит платёж, когда получит деньги"
+                  : "Ваш чек на проверке — комитет подтвердит платёж"
+                : <>
+                    {d.paid > 0 ? `Сдано ${fmt(d.paid)} BYN, осталось ${fmt(d.due)} BYN` : `Нужно сдать ${fmt(d.due)} BYN с семьи`}
+                    {d.deadline ? ` · сдать до ${fmtDateRu(d.deadline)}` : ""}
+                    {reqsLine ? <><br />{reqsLine}</> : null}
+                  </>}
+            </div>
+          </div>
+          <button className="pill-btn blue" onClick={() => onTab("fees")}>К сборам</button>
+        </div>
+      ))}
 
-      {/* ===== Окна поверх главной ===== */}
-      {/* Личная переписка семьи с учителем — открывается из быстрых действий,
-          карточки чата и кнопки «Чат» в нижнем меню телефона */}
+      <ActivePolls polls={polls} family={family} onTab={onTab} />
+
+      {/* Встроенный календарь класса: события, праздники, дни рождения
+          и личные напоминания семьи — к нему ведёт плитка «Календарь» */}
+      <ClassCalendar
+        committee={committee} role={role} events={events} notes={notes}
+        bdays={bdays} family={family} authorName={authorName} toast={toast} onTab={onTab}
+      />
+
+      {/* Личная переписка семьи с учителем — открывается с иконки «Учителю».
+          Отдельной карточки на главной больше нет: её заменила сетка сверху. */}
       {role !== "teacher" && (
         <TeacherFamilyChat
           open={chatOpen}
@@ -2101,7 +1925,8 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
         title="Выберите свою семью"
         onPick={(f) => setFamily(f)}
       />
-      {/* Отсутствия и сводка семьи — в окошках поверх главной.
+
+      {/* Отсутствия и сводка семьи — в окошках поверх главной (иконки сверху).
           Другие родители чужих отсутствий по-прежнему не видят. */}
       <QuickModal open={absOpen && !!family} onClose={() => setAbsOpen(false)} label="Отсутствие ребёнка">
         {family && <AbsenceCard family={family} toast={toast} />}
@@ -2114,35 +1939,50 @@ export default function DashboardTab({ committee, role, toast, onTab, onOpenUplo
           />
         )}
       </QuickModal>
-      {/* Меню «Комитет» (ТЗ §9): уже доступные действия комитета в одном окне,
-          без дублирования второй крупной карточкой внизу страницы */}
-      <QuickModal open={comOpen} onClose={() => setComOpen(false)} label="Меню комитета">
-        <div className="com-menu">
-          <h2 className="sec-title">Комитет</h2>
-          <button
-            className="com-menu-item"
-            onClick={() => {
-              setComOpen(false);
-              try { sessionStorage.setItem("rk1g-open-newann", "1"); } catch {}
-              onTab("announcements");
-            }}
-          >
-            <img src="/icons/icon-note-plus.webp" alt="" /> Создать объявление
-          </button>
-          <button className="com-menu-item" onClick={() => { setComOpen(false); setRemindOpen(true); }}>
-            <img src="/icons/icon-calendar.webp" alt="" /> Напомнить семье
-          </button>
-          <button className="com-menu-item" onClick={() => { setComOpen(false); onTab("calendar"); }}>
-            <img src="/icons/icon-calendar-clock.webp" alt="" /> Добавить событие в календарь
-          </button>
-          <button className="com-menu-item" onClick={() => { setComOpen(false); onTab("fees"); }}>
-            <img src="/icons/icon-wallet.webp" alt="" /> Сборы и взносы
-          </button>
+      {/* Привязка семьи — только для комитета: у учителя «Главной» больше нет,
+          да и своей семьи в списке класса у него не бывает */}
+      {!family && committee && <BindFamilyCard setFamily={setFamily} toast={toast} />}
+      {family && <NotesWidget family={family} notes={notes} onReload={onReloadNotes} toast={toast} />}
+      {committee && <CommitteeRemind authorName={authorName} toast={toast} />}
+
+      <div className="dash-cols">
+        <div className="dash-col-main" id="home-schedule">
+          <ScheduleWidget liveSchedule={liveSchedule} overrides={overrides} onTab={onTab} />
         </div>
-      </QuickModal>
-      <QuickModal open={remindOpen} onClose={() => setRemindOpen(false)} label="Напомнить семье">
-        <CommitteeRemind authorName={authorName} toast={toast} />
-      </QuickModal>
+        <div className="dash-col-side">
+          {/* Новости класса переехали выше — к важным объявлениям (28.10.2026) */}
+          <div className="card cash-card reveal d3">
+            <div className="dash-card-head">
+              <img src="/icons/icon-piggy.webp" className="head-3d" alt="" />
+              <div className="dash-card-titles">
+                <h2 className="sec-title">Касса класса</h2>
+                <div className="dash-card-sub">Главный сбор · {FAMILIES_COUNT} семей</div>
+              </div>
+            </div>
+
+            {/* Остаток только по главному сбору: ведомость + разовые поступления.
+                Целевые сборы и фонд ГПД на главной не показываем — они во вкладке «Взносы» */}
+            <div className="cash-hero">
+              <div className="cash-hero-main">
+                <div className="cash-hero-lbl">Сейчас в кассе</div>
+                <div className="cash-hero-val">{fmt(cashMain)} BYN</div>
+                <div className="cash-hero-note">
+                  {isLive && extras === null ? "поступления обновляются…" : "Главный сбор · без фонда ГПД и целевых сборов"}
+                </div>
+              </div>
+              <img src="/icons/icon-wallet.webp" className="cash-hero-3d" alt="" />
+            </div>
+
+            <button className="pill-btn blue cash-open" onClick={() => onTab("fees")}>Подробнее →</button>
+          </div>
+        </div>
+      </div>
+
+      <BirthdaysWidget committee={committee} ev={bdayEv} list={bdays} onTab={onTab} />
+
+      <HolidaysWidget committee={committee} role={role} events={events} authorName={authorName} toast={toast} onTab={onTab} />
+
+      <PushSettings committee={committee} role={role} familyN={family?.n} toast={toast} />
     </section>
   );
 }
