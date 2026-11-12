@@ -42,6 +42,8 @@ const IMG_ICONS = {
   votes: "nav-votes",
   class: "nav-class",
   history: "nav-history",
+  // «Календарь» (редизайн 30.10.2026) — существующая 3D-иконка календаря
+  calendar: "icon-calendar",
 };
 
 export default function NavIcon({ name, uid, size = 36, className = "" }) {
